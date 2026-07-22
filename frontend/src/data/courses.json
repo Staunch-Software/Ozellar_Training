@@ -1,0 +1,3742 @@
+{
+  "learner": {
+    "name": "Rajan Kumar",
+    "rank": "Chief Officer",
+    "initials": "RK",
+    "ppNo": "PP-4471"
+  },
+  "courses": [
+    {
+      "id": "cargo-ops",
+      "slug": "cargo-operations",
+      "title": "Cargo Operations Manual",
+      "subtitle": "Bulk carriers & other cargo",
+      "icon": "Anchor",
+      "durationLabel": "~45 min",
+      "status": "in-progress",
+      "statusNote": "Assigned",
+      "chapters": [
+        {
+          "id": "cargo-ops-l1",
+          "n": 1,
+          "orig": 2,
+          "chapterLabel": "Lesson 1",
+          "title": "Course Overview",
+          "intro": "What this manual covers across its 13 chapters, and the regulations it is built on.",
+          "sections": [
+            {
+              "heading": "You will learn about",
+              "items": [
+                "Cargo planning and pre-loading checks",
+                "Hold and bilge management",
+                "Documentation requirements",
+                "Cargo care — iron ore, coal, limestone and other bulk cargoes"
+              ]
+            },
+            {
+              "heading": "Regulatory basis",
+              "items": [
+                "SOLAS, IMSBC, BLU, IMDG, CSS, Grain Code and national regulations"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide2.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l2",
+          "n": 2,
+          "orig": 3,
+          "chapterLabel": "Lesson 2",
+          "title": "What Good Cargo Operations Look Like",
+          "intro": "The five themes that run through every chapter of this manual.",
+          "sections": [
+            {
+              "heading": "",
+              "items": [
+                "Safety protocols and personnel responsibilities in cargo handling",
+                "Planning and executing loading and unloading procedures effectively",
+                "Maintaining cargo integrity and equipment monitoring during voyages",
+                "Specialized operations for bulk, heavy, timber and car carriers",
+                "Documentation, regulatory compliance and case-study insights"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide3.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l3",
+          "n": 3,
+          "orig": 5,
+          "chapterLabel": "Lesson 3",
+          "title": "Manual Overview (Chapter 1)",
+          "intro": "The purpose, scope and authority behind safe, compliant cargo operations.",
+          "sections": [
+            {
+              "heading": "",
+              "items": [
+                "Purpose: guide shipboard personnel on safe, efficient and compliant cargo operations",
+                "Scope: applies to all non-tanker vessels operated by Ozellar Marine",
+                "Compliance: SOLAS, IMSBC, BLU, IMDG, CSS, Grain Code, national regulations",
+                "Authority: the Master holds overall responsibility for implementation and adherence"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide5.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l4",
+          "n": 4,
+          "orig": 6,
+          "chapterLabel": "Lesson 4",
+          "title": "Key Responsibilities (Chapter 1)",
+          "intro": "Who does what during cargo operations, and where the focus lies.",
+          "sections": [
+            {
+              "heading": "Roles",
+              "items": [
+                "Master — exercises full control and ensures compliance",
+                "Chief Officer — supervises operations and reports to the Master",
+                "Crew members — execute procedures diligently and uphold safety standards"
+              ]
+            },
+            {
+              "heading": "Focus areas",
+              "items": [
+                "Personnel safety",
+                "Cargo handling",
+                "Documentation",
+                "Equipment operation"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide6.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l5",
+          "n": 5,
+          "orig": 7,
+          "chapterLabel": "Lesson 5",
+          "title": "Personnel Safety (Chapter 2)",
+          "intro": "The hazards crew face during cargo operations and the measures that control them.",
+          "sections": [
+            {
+              "heading": "Hazard identification",
+              "items": [
+                "Toxic fumes and oxygen deficiency",
+                "Fire and explosion risks",
+                "Dust-related respiratory conditions",
+                "Enclosed space entry hazards"
+              ]
+            },
+            {
+              "heading": "Mitigation measures",
+              "items": [
+                "Use of Personal Protective Equipment (PPE)",
+                "Pre-entry enclosed space checks",
+                "Proper ventilation procedures",
+                "Access to emergency gear"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide7.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l6",
+          "n": 6,
+          "orig": 9,
+          "chapterLabel": "Lesson 6",
+          "title": "Cargo Planning & Handling (Chapter 3)",
+          "intro": "Planning a safe, stable load before a single tonne comes aboard.",
+          "sections": [
+            {
+              "heading": "Planning steps",
+              "items": [
+                "Review voyage instructions",
+                "Confirm cargo quantity and specifications",
+                "Assess vessel stability and stress parameters",
+                "Establish loading sequence and trim plans"
+              ]
+            },
+            {
+              "heading": "Calculations",
+              "items": [
+                "Maximum loadable quantity",
+                "Ballast / stress / stability compliance",
+                "Density correction and draft allowance"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide9.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l7",
+          "n": 7,
+          "orig": 10,
+          "chapterLabel": "Lesson 7",
+          "title": "Loading & Unloading Operations (Chapter 4)",
+          "intro": "Checks before, and vigilance during, loading and discharge.",
+          "sections": [
+            {
+              "heading": "Pre-loading checks",
+              "items": [
+                "Inspect cargo holds and bilges",
+                "Validate equipment readiness",
+                "Confirm cleaning status"
+              ]
+            },
+            {
+              "heading": "During loading / unloading",
+              "items": [
+                "Conduct draft surveys",
+                "Address discrepancies proactively",
+                "Document receipts and Bill of Lading",
+                "Monitor cargo quality"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide10.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l8",
+          "n": 8,
+          "orig": 11,
+          "chapterLabel": "Lesson 8",
+          "title": "Documentation Requirements (Chapter 5)",
+          "intro": "The paperwork that protects the ship, the cargo and the crew.",
+          "sections": [
+            {
+              "heading": "Operational documents",
+              "items": [
+                "Notice of Readiness (NOR)",
+                "Mate's Receipt",
+                "Statement of Facts",
+                "Damage Reports"
+              ]
+            },
+            {
+              "heading": "Port-related documents",
+              "items": [
+                "Draft Survey Reports",
+                "Loading Sequences",
+                "Cargo Certificates",
+                "Letters of Protest"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide11.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l9",
+          "n": 9,
+          "orig": 12,
+          "chapterLabel": "Lesson 9",
+          "title": "Holds & Bilges Management (Chapter 6)",
+          "intro": "Keeping holds clean and bilge systems ready to catch trouble early.",
+          "sections": [
+            {
+              "heading": "Routine tasks",
+              "items": [
+                "Cleaning holds after discharge",
+                "Testing bilge systems and alarms",
+                "Checking non-return valves",
+                "Ballast system checks"
+              ]
+            },
+            {
+              "heading": "Risk control",
+              "items": [
+                "Detect water ingress early",
+                "Test and maintain emergency systems",
+                "Log and correct hold deficiencies"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide12.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l10",
+          "n": 10,
+          "orig": 13,
+          "chapterLabel": "Lesson 10",
+          "title": "Cargo Care During Voyage (Chapter 7)",
+          "intro": "Daily monitoring and weather readiness that keep cargo intact at sea.",
+          "sections": [
+            {
+              "heading": "Daily monitoring",
+              "items": [
+                "Inspect hatch covers",
+                "Operate ventilation systems",
+                "Record temperature and humidity",
+                "Check lashings for movement"
+              ]
+            },
+            {
+              "heading": "Weather readiness",
+              "items": [
+                "Secure decks and access points",
+                "Carry out inspections in rough seas",
+                "Maintain cargo integrity"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide13.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l11",
+          "n": 11,
+          "orig": 14,
+          "chapterLabel": "Lesson 11",
+          "title": "Bulk Cargoes Specifics (Chapter 8)",
+          "intro": "Handling coal, iron ore, grain and steel under the IMSBC Code.",
+          "sections": [
+            {
+              "heading": "Types",
+              "items": [
+                "Coal",
+                "Iron ore",
+                "Grain",
+                "Steel"
+              ]
+            },
+            {
+              "heading": "Precautions",
+              "items": [
+                "Adhere to the IMSBC Code",
+                "Review the Shipper's Declaration",
+                "Apply cargo-specific SOPs",
+                "Ensure proper environmental controls"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide14.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l12",
+          "n": 12,
+          "orig": 15,
+          "chapterLabel": "Lesson 12",
+          "title": "Case Study — Draft Survey Discrepancy (Chapter 9)",
+          "intro": "A real mismatch between draft survey and declared weight, and how it was resolved.",
+          "sections": [
+            {
+              "heading": "Scenario",
+              "items": [
+                "A mismatch was found between the draft survey results and the shipper's stated weight"
+              ]
+            },
+            {
+              "heading": "Actions taken",
+              "items": [
+                "Verified readings and vessel trim",
+                "Notified Master and shore office",
+                "Issued Statement of Facts and Letter of Protest"
+              ]
+            },
+            {
+              "heading": "Learning",
+              "items": [
+                "Always validate figures — never assume"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide15.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l13",
+          "n": 13,
+          "orig": 16,
+          "chapterLabel": "Lesson 13",
+          "title": "Heavy Lift Operations (Chapter 10)",
+          "intro": "Risk assessment and stability planning for exceptional loads.",
+          "sections": [
+            {
+              "heading": "Safety focus",
+              "items": [
+                "Conduct formal risk assessments",
+                "Verify lifting gear certification",
+                "Engage experienced personnel"
+              ]
+            },
+            {
+              "heading": "Planning protocol",
+              "items": [
+                "Review cargo and lifting data",
+                "Calculate vessel stability",
+                "Define clear communication channels"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide16.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l14",
+          "n": 14,
+          "orig": 17,
+          "chapterLabel": "Lesson 14",
+          "title": "Timber Loading (Chapter 11)",
+          "intro": "Special precautions for timber deck and hold cargo.",
+          "sections": [
+            {
+              "heading": "Key considerations",
+              "items": [
+                "Follow Timber Code guidelines",
+                "Maintain proper securing and lashings",
+                "Monitor water-absorption impact"
+              ]
+            },
+            {
+              "heading": "Risks",
+              "items": [
+                "Structural limitations",
+                "Personnel injury potential",
+                "Wet timber weight change"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide17.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l15",
+          "n": 15,
+          "orig": 18,
+          "chapterLabel": "Lesson 15",
+          "title": "Car Carriers (Chapter 12)",
+          "intro": "Ventilation, fire safety and controlled operations on vehicle decks.",
+          "sections": [
+            {
+              "heading": "Operational needs",
+              "items": [
+                "Minimum 10 air changes per hour",
+                "Fire suppression and gas detection",
+                "Controlled ramp operations"
+              ]
+            },
+            {
+              "heading": "Safety practices",
+              "items": [
+                "No-smoking policy",
+                "Use emergency escape routes",
+                "Conduct crew training"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide18.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l16",
+          "n": 16,
+          "orig": 19,
+          "chapterLabel": "Lesson 16",
+          "title": "NAABSA Operations (Chapter 13)",
+          "intro": "Not-Always-Afloat-But-Safely-Aground planning and safety.",
+          "sections": [
+            {
+              "heading": "Planning essentials",
+              "items": [
+                "Evaluate tidal conditions",
+                "Secure company authorization",
+                "Prepare contingency procedures"
+              ]
+            },
+            {
+              "heading": "Safety measures",
+              "items": [
+                "Assess seabed conditions",
+                "Protect hull from bottom contact",
+                "Monitor vessel attitude constantly"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide19.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l17",
+          "n": 17,
+          "orig": 20,
+          "chapterLabel": "Lesson 17",
+          "title": "Equipment & Monitoring",
+          "intro": "The tools that keep cargo operations safe, and how to maintain them.",
+          "sections": [
+            {
+              "heading": "Essential tools",
+              "items": [
+                "Gas detectors for O2, CO, H2S",
+                "Draft and temperature monitoring devices",
+                "Radio and communication gear"
+              ]
+            },
+            {
+              "heading": "Maintenance protocol",
+              "items": [
+                "Calibrate equipment regularly",
+                "Keep spares and backups",
+                "Log all maintenance activities"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide20.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l18",
+          "n": 18,
+          "orig": 21,
+          "chapterLabel": "Lesson 18",
+          "title": "Emergency Procedures",
+          "intro": "The emergencies to plan for, and the response system for each.",
+          "sections": [
+            {
+              "heading": "Emergency types",
+              "items": [
+                "Fire",
+                "Hull breach",
+                "Cargo shift",
+                "Medical evacuation"
+              ]
+            },
+            {
+              "heading": "Response system",
+              "items": [
+                "Sound alarms",
+                "Execute crew evacuation plans",
+                "Activate damage control procedures"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide21.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l19",
+          "n": 19,
+          "orig": 22,
+          "chapterLabel": "Lesson 19",
+          "title": "Compliance & Regulations",
+          "intro": "The standards you must meet, and how compliance is proven.",
+          "sections": [
+            {
+              "heading": "Mandatory standards",
+              "items": [
+                "SOLAS",
+                "IMO Codes",
+                "Classification Society Rules",
+                "Port State regulations"
+              ]
+            },
+            {
+              "heading": "Proof of compliance",
+              "items": [
+                "Certificates and logs",
+                "Records of inspections",
+                "Training documentation"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide22.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l20",
+          "n": 20,
+          "orig": 23,
+          "chapterLabel": "Lesson 20",
+          "title": "Training & Competency",
+          "intro": "Building and sustaining a competent, safety-minded crew.",
+          "sections": [
+            {
+              "heading": "Programs",
+              "items": [
+                "Familiarization drills",
+                "Periodic assessments",
+                "Safety briefings"
+              ]
+            },
+            {
+              "heading": "Continuous improvement",
+              "items": [
+                "Review incidents",
+                "Update procedures",
+                "Promote a safety culture"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide23.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l21",
+          "n": 21,
+          "orig": 24,
+          "chapterLabel": "Lesson 21",
+          "title": "Summary",
+          "intro": "The core principles to carry into every cargo operation.",
+          "sections": [
+            {
+              "heading": "Recap",
+              "items": [
+                "Safety is paramount",
+                "Follow planning protocols",
+                "Adhere to regulations",
+                "Document thoroughly"
+              ]
+            },
+            {
+              "heading": "Remember",
+              "items": [
+                "Proper cargo operations are critical for ship, crew and cargo integrity."
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide24.png",
+          "videos": []
+        },
+        {
+          "id": "cargo-ops-l22",
+          "n": 22,
+          "orig": 25,
+          "chapterLabel": "Lesson 22",
+          "title": "Staying Updated",
+          "intro": "How to keep current after this course.",
+          "sections": [
+            {
+              "heading": "",
+              "items": [
+                "Follow company circulars and the company portal for the latest procedures and updates"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cargo-ops/slide25.png",
+          "videos": []
+        }
+      ],
+      "assessment": {
+        "passMark": 80,
+        "questions": [
+          {
+            "q": "Who holds overall responsibility for implementing the Cargo Operations Manual?",
+            "options": [
+              "Chief Officer",
+              "The Master",
+              "The Bosun",
+              "Port Authority"
+            ],
+            "answer": 1,
+            "explain": "The Master holds overall responsibility for implementation and adherence."
+          },
+          {
+            "q": "Which code specifically governs the carriage of solid bulk cargoes?",
+            "options": [
+              "IMDG Code",
+              "IMSBC Code",
+              "Grain Code",
+              "CSS Code"
+            ],
+            "answer": 1,
+            "explain": "The IMSBC Code governs the safe carriage of solid bulk cargoes."
+          },
+          {
+            "q": "What is a key mitigation measure against enclosed space entry hazards?",
+            "options": [
+              "Loading faster",
+              "Pre-entry enclosed space checks",
+              "Skipping ventilation",
+              "Removing PPE"
+            ],
+            "answer": 1,
+            "explain": "Pre-entry enclosed space checks are essential before anyone enters."
+          },
+          {
+            "q": "What should be issued when a draft survey discrepancy is found?",
+            "options": [
+              "Nothing",
+              "A Statement of Facts and Letter of Protest",
+              "A new Bill of Lading only",
+              "A crew list"
+            ],
+            "answer": 1,
+            "explain": "A Statement of Facts and Letter of Protest formally record the discrepancy."
+          },
+          {
+            "q": "Car carrier decks require a minimum of how many air changes per hour?",
+            "options": [
+              "2",
+              "5",
+              "10",
+              "20"
+            ],
+            "answer": 2,
+            "explain": "A minimum of 10 air changes per hour is required on car carrier decks."
+          }
+        ]
+      },
+      "cert": {
+        "titleUpper": "CARGO OPERATIONS TRAINING",
+        "topics": [
+          "Apply safe, compliant cargo operations under SOLAS, IMSBC and related codes.",
+          "Identify personnel safety hazards and apply the correct mitigation measures.",
+          "Plan cargo loading, stability and stress within safe limits.",
+          "Complete required operational and port documentation correctly.",
+          "Manage holds, bilges and cargo care throughout the voyage.",
+          "Handle bulk, heavy-lift, timber and car-carrier cargoes safely."
+        ]
+      }
+    },
+    {
+      "id": "hsm",
+      "slug": "health-safety-manual",
+      "title": "Health & Safety Manual (HSM)",
+      "subtitle": "Shipboard health & safety",
+      "icon": "HardHat",
+      "durationLabel": "~1h 10m",
+      "status": "not-started",
+      "statusNote": "Assigned · due 30 Jul",
+      "chapters": [
+        {
+          "id": "hsm-l1",
+          "n": 1,
+          "orig": 2,
+          "chapterLabel": "Lesson 1",
+          "title": "Course Summary - Key Topics",
+          "intro": "Overview of the main HSM topics covered across the course chapters.",
+          "sections": [
+            {
+              "heading": "",
+              "items": [
+                "20 chapters",
+                "On board familiarisation - ship staff, visitors and contractors",
+                "Bridge, ECDIS and Engine room familiarisation",
+                "SAIL - why and benefits",
+                "Permit to work - 10 permits",
+                "Hot work outside engine room workshop - office approval",
+                "Isolation Procedure - LOTO",
+                "PPE - as per appendix 3"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide2.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l2",
+          "n": 2,
+          "orig": 3,
+          "chapterLabel": "Lesson 2",
+          "title": "Course Summary - Safety Management Topics",
+          "intro": "Continued overview of safety management topics covered in the course.",
+          "sections": [
+            {
+              "heading": "",
+              "items": [
+                "Safety officer inspection and safety meeting - once a month",
+                "Daily work planner",
+                "Smoking Policy - prohibited areas",
+                "HAZARD identification and Risk Assessment - Level 1 & 2 - Sample RA database available",
+                "Single person job",
+                "Fatigue Management"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide3.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l3",
+          "n": 3,
+          "orig": 4,
+          "chapterLabel": "Lesson 3",
+          "title": "Course Summary - Additional Topics",
+          "intro": "Final set of topics covered in the course summary.",
+          "sections": [
+            {
+              "heading": "",
+              "items": [
+                "SIMOPS - Matrix - Appendix 4",
+                "Gas equipment",
+                "Mental health - Speak up"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide4.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l4",
+          "n": 4,
+          "orig": 5,
+          "chapterLabel": "Lesson 4",
+          "title": "Safety Philosophy - Why",
+          "intro": "The company safety philosophy built on shared responsibility, safety principles, and consequences of unsafe acts.",
+          "sections": [
+            {
+              "heading": "Shared Responsibility",
+              "items": [
+                "As an employee, you are responsible for safety of yourself and your mates",
+                "Care towards the vessel and the protection of the Environment"
+              ]
+            },
+            {
+              "heading": "Company Safety Principles",
+              "items": [
+                "No business objective will be pursued at the expense of safety",
+                "Accidents and injuries are preventable - all possible steps must be taken"
+              ]
+            },
+            {
+              "heading": "Consequences of Unsafe Acts",
+              "items": [
+                "Taking unnecessary risks is not in the Company's best interest",
+                "Unsafe actions may result in disciplinary action",
+                "A single major incident can ruin the Company and outweigh any short-term gains"
+              ]
+            }
+          ],
+          "figure": "A 'Safety Philosophy' poster (ozellar) with three colour-coded panels: Shared Responsibility, Company Safety Principles, and Consequences of Unsafe Acts.",
+          "image": "/slides/hsm/slide5.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l5",
+          "n": 5,
+          "orig": 6,
+          "chapterLabel": "Lesson 5",
+          "title": "Seafarers Are Our Strongest Assets",
+          "intro": "Illustrates how the DOC Holder manages ships across several functional areas, with manpower highlighted.",
+          "sections": [
+            {
+              "heading": "DOC Holder Manage Ships",
+              "items": [
+                "Technical",
+                "Systems",
+                "Common Marine Services",
+                "Provide Manpower"
+              ]
+            }
+          ],
+          "figure": "Diagram with the heading 'SEAFARERS ARE OUR STRONGEST ASSETS' showing a ship with an officer, above four pillars under 'DOC Holder Manage Ships': Technical, Systems, Common Marine Services, and Provide Manpower (the last outlined in a red dashed box).",
+          "image": "/slides/hsm/slide6.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l6",
+          "n": 6,
+          "orig": 7,
+          "chapterLabel": "Lesson 6",
+          "title": "Safety Culture - Chapter 1",
+          "intro": "Defines the four pillars of a strong safety culture on board.",
+          "sections": [
+            {
+              "heading": "Zero Tolerance",
+              "items": [
+                "No acceptance of hazardous unsafe practices",
+                "Unsafe practices or shortcuts",
+                "Non-compliance with safety procedures"
+              ]
+            },
+            {
+              "heading": "Proactive Approach",
+              "items": [
+                "Every crew member from Master to trainee - actively spot hazards and unsafe conditions",
+                "Report errors and near misses",
+                "Vessel management must be eliminated or mitigated"
+              ]
+            },
+            {
+              "heading": "Learning & Corrective Action",
+              "items": [
+                "Analyze safety reports and feedback",
+                "Draw intelligent conclusions",
+                "Implement corrective actions promptly",
+                "Encourage enthusiasm and commitment for an incident-free operation"
+              ]
+            },
+            {
+              "heading": "Compliance Culture",
+              "items": [
+                "Applies from Top Leadership to trainee onboard",
+                "No one in a responsible position may ignore safety procedures",
+                "Compliance culture means: doing the job properly; doing it safely the first time and every time; protecting your safety and your life's safety"
+              ]
+            }
+          ],
+          "figure": "A 'Safety Culture' poster (ozellar MARINE) with four colour-coded sections: Zero Tolerance, Proactive Approach, Learning & Corrective Action, and Compliance Culture.",
+          "image": "/slides/hsm/slide7.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l7",
+          "n": 7,
+          "orig": 8,
+          "chapterLabel": "Lesson 7",
+          "title": "Familiarization of Ship Staff",
+          "intro": "The four-section familiarization process for ship staff as per SAF-10 Booklet and SOLAS requirements.",
+          "sections": [
+            {
+              "heading": "Section A - Pre-Joining Briefing",
+              "items": [
+                "Conducted by Company / Manning Office",
+                "Covers familiarizations and objectives",
+                "Procedures, organization structure"
+              ]
+            },
+            {
+              "heading": "Section B - Onboard Safety Familiarization",
+              "items": [
+                "Timeline: Within 24 hours of joining or before voyage begins",
+                "Conducted by: Safety Officer or designate (3/O with 6+ months rank exp. OR 2/O)",
+                "Assisted by 2/E or designate (4/E with 6+ months rank exp. OR 3/E) for machinery spaces"
+              ]
+            },
+            {
+              "heading": "Section C - Detailed Onboard Safety (SOLAS Requirement)",
+              "items": [
+                "Timeline: Within 14 days of joining",
+                "Detailed safety training to be completed",
+                "On-signer signs by signing Section C"
+              ]
+            },
+            {
+              "heading": "Section D - Job Familiarization",
+              "items": [
+                "Conducted by outgoing person or higher rank officer",
+                "Must be completed before assuming responsibility",
+                "Responsibilities & Records"
+              ]
+            },
+            {
+              "heading": "General Requirements",
+              "items": [
+                "Each crew member must read, understand & sign each section",
+                "Submit to the Master/Chief Engineer for verification & signature",
+                "A copy of last page will be filed on bridge with 3/O for records"
+              ]
+            }
+          ],
+          "figure": "A 'Familiarization of Ship Staff' poster (ozellar MARINE) organized into Sections A-D with icons for each stage of the familiarization process.",
+          "image": "/slides/hsm/slide8.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l8",
+          "n": 8,
+          "orig": 9,
+          "chapterLabel": "Lesson 8",
+          "title": "SAIL - See, Act, Inform, Learn",
+          "intro": "The S.A.I.L. behavioural safety observation process of four steps: See, Act, Inform, Learn.",
+          "sections": [
+            {
+              "heading": "1. See (Observation)",
+              "items": [
+                "Stay alert. Spot unsafe acts, hazards, or good safety practices",
+                "If it doesn't look right or feel safe, investigate - trust your instincts"
+              ]
+            },
+            {
+              "heading": "2. Act (Intervention)",
+              "items": [
+                "Take immediate action to correct hazards or appreciate safe behavior",
+                "Intervene respectfully and stop work if danger is imminent - safety comes first"
+              ]
+            },
+            {
+              "heading": "3. Inform (Reporting)",
+              "items": [
+                "Report what you observed and did using the S.A.I.L. form",
+                "Timely, detailed reporting helps prevent incidents and improves fleet-wide safety",
+                "It's about learning, not blame"
+              ]
+            },
+            {
+              "heading": "4. Learn (Prevention)",
+              "items": [
+                "Analyze reports, fix root causes, and share lessons",
+                "Engage in toolbox talks and safety bulletins",
+                "What you do today can prevent tomorrow's accidents"
+              ]
+            }
+          ],
+          "figure": "An 'S.A.I.L. - See. Act. Inform. Learn.' poster with illustrated workers depicting each of the four steps.",
+          "image": "/slides/hsm/slide9.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l9",
+          "n": 9,
+          "orig": 10,
+          "chapterLabel": "Lesson 9",
+          "title": "Permit to Work (PTW) System",
+          "intro": "Explains the purpose, principles, authority, and compliance requirements of the Permit to Work system.",
+          "sections": [
+            {
+              "heading": "Purpose",
+              "items": [
+                "PTW is managed on board in a variety of ways",
+                "Ensures the safety section is to provide guidance on the Permit to Work (PTW) system",
+                "Permit to Work system is to be followed"
+              ]
+            },
+            {
+              "heading": "Key Principles",
+              "items": [
+                "Procedures must be fully completed without exception before a permit is issued",
+                "PTW applies to hazardous and critical work (hot work, enclosed space entry, working aloft, electrical isolation)",
+                "Ensures risks minimized and correctives clearly define responsibilities"
+              ]
+            },
+            {
+              "heading": "Authority & Responsibility",
+              "items": [
+                "Master is overall in charge of all PTW-controlled activities but may delegate the responsibility of issuing some permits",
+                "Shore / External Authorities: In repair yards or port limits, permits may be issued by local authority, chemist, or competent authorities or legislation or repair contract",
+                "However, safety precautions as per PTW must not be compromised if local standards are lower"
+              ]
+            },
+            {
+              "heading": "Compliance Requirement",
+              "items": [
+                "At all times (except when valid local permits apply), Company's PTW system must be used"
+              ]
+            }
+          ],
+          "figure": "A 'Permit to Work (PTW) System' poster (ozellar MARINE) with sections for Purpose, Key Principles, Authority & Responsibility, and Compliance Requirement.",
+          "image": "/slides/hsm/slide10.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l10",
+          "n": 10,
+          "orig": 11,
+          "chapterLabel": "Lesson 10",
+          "title": "PTW Colour Code - Chapter 2",
+          "intro": "Lists the 10 permits to work with their book numbers and maximum validity periods.",
+          "sections": [
+            {
+              "heading": "Colour Code for Permit to Work (Book No. / Permit Name / Maximum Validity Period)",
+              "items": [
+                "1 - Hot Work - 12 hours",
+                "2 - Enclosed Space Entry - 8 hours",
+                "3 - Working at Height / Overside - 12 hours",
+                "4 - Cold Work Permit - 12 hours",
+                "5 - Electrical Work Permit - 12 hours",
+                "6 - Underwater Operation Permit - 8 hours",
+                "7 - Elevator Maintenance Permit - 12 hours",
+                "8 - Work on deck in heavy Weather Permit - 4 hours",
+                "9 - Lifeboat/ Rescue Boat Waterborne and Hook Maintenance Permit - 12 hours",
+                "10 - Permit for pressure testing of pipeline - 12 hours"
+              ]
+            }
+          ],
+          "figure": "A table titled 'Colour Code for Permit to Work' with columns Book No., Permit Name, and Maximum Validity Period, listing 10 permits.",
+          "image": "/slides/hsm/slide11.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l11",
+          "n": 11,
+          "orig": 12,
+          "chapterLabel": "Lesson 11",
+          "title": "Personal Protective Clothing and Equipment - Chapter 3",
+          "intro": "Covers company and crew responsibilities for PPE and its use as the last line of defence (Appendix 3).",
+          "sections": [
+            {
+              "heading": "Company Responsibility",
+              "items": [
+                "Always use appropriate PPE for the task as instructed by Master / HOD",
+                "PPE check daily during Daily work plan meeting and Toolbox meeting",
+                "Failure to comply may lead to disciplinary action"
+              ]
+            },
+            {
+              "heading": "Crew Responsibility",
+              "items": [
+                "Always use appropriate PPE for the task as instructed by Master / HOD",
+                "PPE must be checked daily during Daily work plan",
+                "Keep PPE in good condition at all times"
+              ]
+            },
+            {
+              "heading": "PPE Use - Last Line of Defence",
+              "items": [
+                "PPE is the final barrier after all risk-mitigation measures",
+                "Note: PPE may introduce hazards - Reduced field of vision, Loss of dexterity, Restricted agility"
+              ]
+            },
+            {
+              "heading": "Selection of PPE (3,2)",
+              "items": [
+                "Conduct a Risk Assessment before starting any task",
+                "Refer to the PPE Matrix for task-specific requirements",
+                "Daily work plan + tool box talk confirm correct PPE",
+                "Special case: Thermal suits required for prolonged work"
+              ]
+            }
+          ],
+          "figure": "A 'Provision of Protective Clothing & Equipment' poster (ozellar MARINE) showing PPE icons and sections on Company Responsibility, Crew Responsibility, PPE Use - Last Line of Defence, and Selection of PPE. Slide text notes 'Appendix' (Appendix 3).",
+          "image": "/slides/hsm/slide12.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l12",
+          "n": 12,
+          "orig": 13,
+          "chapterLabel": "Lesson 12",
+          "title": "PPE Matrix (Work Related)",
+          "intro": "Appendix 03 personal protective equipment matrix mapping PPE requirements to work-related tasks.",
+          "sections": [
+            {
+              "heading": "PPE items",
+              "items": [
+                "Helmet, Safety Glasses, Safety Goggles, Dust mask, Ear Defender",
+                "Face protection - Visor (V), Welding shield (S), Splash Hood (H)",
+                "Welding Shield & Apron, Boiler suit, Chemical Apron/Suit",
+                "High visibility vest, Safety Shoes, Gloves (per Glove Poster)",
+                "Full Body Harness, Self-retractable reel, Elastic Twin Lanyard, Safety Line",
+                "Flotation aid (Lifevest or Lifejacket), Winter Jacket & Gloves",
+                "Personal Multi-gas meter, Apron/Chef's Hat/Winter suits"
+              ]
+            },
+            {
+              "heading": "Tasks covered",
+              "items": [
+                "On deck; heavy weather; cold weather; mooring; anchoring; crane ops; wire handling",
+                "Lifeboat operations/maintenance; working at ship side",
+                "Vertical ladders where fall > 1.5 m; work at height (bosun chair, staging)",
+                "Enclosed space entry/exit and static work at height",
+                "Rigging gangways/accommodation ladders; personnel transfer at sea (pilot ladder)",
+                "Descaling; painting"
+              ]
+            }
+          ],
+          "figure": "Colour-coded PPE matrix (Appendix 03): rows are work tasks, columns are PPE items; red cells = mandatory, yellow = conditional.",
+          "image": "/slides/hsm/slide13.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l13",
+          "n": 13,
+          "orig": 14,
+          "chapterLabel": "Lesson 13",
+          "title": "Isolation Procedure",
+          "intro": "Purpose, triggers and key principles for isolating hazardous energy before work.",
+          "sections": [
+            {
+              "heading": "Purpose",
+              "items": [
+                "Safeguard personnel from uncontrolled release of hazardous energy",
+                "Live energy: flowing/moving (live electrical circuit, fluid in pipeline)",
+                "Stored energy: restrained (compressed spring, static pressure, stored charge)",
+                "Uncontrolled release of hazardous substances (vapours, chemicals)"
+              ]
+            },
+            {
+              "heading": "When isolation is required",
+              "items": [
+                "Work on electrical systems where contact with live connections is possible (Electrical Work Permit required, incl. HV and elevator maintenance)",
+                "Systems where automatic, remote or inadvertent activation could cause injury",
+                "Work releasing liquids/vapours from lines or pressure systems (Cold Work Permit)",
+                "Work on pressurized systems (pneumatic, hydraulic)",
+                "Work where a windmilling hazard exists (fans/impellers)"
+              ]
+            },
+            {
+              "heading": "Key principles",
+              "items": [
+                "Isolation is part of the Permit to Work (PTW) system",
+                "Controls identified from the Risk Assessment must be implemented before work begins",
+                "All residual energy sources must be neutralized",
+                "Locks and tags must be placed and clearly identified in the permit"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide14.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l14",
+          "n": 14,
+          "orig": 15,
+          "chapterLabel": "Lesson 14",
+          "title": "LOTO - Lock Out Tag Out",
+          "intro": "Lock Out Tag Out purpose, kit custody, usage guidelines and best practices.",
+          "sections": [
+            {
+              "heading": "Purpose",
+              "items": [
+                "Locks and/or tags are used to secure and identify isolation points"
+              ]
+            },
+            {
+              "heading": "Custody & usage",
+              "items": [
+                "The person in charge of the job should carry out Lock Out and Tag Out",
+                "LOTO kit kept under custody of Chief Engineer/Chief Officer",
+                "Issued to the person in charge during the Toolbox meeting",
+                "All vessels must carry out LOTO kit training using provided materials"
+              ]
+            },
+            {
+              "heading": "Best practices",
+              "items": [
+                "Keep the tagged and locked system isolated until all work is complete",
+                "Never sign off locks or tags applied by others"
+              ]
+            },
+            {
+              "heading": "Six-step process",
+              "items": [
+                "Isolate",
+                "Lock",
+                "Tag",
+                "Verify",
+                "Work",
+                "Remove"
+              ]
+            }
+          ],
+          "figure": "Poster showing a LOTO kit (case, padlocks, hasps, tags) and a six-step icon flow.",
+          "image": "/slides/hsm/slide15.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l15",
+          "n": 15,
+          "orig": 16,
+          "chapterLabel": "Lesson 15",
+          "title": "Safety Officer - Role & Duties",
+          "intro": "Appointment and key duties of the shipboard Safety Officer.",
+          "sections": [
+            {
+              "heading": "Appointment",
+              "items": [
+                "Chief Engineer and Second Engineer act as Safety Officers on company-managed vessels"
+              ]
+            },
+            {
+              "heading": "Key duties",
+              "items": [
+                "Look for potential hazards and means of preventing incidents",
+                "Develop and sustain high safety consciousness among the crew",
+                "Stop unsafe practices, suggest improvements, escalate if necessary",
+                "Instruct joining seafarers in all relevant health & safety arrangements",
+                "Pair new entrants with a safety-conscious crew member",
+                "Remind experienced seamen of the importance of high safety standards",
+                "Promote safety by distributing booklets, notices and learning materials",
+                "Investigate notifiable accidents or dangerous occurrences onboard"
+              ]
+            },
+            {
+              "heading": "Note",
+              "items": [
+                "The Safety Officer is the Master's key partner in ensuring zero harm and a strong safety culture."
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide16.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l16",
+          "n": 16,
+          "orig": 17,
+          "chapterLabel": "Lesson 16",
+          "title": "Safety Officer's Inspection Flow",
+          "intro": "Step-by-step flow of the Safety Officer's periodic inspection process.",
+          "sections": [
+            {
+              "heading": "Inspection flow",
+              "items": [
+                "Plan inspection - start of quarter, using SAF 11 A/B/C checklists",
+                "Conduct area checks - accommodation, deck, engine room, others",
+                "Record findings - use checklist, note hazards",
+                "Discuss in safety meeting - present to Master & Safety Committee",
+                "Submit to office - Superintendent's review",
+                "Follow-up in SCMM - record and track corrective actions"
+              ]
+            },
+            {
+              "heading": "Note",
+              "items": [
+                "Effective inspections are the foundation of a safer ship."
+              ]
+            }
+          ],
+          "figure": "Vertical flowchart connecting six inspection steps from Plan Inspection to Follow-up in SCMM.",
+          "image": "/slides/hsm/slide17.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l17",
+          "n": 17,
+          "orig": 18,
+          "chapterLabel": "Lesson 17",
+          "title": "Safety Meeting",
+          "intro": "Requirements for convening, conducting and recording shipboard safety meetings.",
+          "sections": [
+            {
+              "heading": "Convening",
+              "items": [
+                "Master shall convene the safety meeting at least once a month",
+                "All ship staff except watchkeepers should attend",
+                "Ideally conducted close to the end of the month"
+              ]
+            },
+            {
+              "heading": "Superintendent presence",
+              "items": [
+                "A safety meeting shall be conducted in the presence of a superintendent during his visit onboard"
+              ]
+            },
+            {
+              "heading": "Recording minutes",
+              "items": [
+                "Minutes recorded in the 'Safety meeting minutes' form",
+                "Attendees identified in the minutes",
+                "Minutes sent to office by email"
+              ]
+            },
+            {
+              "heading": "Review",
+              "items": [
+                "Review comments sent to the vessel within 1 week of submission"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide18.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l18",
+          "n": 18,
+          "orig": 19,
+          "chapterLabel": "Lesson 18",
+          "title": "Onboard Safety Day",
+          "intro": "Purpose, objectives and agenda for the monthly onboard Safety Day.",
+          "sections": [
+            {
+              "heading": "Purpose",
+              "items": [
+                "Once a month all seafarers participate in a 'Safety Day' to reinforce ownership of safety and a culture of awareness, responsibility and teamwork"
+              ]
+            },
+            {
+              "heading": "Objectives",
+              "items": [
+                "Participation of all crew members",
+                "Training & mentoring - senior officers guide juniors",
+                "Hands-on training - juniors inspect critical safety items",
+                "Open reporting culture - free reporting of hazards",
+                "Responsibility & ownership - junior ranks develop safety leadership"
+              ]
+            },
+            {
+              "heading": "Agenda",
+              "items": [
+                "Opening meeting - Master briefs crew; C/E & C/O present the plan",
+                "Incident review - discuss incidents since last Safety Day",
+                "Hazard identification - group discussions",
+                "PPE inspection - boiler suits, safety shoes, goggles, gloves, harness, fall arrestors, LOTO kits, HV equipment, work vests",
+                "Corrective actions - discuss findings and assign"
+              ]
+            },
+            {
+              "heading": "Note",
+              "items": [
+                "Safety Day is about building responsibility, awareness and ownership - not just a drill."
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide19.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l19",
+          "n": 19,
+          "orig": 20,
+          "chapterLabel": "Lesson 19",
+          "title": "Safety Committee",
+          "intro": "Composition, Safety Representative election and support for the shipboard Safety Committee.",
+          "sections": [
+            {
+              "heading": "Composition",
+              "items": [
+                "In addition to the Master: Chief Engineer, Chief Officer, 2nd Engineer, Bosun, Cook, Engine Room Rating, Deck Department Rating",
+                "Updated list of members must be displayed on the common noticeboard"
+              ]
+            },
+            {
+              "heading": "Safety Representative (SR)",
+              "items": [
+                "Elected from the crew during the monthly Safety Committee meeting",
+                "Election presided by the Master through informal voting",
+                "Tenure 1 month, extendable; give as many crew as possible the opportunity",
+                "Danish-flag vessels: SR remains until end of service onboard",
+                "Eligibility: at least 6 months' experience on that vessel type"
+              ]
+            },
+            {
+              "heading": "Role & support",
+              "items": [
+                "The Safety Representative receives full cooperation from the Shipboard Management Team"
+              ]
+            },
+            {
+              "heading": "Note",
+              "items": [
+                "The Safety Committee ensures participation, representation and shared responsibility for safety."
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide20.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l20",
+          "n": 20,
+          "orig": 21,
+          "chapterLabel": "Lesson 20",
+          "title": "Daily Work Plan Meeting",
+          "intro": "Purpose and flow of the vessel's daily work planning meeting.",
+          "sections": [
+            {
+              "heading": "Purpose",
+              "items": [
+                "Management team (Master, C/O, C/E, 2/E) conducts a daily planning meeting to:",
+                "Plan and allocate the next day's work",
+                "Discuss ship operations, maintenance & contractor tasks",
+                "Review resources, risks and safety measures"
+              ]
+            },
+            {
+              "heading": "Flow",
+              "items": [
+                "Collect the tasks - mandatory: Master, C/O, C/E, 2/E, E/O",
+                "Officers list their own tasks; additional crew as required",
+                "Identify resources, challenges, risks; finalize tasks for next day",
+                "Crew informed of tasks; copy of task list posted in crew mess",
+                "Contractor tasks discussed with the responsible officer",
+                "Record in ADM-19 Daily Work Planner (available on Bridge & ECR)"
+              ]
+            },
+            {
+              "heading": "Note",
+              "items": [
+                "A well-planned day improves efficiency, reduces risk and ensures teamwork."
+              ]
+            }
+          ],
+          "figure": "Flow diagram: Collect the Task leading to Task List Final.",
+          "image": "/slides/hsm/slide21.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l21",
+          "n": 21,
+          "orig": 22,
+          "chapterLabel": "Lesson 21",
+          "title": "Single-Person Job Guidelines",
+          "intro": "Definition, safety measures and restrictions for single-person (working-alone) jobs.",
+          "sections": [
+            {
+              "heading": "Definition",
+              "items": [
+                "A single-person job is one done alone, without being seen or heard by others",
+                "Risk depends on the location and nature of the task"
+              ]
+            },
+            {
+              "heading": "Safety measures",
+              "items": [
+                "Limit single-person jobs - team leaders & HODs must plan to avoid them where possible",
+                "Pre-planning - discuss intended solo tasks in departmental & daily meetings",
+                "Training - team leaders must train crew on the hazards of single-person jobs",
+                "Communication - must have a reliable way to raise the alarm or contact help immediately"
+              ]
+            },
+            {
+              "heading": "Restrictions",
+              "items": [
+                "Contractors not allowed as single-person job unless a Risk Assessment is completed and the Master authorizes it",
+                "Enclosed space entry as a single-person job is prohibited"
+              ]
+            },
+            {
+              "heading": "Note",
+              "items": [
+                "Working alone increases risk - plan, inform and stay connected."
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide22.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l22",
+          "n": 22,
+          "orig": 23,
+          "chapterLabel": "Lesson 22",
+          "title": "Smoking Policy Onboard",
+          "intro": "Fire risk, designated and prohibited smoking areas, and special instructions.",
+          "sections": [
+            {
+              "heading": "Fire risk",
+              "items": [
+                "Fire is a major hazard onboard; strict compliance with smoking rules is essential",
+                "Secret smoking is highly dangerous - risk of flammable gases in toilets, lockers or ventilation"
+              ]
+            },
+            {
+              "heading": "Designated smoking areas",
+              "items": [
+                "Officer Smoke Room and Crew Smoke Room",
+                "Controlled smoking is less risky than secret smoking - follow the rules"
+              ]
+            },
+            {
+              "heading": "Prohibited areas",
+              "items": [
+                "Navigation Bridge and Engine Control Room (ECR)",
+                "Cabins/bed, and any area during cargo/flammable operations"
+              ]
+            },
+            {
+              "heading": "Special instructions",
+              "items": [
+                "Master must ensure no smoking in wheelhouse or ECR if any duty team member objects to passive smoking",
+                "Pilots may smoke on the bridge at sea only if no flammable cargo operations and no purging/inerting/gas-freeing in progress"
+              ]
+            }
+          ],
+          "figure": "Poster with no-smoking symbol and warning icons.",
+          "image": "/slides/hsm/slide23.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l23",
+          "n": 23,
+          "orig": 24,
+          "chapterLabel": "Lesson 23",
+          "title": "OH&S Risk Assessment - Scope & Roles",
+          "intro": "Scope and responsibilities for occupational health & safety risk assessment.",
+          "sections": [
+            {
+              "heading": "Scope",
+              "items": [
+                "Applies to routine & non-routine activities onboard",
+                "All employees, suppliers, sub-contractors and visitors",
+                "Company office activities linked to ship operations"
+              ]
+            },
+            {
+              "heading": "Management Representative (Office)",
+              "items": [
+                "Convene & coordinate qualified personnel for hazard identification and risk assessment",
+                "Present findings in management review meetings",
+                "Review and evaluate the effectiveness of risk controls"
+              ]
+            },
+            {
+              "heading": "Master (Onboard)",
+              "items": [
+                "Implement control measures for risk mitigation",
+                "Notify office of new hazards, control measures and best practices"
+              ]
+            },
+            {
+              "heading": "Note",
+              "items": [
+                "Risk assessment is a continuous process of identifying, controlling and improving safety."
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide24.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l24",
+          "n": 24,
+          "orig": 25,
+          "chapterLabel": "Lesson 24",
+          "title": "Occupational Health & Safety Risk Assessment",
+          "intro": "Risk assessment is a continuous process of identifying, controlling, and improving safety.",
+          "sections": [
+            {
+              "heading": "7.1 Scope",
+              "items": [
+                "Routine & non-routine activities onboard vessels, and non-routine activities",
+                "All routine & non-routine activities",
+                "Facilities onboard, activities of contractors, ship companies & maintenance (subvisitors), and ancillary meetings",
+                "Company office activities linked to ship operations"
+              ]
+            },
+            {
+              "heading": "7.1.1 Responsibilities - Management Representative (Office)",
+              "items": [
+                "Convene & coordinate qualified personnel to do hazard identification and risk assessment",
+                "Ensure six-monthly review of all risk assessments",
+                "Present findings in Management Review Meetings"
+              ]
+            },
+            {
+              "heading": "7.1.1 Responsibilities - Master (Onboard)",
+              "items": [
+                "Implement control measures for risk mitigation",
+                "Identify and report on-going hazards",
+                "Review and evaluate effectiveness of risk controls",
+                "Update onboard risk assessments",
+                "Notify office of new hazards and control measures"
+              ]
+            },
+            {
+              "heading": "Hazards List - Key Questions for Hazard Identification",
+              "items": [
+                "Is there a source of harm?",
+                "Who (or what) could be harmed?",
+                "How could the harm occur?"
+              ]
+            },
+            {
+              "heading": "Main Categories of Hazards - Unsafe Acts",
+              "items": [
+                "Not following procedures",
+                "Improper lifting or handling",
+                "Bypassing safety devices"
+              ]
+            },
+            {
+              "heading": "Unsafe Conditions",
+              "items": [
+                "Slippery or cluttered decks",
+                "Defective or poorly maintained equipment",
+                "Poor lighting or ventilation"
+              ]
+            },
+            {
+              "heading": "Human Factors",
+              "items": [
+                "Fatigue, stress, or complacency",
+                "Lack of training/experience",
+                "Lack of training/experience",
+                "Miscommunication or language barriers"
+              ]
+            },
+            {
+              "heading": "Job Factors",
+              "items": [
+                "Inadequate planning",
+                "Insufficient supervision",
+                "High workload or time pressure"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide25.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l25",
+          "n": 25,
+          "orig": 26,
+          "chapterLabel": "Lesson 25",
+          "title": "Handling & Storage of Chemicals",
+          "intro": "Respect chemicals: read the MSDS, use PPE, and act fast in emergencies.",
+          "sections": [
+            {
+              "heading": "General Guidelines (8A.1.1)",
+              "items": [
+                "Chemicals (caustics and acids) require special attention when storing, handling and using because they cause injury",
+                "MSDS must be available for chemicals; assess the risks",
+                "Prior to supply on board, crew must be briefed with handling precautions and equipment",
+                "Storage and handling locations must be equipped accordingly"
+              ]
+            },
+            {
+              "heading": "Chemical Handling Precautions (8A.1.2)",
+              "items": [
+                "Always refer to MSDS and follow label directions.",
+                "Do not remove or damage labels - keep them attached to job.",
+                "Use eye and face protection; must have means to establish contact or raise alarm immediately if required.",
+                "Protect hands by use of a full boiler suit (sleeves and legs) and proper boots.",
+                "In case of chemical contact with body/eyes."
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide26.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l26",
+          "n": 26,
+          "orig": 27,
+          "chapterLabel": "Lesson 26",
+          "title": "Storage of Batteries and Paints",
+          "intro": "Safe storage, handling, and disposal of batteries prevents accidents and protects the environment.",
+          "sections": [
+            {
+              "heading": "Storage of Batteries (8B) - General Requirements",
+              "items": [
+                "Secure fastening - Batteries must be properly fixed to prevent shifting in heavy weather.",
+                "Upright storage - Always store & transport upright to prevent electrolyte spillage.",
+                "Follow manufacturer's instructions unless company directs otherwise.",
+                "Battery compartments: Only for battery-related gear; vent openings must be clearly marked: \"Do not close except in emergency\"",
+                "Disposal: Never dispose at sea; land to authorized contractors for safe disposal",
+                "Do not incinerate used batteries",
+                "Damaged/non-rechargeable batteries → Do not attempt recharging."
+              ]
+            },
+            {
+              "heading": "8B.2 Personal Safety",
+              "items": [
+                "Tankers: Do not change batteries (lifebuoy lights, flashlights, walkie-talkies, gas detectors) in hazardous/open deck areas. Perform in safe locations (inside accommodation)."
+              ]
+            },
+            {
+              "heading": "Storage of Paints",
+              "items": [
+                "As per SOLAS II-2, Part C regulation 10 Section 6.3, all paint, thinners and associated cleaners and hardeners should be stowed in storage locations protected by fixed fire extinguishing arrangements approved by the administration.",
+                "Paint Store to have a file containing updated MSDS for all chemicals (ISGOTT 13.2.3.).",
+                "Storing of paints should be ventilated during and safety goggles for eye protection.",
+                "Drums must be orderly stacked in the Paint Store, and not kept haphazardly. The stack height should be below the sprinkler heads.",
+                "Paints in use at any place onboard must be returned to Paint Store when not in use.",
+                "Avoid storing thinners in water bottle or any other bottle which can be misunderstood as drinking water.",
+                "Updated inventory to be maintained",
+                "All opened/in-use drums inside Paint Store always be covered with their lids",
+                "Regular and thorough safety inspections to be carried out"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide27.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l27",
+          "n": 27,
+          "orig": 28,
+          "chapterLabel": "Lesson 27",
+          "title": "Chapter 8 Topics",
+          "intro": "",
+          "sections": [
+            {
+              "heading": "",
+              "items": [
+                "Lub oil storage and handling",
+                "Caustic soda handling"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide28.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l28",
+          "n": 28,
+          "orig": 29,
+          "chapterLabel": "Lesson 28",
+          "title": "Fatigue Management",
+          "intro": "IMO defines fatigue as a reduction in physical and/or mental capability from exertion.",
+          "sections": [
+            {
+              "heading": "Fatigue - IMO Definition",
+              "items": [
+                "A reduction in physical and/or mental capability as a result of physical, mental or emotional exertion which may impair nearly all physical abilities including strength, speed, reaction making or coordination, decision making or balance."
+              ]
+            },
+            {
+              "heading": "Causes of Fatigue - Sleep & Rest",
+              "items": [
+                "Shortage of sleep",
+                "Poor sleep quality",
+                "Insufficient rest periods between duty cycles"
+              ]
+            },
+            {
+              "heading": "Psychological / Emotional",
+              "items": [
+                "Monotony & boredom",
+                "Stress & interpersonal conflicts",
+                "Emotional strain from prolonged voyages"
+              ]
+            },
+            {
+              "heading": "Workload Factors",
+              "items": [
+                "Excessive paperwork",
+                "Work beyond normal hours (overtime, night shifts)",
+                "Boring, repetitive jobs"
+              ]
+            },
+            {
+              "heading": "Voyage & Scheduling",
+              "items": [
+                "Frequent port turnarounds",
+                "Irregular schedules & watchkeeping patterns"
+              ]
+            },
+            {
+              "heading": "Health & Lifestyle",
+              "items": [
+                "Alcohol & caffeine misuse",
+                "Poor diet and irregular eating habits"
+              ]
+            },
+            {
+              "heading": "Port Duty Demands",
+              "items": [
+                "Heavy workload during cargo ops",
+                "Limited or no shore leave"
+              ]
+            },
+            {
+              "heading": "How to Prevent Fatigue Onboard - Sleep (The Most Effective Strategy)",
+              "items": [
+                "Duration: 7-8 hours per 24 hours (minimum 6 hours continuous)",
+                "Continuity: At least 6 hours in one stretch",
+                "Quality: Deep, aligned with biological clock",
+                "Maintain pre-sleep routine (warm shower, reading, calming activities)",
+                "Ensure dark, quiet, cool, comfortable environment",
+                "Light meal before bed: avoid heavy food",
+                "Avoid stimulants: tea, coffee, colas, chocolate, alcohol-based meds (esp. 6 hours prior)",
+                "Use relaxation (yoga, meditation)"
+              ]
+            },
+            {
+              "heading": "Rest (Apart from Sleep)",
+              "items": [
+                "Breaks and activity changes to reduce strain",
+                "Rest requirement depends on: length and intensity of work before break",
+                "Duration of change of activity"
+              ]
+            },
+            {
+              "heading": "Guidelines for Maintaining Performance",
+              "items": [
+                "Get enough sleep before long duty/voyage",
+                "Ensure continuous sleep cycles, good sleep discipline"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide29.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l29",
+          "n": 29,
+          "orig": 30,
+          "chapterLabel": "Lesson 29",
+          "title": "Practical Steps to Reduce Fatigue",
+          "intro": "Practical short-term and long-term measures, plus digital wellness, to reduce fatigue onboard.",
+          "sections": [
+            {
+              "heading": "Temporary Relief From Fatigue",
+              "items": [
+                "Allow the crew member to take a break.",
+                "Drink lots of water. Avoid caffeine.",
+                "Have a strategic nap.",
+                "Rotate the crew member to a low-risk task.",
+                "Drink lots of water.",
+                "Consider if the task can be delayed."
+              ]
+            },
+            {
+              "heading": "Long-Term Relief From Fatigue",
+              "items": [
+                "Keep duty schedules under review.",
+                "Provide compensatory rest if needed.",
+                "Discuss fatigue during safety meetings.",
+                "Encourage open reporting of fatigue symptoms.",
+                "Schedule drills and maintenance to minimize sleep disturbance.",
+                "Develop a watchkeeping schedule for proper rest hours.",
+                "Rotate duties to balance workloads.",
+                "Transfer duties if needed during extended operations.",
+                "Maintain good shipboard living conditions.",
+                "Encourage relaxation techniques on leave."
+              ]
+            },
+            {
+              "heading": "Digital Wellness & Fatigue Management - Responsible Digital Device Usage",
+              "items": [
+                "Limit mobile phone and laptop use at least 1 hour before bedtime",
+                "Use blue light filtering settings or apps during evening hours",
+                "Avoid high-stimulation content (social media, work emails, news) before sleep",
+                "Follow the 20-20-20 rule to reduce eye strain during prolonged screen use"
+              ]
+            },
+            {
+              "heading": "Sleep Hygiene and Technology",
+              "items": [
+                "Keep digital devices away from bed or in airplane mode during rest periods",
+                "Use do not disturb settings to prevent notifications interrupting sleep",
+                "Dim cabin lights or use warm-toned lighting during the evening",
+                "Establish a consistent pre-sleep routine that minimizes digital interaction"
+              ]
+            },
+            {
+              "heading": "Digital Addiction Awareness",
+              "items": [
+                "Monitor screen time and recognize signs of over-dependence"
+              ]
+            },
+            {
+              "heading": "Digital Ergonomics",
+              "items": [
+                "Position screens at eye level to prevent neck and back strain"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide30.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l30",
+          "n": 30,
+          "orig": 31,
+          "chapterLabel": "Lesson 30",
+          "title": "Rest Hour Compliance and Work/Rest Hours",
+          "intro": "Always log hours honestly - PSC & flag checks will verify compliance.",
+          "sections": [
+            {
+              "heading": "Key Statutory References",
+              "items": [
+                "STCW, ILO, MLC - International standards",
+                "OPA 90 (US waters, tankers) - Max 36 hrs work/72 hrs",
+                "Flag State Rules - Apply if stricter than STCW"
+              ]
+            },
+            {
+              "heading": "What Counts as Work Hours",
+              "items": [
+                "On-call disturbance (UMS alarms, emergencies) → Adequate rest must follow",
+                "Master's Overriding Authority → May suspend rest hours to ensure: Safety of ship, crew, cargo; Assistance to ships/persons in distress; Must provide compensatory rest as soon as practicable"
+              ]
+            },
+            {
+              "heading": "Risk Assessment & Manning",
+              "items": [
+                "Persistent rest hour breaches → Risk assessment required",
+                "Review Safe Manning Document with company & flag state if needed"
+              ]
+            },
+            {
+              "heading": "Shore Leave & Joining Crew",
+              "items": [
+                "Returning crew → must be rested before duty",
+                "Always log hours accurately in work/rest software - records must withstand PSC, vetting, and flag inspections"
+              ]
+            },
+            {
+              "heading": "Work / Rest Hours - General Guidance: Any 24 Hours Rule",
+              "items": [
+                "Minimum 10 hrs rest in any 24 hrs",
+                "Divided into no more than 2 periods"
+              ]
+            },
+            {
+              "heading": "Non-Conformances",
+              "items": [
+                "Musters & drills - schedule to minimize rest disruption; properly record"
+              ]
+            },
+            {
+              "heading": "Compensatory Rest",
+              "items": [
+                "If rest interrupted (UMS alarms, call-outs)",
+                "Provide compensatory rest before next duty"
+              ]
+            },
+            {
+              "heading": "Record Keeping",
+              "items": [
+                "Rest hour records must be: Signed by seafarer & Master",
+                "Retained for service period or 12 months"
+              ]
+            },
+            {
+              "heading": "Exceptions",
+              "items": [
+                "Allowed only under ILO/MLC provisions",
+                "Emergencies override rest hour rules",
+                "STCW 2010 - \"2 day derogation\" no longer allowed"
+              ]
+            },
+            {
+              "heading": "OPA 90 Tanker Rule",
+              "items": [
+                "Max 36 hrs work in any 72 hr"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide31.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l31",
+          "n": 31,
+          "orig": 32,
+          "chapterLabel": "Lesson 31",
+          "title": "Food and Fresh Water Hygiene",
+          "intro": "Good food, clean water, and hygiene = healthy crew, safe ship.",
+          "sections": [
+            {
+              "heading": "Food & Hygiene - Master's Responsibility",
+              "items": [
+                "Overall control of catering arrangements",
+                "May delegate duties to a designated officer",
+                "Ensure food & water are nutritious, safe, varied, and culturally appropriate"
+              ]
+            },
+            {
+              "heading": "Menu & Records",
+              "items": [
+                "Daily menu prepared & displayed in mess room",
+                "Menu records kept for 1 year",
+                "Food & drinking water supplied free of charge"
+              ]
+            },
+            {
+              "heading": "Hygiene & Inspections",
+              "items": [
+                "Accommodation must be clean, habitable, and maintained",
+                "Master to carry out weekly (7-day) hygiene inspections covering: Crew accommodation recreational areas; Food and water storage spaces; Galley & catering equipment"
+              ]
+            },
+            {
+              "heading": "Water Loading & Supply Hygiene Checklist - Hoses",
+              "items": [
+                "Use only designated freshwater hoses",
+                "Marked BLUE",
+                "Drain & cap both ends after use",
+                "Stow in locker clear of deck",
+                "Flush & discharge to waste before loading"
+              ]
+            },
+            {
+              "heading": "Quality Check",
+              "items": [
+                "Verify source is reliable before loading",
+                "Avoid intake at ports with water-borne disease outbreak",
+                "If in doubt → follow Ship Captain's Medical Guide sanitation steps"
+              ]
+            },
+            {
+              "heading": "Treatment & Inspection",
+              "items": [
+                "FWG water must pass through mineralizer",
+                "If no mineralizer → top-up from shore at planned intervals",
+                "Master to confirm UV treatment working weekly",
+                "Provide mineral water in bonded stores",
+                "Use portable water purifier if fitted"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide32.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l32",
+          "n": 32,
+          "orig": 33,
+          "chapterLabel": "Lesson 32",
+          "title": "Pest Control Onboard",
+          "intro": "Any food suspected of contamination by rodents, flies, or cockroaches must be destroyed.",
+          "sections": [
+            {
+              "heading": "Good Housekeeping",
+              "items": [
+                "Keep refuse areas clean & tidy",
+                "Waste bins: emptied regularly, lids fitted, washed after emptying"
+              ]
+            },
+            {
+              "heading": "Health Hazards",
+              "items": [
+                "Flies, cockroaches & rodents = serious hazard",
+                "Any food suspected of contamination → destroy immediately"
+              ]
+            },
+            {
+              "heading": "Inspections & Records",
+              "items": [
+                "Responsible crew to carry out routine inspections",
+                "Log all findings in Pest Control Book"
+              ]
+            },
+            {
+              "heading": "Safe Use of Pesticides",
+              "items": [
+                "Use only treatments compliant with: \"Recommendations on the Safe Use of Pesticides in Ships\"",
+                "Store pesticides safely & handle with care"
+              ]
+            },
+            {
+              "heading": "Vector Management Plan",
+              "items": [
+                "Mandatory on every vessel",
+                "Goal: Prevent carrier-borne diseases onboard"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide33.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l33",
+          "n": 33,
+          "orig": 34,
+          "chapterLabel": "Lesson 33",
+          "title": "Health Surveillance and Physical Fitness",
+          "intro": "Health surveillance detects early ill health, while physical fitness improves during rest, not exercise.",
+          "sections": [
+            {
+              "heading": "Health Surveillance Onboard (Purpose & Application - Sec 11A.1/1A.2) - Purpose",
+              "items": [
+                "Detect early signs of ill health caused by occupational hazards",
+                "Take action before serious harm occurs",
+                "Support risk assessment & safety measures"
+              ]
+            },
+            {
+              "heading": "Benefits",
+              "items": [
+                "Checking effectiveness of same controls",
+                "Providing feedback on risk assessments",
+                "Identifies crew at higher risk (spirometry)",
+                "Establishes baseline health records at pre-employment"
+              ]
+            },
+            {
+              "heading": "Application",
+              "items": [
+                "Required when crew exposed to hazardous substances",
+                "Applies to Engineers, fitters, tank cleaners, galley stair staff",
+                "Incorporated into Safety Management System (ISM)",
+                "Must comply with MLC 2006 & Flag State rules",
+                "Remember: Health surveillance is NOT a substitute for hazard control. It is an early warning system, not a replacement for PPE or safe practices.",
+                "Warning: Any abnormal finding during health surveillance must be reported immediately and followed up with corrective action."
+              ]
+            },
+            {
+              "heading": "Physical Fitness & Training for Seafarers - Walking",
+              "items": [
+                "20-30 min after meals",
+                "10,000 steps/day",
+                "Safety: Inform bridge watchkeeper, wear PPE"
+              ]
+            },
+            {
+              "heading": "Skipping",
+              "items": [
+                "Stand upright, feet apart",
+                "Lift heel backward to touch bottom",
+                "Alternate feet repeat"
+              ]
+            },
+            {
+              "heading": "Yoga",
+              "items": [
+                "Improves posture, alignment, balance"
+              ]
+            },
+            {
+              "heading": "Benefits",
+              "items": [
+                "Improved stamina and suppleness",
+                "Reduced stress and better balance",
+                "Digestion",
+                "Weight control and stabilized blood sugar",
+                "Improved sleep, concentration, and self-confidence",
+                "Stronger bones and muscles, less risk of injury",
+                "Stabilized blood pressure (not during exercise), lowered cardiovascular disease risk",
+                "Fitness improves during rest, not during exercise. Avoid overstrain to prevent injuries."
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide34.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l34",
+          "n": 34,
+          "orig": 35,
+          "chapterLabel": "Lesson 34",
+          "title": "Mental Health and Psychological Issues",
+          "intro": "Mental health and wellbeing is a priority; recognize early signs and support each other.",
+          "sections": [
+            {
+              "heading": "Mental Health - Purpose",
+              "items": [
+                "Mental Health and wellbeing will be our utmost priority. The aim is to ensure a psychologically safe, healthy, and resilient work environment.",
+                "Mental well-being is essential for building a sustainable, productive, and harmonious workplace. By taking a holistic approach, the aim is to support all stakeholders and foster an environment that promotes overall well-being."
+              ]
+            },
+            {
+              "heading": "Key Approaches",
+              "items": [
+                "Fostering Psychological Safety: Embedding mental health into company policies and practices, creating an environment where seafarers feel valued and supported.",
+                "Empowering Through Training: Conduct regular mental health training programs to help seafarers recognize and address early signs of psychological distress.",
+                "Inclusive Mental Health Services: Ensure 24/7 access to counselling support and onboard mental health resources for seafarers, shore-based employees, and their families.",
+                "Provide Post-Incident Emotional Support: Offer structured care to help seafarers recover emotionally and maintain productivity after critical incidents.",
+                "Remember: Speak up. Seeking help is a sign of strength, not weakness."
+              ]
+            },
+            {
+              "heading": "Common Psychological Issues - Signs & Symptoms: Stress",
+              "items": [
+                "Physical: Fatigue, trouble sleeping, headaches; High blood pressure; Digestive issues; weakened immunity and body aches",
+                "Psychological: Irritability, difficulty concentrating; Feeling overwhelmed, sadness; Sudden anger outbursts"
+              ]
+            },
+            {
+              "heading": "Anxiety",
+              "items": [
+                "Physical: Rapid heartbeat; sweating; trembling; Muscle tension; Digestive discomfort",
+                "Psychological: Excessive worry; Restlessness; Irritability",
+                "Avoiding things seen as threats, over-preparing, withdrawing socially, or engaging in compulsive actions"
+              ]
+            },
+            {
+              "heading": "Depression",
+              "items": [
+                "Physical: Chronic fatigue; Appetite or sleep changes; Unexplained aches; Slowed movements or speech",
+                "Behavioural: Substance overuse, feelings of self-care/sleeping patterns; Social withdrawal or delayed task completion"
+              ]
+            },
+            {
+              "heading": "Suicide",
+              "items": [
+                "Emotional: Hopelessness, despair; Feelings of being a burden; Loss of purpose",
+                "Physical: Neglecting hygiene; Fatigue; Changes in sleeping patterns",
+                "Warning signs: Emotive; Talking about death; withdrawing from others; risky actions; giving away belongings or sudden mood changes"
+              ]
+            },
+            {
+              "heading": "Key Message",
+              "items": [
+                "Recognize early signs. Support each other. Seeking help is strength, not weakness."
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide35.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l35",
+          "n": 35,
+          "orig": 36,
+          "chapterLabel": "Lesson 35",
+          "title": "Psychological Safety and Self-Care Onboard",
+          "intro": "Psychological safety keeps crew healthy, united, and mission-ready.",
+          "sections": [
+            {
+              "heading": "Psychological Safety",
+              "items": [
+                "Prolonged isolation, heavy workloads, and limited support systems can lead to loneliness, fatigue, and reluctance to seek help. Addressing these challenges is crucial for maintaining mental health and operational efficiency.",
+                "Open Communication: Encourage regular sharing of concerns through casual conversations or anonymous feedback, ensuring a judgement-free environment.",
+                "Supportive Leadership: Train leaders to recognize signs of stress and provide empathetic support, including basic psychological first aid.",
+                "Confidentiality: Establish clear policies to ensure mental health discussions remain private, building trust within the team.",
+                "Wellness Check-Ins: Simple, informal check-ins can help identify early signs of distress and enable timely support.",
+                "Stigma-Free Culture: Conduct awareness activities like storytelling or myth-busting sessions to normalize discussions about mental health."
+              ]
+            },
+            {
+              "heading": "Self-Care Onboard - Crew Wellbeing: Physical",
+              "items": [
+                "10-min Stretch & Energize (shoulder, neck, leg, wrist)",
+                "Fitness Ladder → 10 push-ups, 15 squats, 20 step-ups"
+              ]
+            },
+            {
+              "heading": "Emotional",
+              "items": [
+                "Gratitude Postcards → weekly thank-you notes to crew",
+                "Story Circle Night → share funny or inspiring stories"
+              ]
+            },
+            {
+              "heading": "Psychological",
+              "items": [
+                "Cognitive Reframing → change negative thoughts into positive steps"
+              ]
+            },
+            {
+              "heading": "Team Activity",
+              "items": [
+                "Use downtime - music, games",
+                "Rotate leadership",
+                "Use simple resources",
+                "Keep flexible & inclusive"
+              ]
+            },
+            {
+              "heading": "Remember",
+              "items": [
+                "Self-care = safer ships, healthier crews, stronger teams"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide36.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l36",
+          "n": 36,
+          "orig": 37,
+          "chapterLabel": "Lesson 36",
+          "title": "OHSAS: Crew Health Hazards and Wellbeing",
+          "intro": "Crew health hazards, controls, and wellbeing covering dermatitis, heat illness and ergonomics.",
+          "sections": [
+            {
+              "heading": "Vibration (HAVS / CTS / Whole body vib)",
+              "items": [
+                "Tingling, numbness",
+                "Loss of grip strength",
+                "Fingers blanching in cold",
+                "Control: Reduce exposure hours",
+                "Control: Anti-vibration handles, low grip strength",
+                "Back pain"
+              ]
+            },
+            {
+              "heading": "Noise (Temporary & Permanent Hearing Loss)",
+              "items": [
+                "Tinnitus (buzzing, ringing)",
+                "Gradual deafness, sudden loss from loud blasts",
+                "Control: Soundproofing, tool maintenance",
+                "Control: Noise reduction methods",
+                "Control: Ear protection, reduced exposure"
+              ]
+            },
+            {
+              "heading": "Hazardous Substances (Chemicals, Carcinogens, Mutagens)",
+              "items": [
+                "Benzene (toxic, long-term cancer risk, TLV TWA 1 ppm)",
+                "Hydrogen Sulphide (H2S) deadly at > 10 ppm, unconscious at 100 ppm",
+                "Mercaptans toxic odour gases",
+                "Dusts, solvents, residues",
+                "Cargo vapours",
+                "MSDS use, ventilation, hygiene, substitution, enclosed handling, PPE; safe storage",
+                "Rack storage"
+              ]
+            },
+            {
+              "heading": "Oxygen Deficiency",
+              "items": [
+                "Normal = 21%",
+                "Impairment < 80%",
+                "Immediate collapse & death",
+                "Control: Test before entry, alarms at 19.5",
+                "Control: Avoid disturbing materials",
+                "Control: Double-bag disposal"
+              ]
+            },
+            {
+              "heading": "Asbestos",
+              "items": [
+                "Asbestos-free ships after 2012",
+                "Avoid disturbing materials",
+                "Double-bag disposal"
+              ]
+            },
+            {
+              "heading": "Dermatitis",
+              "items": [
+                "Symptoms: Redness, itching, scaling, blistering",
+                "Symptoms: Cracked/bleeding skin can spread all over body",
+                "Prevention: Gloves when handling irritants, before/after work frequently",
+                "Prevention: Barrier & moisturizing creams (before/after work)"
+              ]
+            },
+            {
+              "heading": "Heat-Related Illness",
+              "items": [
+                "Types & Symptoms: Painful muscle contractions",
+                "Types & Symptoms: Fainting due to diverted blood",
+                "Heat Stroke: severe, life-threatening failure of temperature control",
+                "Prevention: Drink >= 4-5 L water daily (not iced, no alcohol; not AC)",
+                "Prevention: Stay hydrated to maintain sweat cooling",
+                "Prevention: Take breaks in shade/cool areas"
+              ]
+            },
+            {
+              "heading": "Ergonomics",
+              "items": [
+                "Hazards: Poor posture, fatigue, vibration, noise",
+                "Hazards: High mental workload, stress, poor team",
+                "Best Practices: Correct body posture & safe-lifting methods",
+                "Best Practices: Fit-for-purpose tools & PPE",
+                "Best Practices: Good workplace layout"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide37.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l37",
+          "n": 37,
+          "orig": 38,
+          "chapterLabel": "Lesson 37",
+          "title": "Managing Simultaneous Operations (SIMOPS)",
+          "intro": "SIMOPS are operations conducted at the same time in the same area, managed through a defined process.",
+          "sections": [
+            {
+              "heading": "SIMOPS Process",
+              "items": [
+                "Identify: Potential safety risk from another activity",
+                "Risk Assess: Conduct Level II risk assessment",
+                "Approve: SIMOPS plan approved by superintendent / DPA & QHSE",
+                "Toolbox Meeting: Review RA, procedures, contingency measures",
+                "LMRA: Last-minute risk assessment",
+                "Updated risk assessment, LMRA conducted"
+              ]
+            }
+          ],
+          "figure": "Vertical flowchart of SIMOPS steps: Identify, Risk Assess, Approve, Toolbox Meeting",
+          "image": "/slides/hsm/slide38.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l38",
+          "n": 38,
+          "orig": 39,
+          "chapterLabel": "Lesson 38",
+          "title": "Escape Routes: Key Requirements",
+          "intro": "Key requirements for providing, maintaining and training on escape routes.",
+          "sections": [
+            {
+              "heading": "Identify",
+              "items": [
+                "Escape routes must be provided in accommodation, machinery, pump, compressor, thruster rooms or any space where disorientation may occur",
+                "In port, escape route leads to terminal means of access"
+              ]
+            },
+            {
+              "heading": "Keep Clear",
+              "items": [
+                "Doors must not be locked/bolted without rapid means of opening from inside (no keys/tools needed)",
+                "If locked for security, emergency opening must still be possible from inside",
+                "Firefighting teams must be able to open from outside in emergencies",
+                "Escape routes/doors must never be blocked or obstructed",
+                "Fire doors should close/latch automatically",
+                "Enclosed trunks must have fully maintained emergency lighting"
+              ]
+            },
+            {
+              "heading": "Unlock",
+              "items": [
+                "Locking arrangement & embarkation decks",
+                "Escape routes serve both escape & access",
+                "Keys should not be required when moving in escape direction",
+                "Embarkation deck must be accessible from open decks connected to escape routes"
+              ]
+            },
+            {
+              "heading": "Train",
+              "items": [
+                "Familiarisation: Crew (officers/ratings) must be able to:",
+                "Explain escape routes from any point on vessel",
+                "Demonstrate door operation of external doors forming part of escape route"
+              ]
+            },
+            {
+              "heading": "Summary",
+              "items": [
+                "Escape routes must remain clear, illuminated, and accessible without keys, ensuring rapid evacuation and access for firefighting teams, with all crew properly trained."
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide39.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l39",
+          "n": 39,
+          "orig": 40,
+          "chapterLabel": "Lesson 39",
+          "title": "Working on Moving Machinery and Water Jet Safety",
+          "intro": "Precautions for working on moving machinery and high-pressure water jet operations.",
+          "sections": [
+            {
+              "heading": "Working on Moving Machinery - General Rules",
+              "items": [
+                "Maintenance or repairs to moving machinery should be avoided",
+                "Work can only be carried out in circumstances where job scope demands working on running machinery is impractical",
+                "Wear close-fitting clothing should be worn",
+                "Confined/long hair should be covered"
+              ]
+            },
+            {
+              "heading": "Accompanying Risk",
+              "items": [
+                "Accompanying person must also avoid",
+                "Avoid using proper protective equipment"
+              ]
+            },
+            {
+              "heading": "Greasing Mooring Winch / Windlass Precautions",
+              "items": [
+                "Conduct specific review, level 2 RA by senior management approved",
+                "Level 2 Risk assessment specific to task, RA",
+                "Two skilled persons, 1 assigned to winch",
+                "Avoid expected purges / operate greasing",
+                "Use woolen brush with long handle",
+                "Avoid: Leave go control position; Avoid running",
+                "Don't: Never sight of one; Avoid Embarkation"
+              ]
+            },
+            {
+              "heading": "High-Pressure Water Jet - Hazards",
+              "items": [
+                "Exceed > 3,300 km/h can cut solid material, fatal injuries",
+                "Minor-looking wound may be life-threatening",
+                "Individual assigned to safety, precaution obtained from QHSE and Marine manager"
+              ]
+            },
+            {
+              "heading": "Instruction & Training",
+              "items": [
+                "Personnel must be trained by Chief Officer & Chief Engineer",
+                "Training must be covered and supervision, ensures supervision, equipment, and workplace safety",
+                "Equipment must be earthed and conductive",
+                "Area must be gas-free (LFL confirmed)"
+              ]
+            },
+            {
+              "heading": "Supervision & Safety - Safe Work Practices",
+              "items": [
+                "Chief Officer safety supervisor",
+                "Plan access properly - no unsafe reach",
+                "Avoid overhead work (risk of unstable posture)",
+                "Use only proper work platforms for elevated work",
+                "Clearly mark & restrict work area (signs/barriers)"
+              ]
+            },
+            {
+              "heading": "Safe Work Practices (Prohibited)",
+              "items": [
+                "Do not work from ladders, pipes, stools, or valves",
+                "Do not clean in enclosed spaces without risk-assessment",
+                "Do not work in unmarked/unrestricted areas",
+                "Do not work without respiratory protection",
+                "High-pressure jetting is extremely hazardous"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide40.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l40",
+          "n": 40,
+          "orig": 41,
+          "chapterLabel": "Lesson 40",
+          "title": "Work From Boats, Life Vests and Compressed Air Safety",
+          "intro": "Safety for operations from workboats, use of life vests and compressed air.",
+          "sections": [
+            {
+              "heading": "Operations From Workboats, Dinghies, Lifeboats, Rafts, or Platforms",
+              "items": [
+                "All crew must wear a lifejacket; personnel described above shall always wear a lifejacket",
+                "In addition to other personal safety equipment relevant to the operation/work"
+              ]
+            },
+            {
+              "heading": "Use of Life Vests",
+              "items": [
+                "Higher buoyancy",
+                "Work related",
+                "For emergency & drills",
+                "Life vests in emergency",
+                "Life vest cannot replace use of lifejacket in emergency situation",
+                "Life vest can replace a lifejacket when flotation aid is required in work-related activities on or in the vicinity of ship side"
+              ]
+            },
+            {
+              "heading": "Use of Compressed Air - Prohibited Practices",
+              "items": [
+                "Cleaning or drying workspaces",
+                "Directing air towards air (persons)"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide41.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l41",
+          "n": 41,
+          "orig": 42,
+          "chapterLabel": "Lesson 41",
+          "title": "Transfer of Persons: Gangway and Personnel Transfer",
+          "intro": "Safe transfer of persons at berth via gangway/accommodation ladder and at sea via pilot ladder.",
+          "sections": [
+            {
+              "heading": "Transfer at Berth - Gangway / Ladder Safety Requirements",
+              "items": [
+                "Keep clean and free",
+                "Inspections, transportation checked",
+                "Rope guard rails must be tight, all stanchions must be fitted",
+                "Communication with the vessel must be maintained as far as practical"
+              ]
+            },
+            {
+              "heading": "Hazard Awareness (Deck watch check for use)",
+              "items": [
+                "Guardrails, safety net when flotation aid is required",
+                "If fenced a small extension light leading from the bottom platform to the jetty in cargo operations",
+                "Note in high/low water times on sailing board to assist with gangway",
+                "30 degrees to 50 degrees above or <= 55 degrees below, amend in unremediate us",
+                "Alternative safe access alternative safe access provided",
+                "Provide an alternative"
+              ]
+            },
+            {
+              "heading": "Inclination Limits",
+              "items": [
+                "Gangway: 30 degrees above/horizontal",
+                "Accommodation ladder: 55 degrees below horizontal",
+                "DO: 30 degrees",
+                "DON'T: exceed limit"
+              ]
+            },
+            {
+              "heading": "Personnel Transfer at Sea or Seaside",
+              "items": [
+                "For personnel transfer at sea or seaside, the vessel must adopt all guidance from 'Pilot boarding arrangement' poster exhibited on the navigation bridge",
+                "Transfer must only take place in good weather and sea conditions; Master shall assess sea condition prior to initiating transfer process during the transfer of personnel"
+              ]
+            },
+            {
+              "heading": "15B.2 Before the Transfer",
+              "items": [
+                "Risk assessment discussion before confirming the pilot ladder",
+                "A briefing on both receiving and transferring vessels:",
+                "a. Number, experience and mobility of the people to be transferred",
+                "b. The type of boat being used and the resulting requirement for ropes, securing points, painters and fenders",
+                "c. The designated side for transfer",
+                "d. Any navigational/time constraints",
+                "e. Required clothing or conditions",
+                "f. Required clothing and life-saving equipment for people and ship teams"
+              ]
+            },
+            {
+              "heading": "Pilot Ladder Securing",
+              "items": [
+                "Checks to be carried out before rigging pilot ladder",
+                "1. Ladder shall be approved type & certified",
+                "2. Ladder is free of any defects or damages",
+                "3. Ladder must not have knot, splices or joins/kinks",
+                "4. Chocks under the steps must be tightly secured",
+                "5. Steps should not be painted, dirty or slippery",
+                "Pilot ladder should be secured to the ship's deck, on designated strong points, by means of the ladder's side ropes",
+                "Using accommodation ladder only is not recommended"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide42.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l42",
+          "n": 42,
+          "orig": 43,
+          "chapterLabel": "Lesson 42",
+          "title": "Personnel Transfer by Crane and Helicopter Operation",
+          "intro": "Safety plans for personnel transfer by crane and marine helicopter operations.",
+          "sections": [
+            {
+              "heading": "Crane Transfer Plan",
+              "items": [
+                "Masters of both vessels and the personnel being transferred should agree on the personnel transfer by crane plan",
+                "The personnel transfer by crane plan is an interactive document that the Masters of the active and passive vessel can complete leading up to the transfer and agree on region"
+              ]
+            },
+            {
+              "heading": "Checks Before Transfer",
+              "items": [
+                "Prior to transfer, the Master and the other vessel must agree that the transfer can be carried out safely",
+                "Pre-use tests may include:",
+                "a. Topping lift to maximum & minimum extent",
+                "b. Runner to maximum height",
+                "c. Slewing function, by slewing the crane clockwise and anticlockwise",
+                "e. Secondary brake",
+                "f. Mechanical brake for cylinders",
+                "g. Emergency means of recovery",
+                "Operational safety"
+              ]
+            },
+            {
+              "heading": "Marine Helicopter Operation - Guidelines & References",
+              "items": [
+                "Follow ICS Guide to Helicopter Operations (latest edition)",
+                "Classified as a critical operation in Safety Management Manual (SMM)",
+                "Level II Risk Assessment and use of ICS Checklist (Appendix CI) required",
+                "Arrangements, equipment, crew training, and drills must match ICS standards"
+              ]
+            },
+            {
+              "heading": "Master's Responsibilities",
+              "items": [
+                "Ensure vessel Safety Management System (SMS) includes helicopter ops procedures",
+                "Provide documentary evidence that landing/winching surface can withstand helicopter loads",
+                "Verify helicopter landing area is clear of obstacles and properly sized",
+                "Establish detailed communication with the helicopter operator/pilot",
+                "May obtain advice on helicopter types/operations from agents/port authorities (esp. in Australia)"
+              ]
+            },
+            {
+              "heading": "Communication",
+              "items": [
+                "Essential for safety before and during operation",
+                "May involve vessel operator - ship's agent - helicopter operator",
+                "Direct communication between vessel and helicopter via VHF radio"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide43.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l43",
+          "n": 43,
+          "orig": 44,
+          "chapterLabel": "Lesson 43",
+          "title": "Tools Management: Power Tools Safety",
+          "intro": "Power tools safety covering general rules, pre-checks, requirements and bad practices.",
+          "sections": [
+            {
+              "heading": "General Rules",
+              "items": [
+                "Use only fit-for-purpose power tools",
+                "Only nominated, trained crew may use",
+                "Maintain training records (SF-17 Form)",
+                "New tools: Test as per OEM before first use"
+              ]
+            },
+            {
+              "heading": "Requirements",
+              "items": [
+                "Must have constant-pressure switch (auto shut-off)",
+                "RPM of tool piece >= RPM of device",
+                "Rated vibration <= 5 m/s2",
+                "Always use whip lash arrestors on hoses",
+                "No jubilee clips - use bandit clamps"
+              ]
+            },
+            {
+              "heading": "Portable Power Tools Pre-Checks",
+              "items": [
+                "Safety guards fixed",
+                "Tool pieces locked securely",
+                "Hose/cables free of obstructions",
+                "Couplings tight, no leaks",
+                "Accessories in good condition"
+              ]
+            },
+            {
+              "heading": "Electrical Tools",
+              "items": [
+                "Operate only in dry areas unless approved",
+                "Cords must not cause tripping hazards"
+              ]
+            },
+            {
+              "heading": "Bad Practices (Never Do)",
+              "items": [
+                "Carry tool by cord/hose",
+                "Yank cord to disconnect",
+                "Fix trigger in 'ON' position",
+                "Remove safety guards unsafely"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide44.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l44",
+          "n": 44,
+          "orig": 45,
+          "chapterLabel": "Lesson 44",
+          "title": "Steel Plates: Safe Stowage, Securing and Handling",
+          "intro": "Hazards, dos and don'ts for safe stowage, securing and handling of steel plates.",
+          "sections": [
+            {
+              "heading": "Hazards",
+              "items": [
+                "Heavy weight (up to 280 kg)",
+                "Sharp edges & corners",
+                "Tipping / crushing risks"
+              ]
+            },
+            {
+              "heading": "DOs",
+              "items": [
+                "Use pallets & banding when lifting",
+                "Weld lifting eyes for safe handling",
+                "Move plates with trolleys / hoists",
+                "Stow against bulkheads or in racks",
+                "Lash with steel wires (3 x weight) + bottle screws",
+                "Keep clear space in front of stowage"
+              ]
+            },
+            {
+              "heading": "DON'Ts",
+              "items": [
+                "Don't stow vertically without support",
+                "Don't use synthetic lashings",
+                "Don't overload racks",
+                "Don't attempt solo handling"
+              ]
+            }
+          ],
+          "figure": "Illustrations of steel plates on pallets, in racks and being carried by one worker",
+          "image": "/slides/hsm/slide45.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l45",
+          "n": 45,
+          "orig": 46,
+          "chapterLabel": "Lesson 45",
+          "title": "Lifting Equipment: Records and Safe Handling",
+          "intro": "Lifting equipment definitions, certification, inspection, and safe handling/familiarity.",
+          "sections": [
+            {
+              "heading": "Definitions",
+              "items": [
+                "Lifting Equipment → cranes, derricks, davits, etc.",
+                "Loose Gear → slings, shackles, hooks, chain blocks",
+                "Rigging Equipment → pulling/dragging gear not classed as lifting"
+              ]
+            },
+            {
+              "heading": "Certification",
+              "items": [
+                "Valid test & inspection certificates mandatory",
+                "Class-certified items: valid up to 5 years",
+                "Loose gear & rigging: certificates, SWL, serial no. must be retained"
+              ]
+            },
+            {
+              "heading": "Inspection & Condition",
+              "items": [
+                "Examine before every use",
+                "6-monthly: personnel lifting equipment",
+                "12-monthly: other lifting gear",
+                "Withdraw damaged/overloaded gear until cleared",
+                "Maintain OP15 & OP28 forms",
+                "Mark each item with SWL + unique ID"
+              ]
+            },
+            {
+              "heading": "Rules for Personnel Lifting",
+              "items": [
+                "Only allowed with certified equipment designed/adapted for personnel",
+                "Rescue/emergency lifting permitted with strict precautions"
+              ]
+            },
+            {
+              "heading": "Class-Certified Gear",
+              "items": [
+                "Cranes, davits, derricks, fall/topping lift wires",
+                "Certificates retained onboard",
+                "Wire life: max 5 years"
+              ]
+            },
+            {
+              "heading": "Non-Class Certified Gear",
+              "items": [
+                "Chain blocks, web slings, shackles, eyebolts, height gear, LOTO gear",
+                "Segregate & tag defective 'NOT FOR USE'"
+              ]
+            },
+            {
+              "heading": "Crew Familiarity",
+              "items": [
+                "Officers: manage inventory & procedures",
+                "Ratings: know markings, SWL & pre-use checks",
+                "Reinforce through toolbox talks & safety meetings"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide46.png",
+          "videos": []
+        },
+        {
+          "id": "hsm-l46",
+          "n": 46,
+          "orig": 47,
+          "chapterLabel": "Lesson 46",
+          "title": "Contractor Security, Health and Management",
+          "intro": "Contractor security and health guidelines and the Master's responsibilities for contractor management.",
+          "sections": [
+            {
+              "heading": "Objective",
+              "items": [
+                "Guidelines on the Contractor or Service Management System"
+              ]
+            },
+            {
+              "heading": "Definitions",
+              "items": [
+                "Independent Contractor",
+                "Service Technician",
+                "Stevedore",
+                "Riding Squad",
+                "Repair Team",
+                "Agent",
+                "Security briefs on-board, security level",
+                "Report suspicious acts to Master",
+                "Health issue + stop work, medical check, Company informed"
+              ]
+            },
+            {
+              "heading": "Master's Responsibilities for Contractor Management",
+              "items": [
+                "Advance information of visits",
+                "Ensure risk assessment & mitigation",
+                "Monitor performance & delegate tasks",
+                "Ensure contractors wear PPE & follow ship/company policies",
+                "Suspend if safety/security violated",
+                "Check supplies (GRN, feedback)",
+                "Do not use contractors for routine seafarer duties (except emergencies)"
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/hsm/slide47.png",
+          "videos": []
+        }
+      ],
+      "assessment": {
+        "passMark": 80,
+        "questions": [
+          {
+            "q": "How many permits are covered under the Permit to Work system?",
+            "options": [
+              "5",
+              "8",
+              "10",
+              "12"
+            ],
+            "answer": 2,
+            "explain": "The HSM covers 10 permits to work."
+          },
+          {
+            "q": "What does LOTO stand for?",
+            "options": [
+              "Log On / Take Off",
+              "Lock Out / Tag Out",
+              "Load On / Tie Off",
+              "List Of Tasks Onboard"
+            ],
+            "answer": 1,
+            "explain": "LOTO is the Lock Out / Tag Out isolation procedure."
+          },
+          {
+            "q": "What is the maximum validity of a Hot Work permit?",
+            "options": [
+              "4 hours",
+              "8 hours",
+              "12 hours",
+              "24 hours"
+            ],
+            "answer": 2,
+            "explain": "A Hot Work permit is valid for a maximum of 12 hours."
+          },
+          {
+            "q": "What is the minimum rest in any 24-hour period?",
+            "options": [
+              "6 hours",
+              "8 hours",
+              "10 hours",
+              "12 hours"
+            ],
+            "answer": 2,
+            "explain": "A minimum of 10 hours rest is required in any 24 hours, in no more than 2 periods."
+          },
+          {
+            "q": "Which appendix defines PPE requirements?",
+            "options": [
+              "Appendix 1",
+              "Appendix 3",
+              "Appendix 4",
+              "Appendix 7"
+            ],
+            "answer": 1,
+            "explain": "PPE requirements are set out in Appendix 3."
+          }
+        ]
+      },
+      "cert": {
+        "titleUpper": "HEALTH & SAFETY MANUAL TRAINING",
+        "topics": [
+          "Complete onboard familiarisation and uphold the safety culture.",
+          "Apply the Permit to Work system and LOTO isolation procedures.",
+          "Select and use PPE correctly as per Appendix 3.",
+          "Carry out hazard identification and risk assessment.",
+          "Manage fatigue, rest hours, health and hygiene onboard.",
+          "Support mental health and the Speak Up culture."
+        ]
+      }
+    },
+    {
+      "id": "cyber",
+      "slug": "cyber-security-awareness",
+      "title": "Cyber Security Awareness",
+      "subtitle": "Maritime cyber security",
+      "icon": "ShieldCheck",
+      "durationLabel": "1h 05m",
+      "status": "completed",
+      "statusNote": "Passed · 92%",
+      "progressOverride": 100,
+      "chapters": [
+        {
+          "id": "cyber-l1",
+          "n": 1,
+          "orig": 3,
+          "chapterLabel": "Lesson 1",
+          "title": "How Maersk Was Affected by Cyber Attack",
+          "intro": "Watch the training video for this part of the course.",
+          "sections": [],
+          "figure": "Video (dark grid poster frame) titled 'How Maersk was affected by Cyber attack'.",
+          "image": "/slides/cyber/slide3.png",
+          "videos": [
+            "/media/cyber/slide3_1.mp4"
+          ]
+        },
+        {
+          "id": "cyber-l2",
+          "n": 2,
+          "orig": 4,
+          "chapterLabel": "Lesson 2",
+          "title": "Why Cyber Security - GARD Video",
+          "intro": "Watch the training video for this part of the course.",
+          "sections": [],
+          "figure": "Video placeholder titled 'Why cyber security- GARD- click for video'.",
+          "image": "/slides/cyber/slide4.png",
+          "videos": [
+            "/media/cyber/slide4_2.mp4"
+          ]
+        },
+        {
+          "id": "cyber-l3",
+          "n": 3,
+          "orig": 5,
+          "chapterLabel": "Lesson 3",
+          "title": "Maritime Cyber Security: Protecting the Vessel",
+          "intro": "Cyber security in shipping is critical for vessel safety, environmental protection, and business continuity, distinguishing IT and OT systems and outlining Cyber Hygiene best practices.",
+          "sections": [
+            {
+              "heading": "IT Systems (Information Technology)",
+              "items": [
+                "IT manages data (emails, servers)",
+                "Crew Welfare Wi-Fi",
+                "Network Servers",
+                "Communication (GMDSS, Inmarsat, VSAT, CCTV)",
+                "Office PCs, Email"
+              ]
+            },
+            {
+              "heading": "OT Systems (Operational Technology)",
+              "items": [
+                "OT controls physical ship functions (navigation, engines)",
+                "ECDIS, GPS, Radar",
+                "OT Failure Directly Affects Vessel Safety: A cyber-attack on systems like ECDIS, GPS, or Steering Gear can lead to immediate physical danger.",
+                "Critical Vulnerabilities: Communication systems (VSAT) and cargo systems (Loadicator) are primary targets for cyber-attacks."
+              ]
+            },
+            {
+              "heading": "Prevention and Incident Response",
+              "items": [
+                "Practice 'Cyber Hygiene' Daily: Scan USBs before use, use strong passwords, and never share credentials.",
+                "Spot the Phishing Hook: Be wary of unknown senders, urgent requests, poor grammar, or suspicious links.",
+                "Immediate Response - Stop, Isolate, Inform: Stop using the system; Isolate it from the network; Notify the Master/DPA."
+              ]
+            }
+          ],
+          "figure": "Infographic cross-section of a vessel mapping IT systems (above) and OT systems (below), with a prevention/incident response panel on the right.",
+          "image": "/slides/cyber/slide5.png",
+          "videos": []
+        },
+        {
+          "id": "cyber-l4",
+          "n": 4,
+          "orig": 6,
+          "chapterLabel": "Lesson 4",
+          "title": "IT vs. OT: Understanding the Difference",
+          "intro": "Navigating maritime cyber security means protecting both the ship (OT) and the office (IT).",
+          "sections": [
+            {
+              "heading": "OT: Controls the Physical World",
+              "items": [
+                "Monitors and controls physical devices and processes",
+                "Real-time, time-critical response",
+                "Reboots may be unacceptable due to operational requirements",
+                "OT Requirements are Real-Time and Mission-Critical: OT response must be immediate; delays can impact ship safety and the environment",
+                "Availability is Paramount for OT"
+              ]
+            },
+            {
+              "heading": "IT: Manages Data",
+              "items": [
+                "Manages information flow",
+                "Non-real-time; consistent response",
+                "Reboots are generally acceptable"
+              ]
+            },
+            {
+              "heading": "System Requirements Comparison",
+              "items": [
+                "Performance - IT: Non-real-time, consistent response; OT: Real-time, time-critical response",
+                "Availability - IT: Reboots are generally acceptable; OT: Reboots may be unacceptable",
+                "Risk Impact - IT: Data management delays; OT: Regulatory noncompliance and physical harm"
+              ]
+            },
+            {
+              "heading": "The 5 Pillars of Cyber Risk Management",
+              "items": [
+                "Identify and Protect Critical Assets: Inventory all IT/OT software and strictly control access to authorized users only.",
+                "Detect and Respond to Incidents: Report suspected attacks to the Master or DPA immediately for escalation.",
+                "Recover and Restore Operations: Use original media for system restoration and coordinate data recovery through the Master."
+              ]
+            }
+          ],
+          "figure": "Infographic comparing OT and IT with a split ship/office illustration, a system requirements comparison table, and cyber risk management pillar panels. Slide labelled 'Part 1'.",
+          "image": "/slides/cyber/slide6.png",
+          "videos": []
+        },
+        {
+          "id": "cyber-l5",
+          "n": 5,
+          "orig": 7,
+          "chapterLabel": "Lesson 5",
+          "title": "Protecting Vessel IT and OT Systems",
+          "intro": "Mapping the ship's digital infrastructure, vulnerability entry points, and the cyber incident response lifecycle.",
+          "sections": [
+            {
+              "heading": "Mapping the Ship's Digital Infrastructure",
+              "items": [
+                "IT Supported Processes (N-Series): Manages ship administration, crew/passenger entertainment, and land-based remote IT support.",
+                "Critical OT Systems (Operational Technology): Controls essential vessel functions including propulsion, steering, navigation (ECDIS/GPS), and watertight integrity."
+              ]
+            },
+            {
+              "heading": "Vulnerability Entry Points",
+              "items": [
+                "Open USB ports",
+                "Satellite connections",
+                "Human-error vulnerabilities in firewalls"
+              ]
+            },
+            {
+              "heading": "The Cyber Incident Response Lifecycle",
+              "items": [
+                "Phase 1: Detection & Analysis - Identify signs of tampering, malicious code implantation, or unusual system performance changes.",
+                "Phase 2: Containment & Recovery - Isolate affected systems, remove malware, and return technology to an operationally ready state.",
+                "Phase 3: Post-Incident Activity - Conduct a lessons-learned meeting and update the response plan to prevent future deficiencies."
+              ]
+            },
+            {
+              "heading": "Maritime Cyber Risk Formula",
+              "items": [
+                "Risk = Threat x Vulnerability x Impact",
+                "Key Threats: GPS Spoofing, Malware installation, Phishing, and Sensor Freezing",
+                "Control Barriers: Two-factor authentication, network segregation, and automatic USB scanning"
+              ]
+            }
+          ],
+          "figure": "Infographic of a vessel showing IT and OT infrastructure, vulnerability entry points, incident response lifecycle phases, and a maritime cyber risk formula panel.",
+          "image": "/slides/cyber/slide7.png",
+          "videos": []
+        },
+        {
+          "id": "cyber-l6",
+          "n": 6,
+          "orig": 8,
+          "chapterLabel": "Lesson 6",
+          "title": "Cyber Security — Part 1 (Video)",
+          "intro": "Watch the training video for this part of the course.",
+          "sections": [],
+          "figure": "Divider slide 'Cyber security Part 1' with a hand-drawn 'Maritime Cyber Security Manual - Protocols, Risks, & Realities' title card.",
+          "image": "/slides/cyber/slide8.png",
+          "videos": [
+            "/media/cyber/slide8_3.mp4"
+          ]
+        },
+        {
+          "id": "cyber-l7",
+          "n": 7,
+          "orig": 9,
+          "chapterLabel": "Lesson 7",
+          "title": "Navigating Cyber Waves: A Vessel Security Guide",
+          "intro": "Identifying cyber threats and vessel defense strategies across the cyber attack lifecycle.",
+          "sections": [
+            {
+              "heading": "Identifying Cyber Threats - The Cyber Attack Lifecycle",
+              "items": [
+                "1. Reconnaissance",
+                "2. Weaponization",
+                "3. Delivery",
+                "4. Exploitation",
+                "5. Installation",
+                "6. Command & Control",
+                "7. Actions on Objectives",
+                "8. Data Exfiltration"
+              ]
+            },
+            {
+              "heading": "Phishing Red Flags",
+              "items": [
+                "Unknown Senders",
+                "Unexpected Attachments",
+                "Odd Language",
+                "Mismatched URL Links"
+              ]
+            },
+            {
+              "heading": "Common Malware Threats",
+              "items": [
+                "Ransomware (Encrypts data for money)",
+                "Trojans (Disguised as standard software)"
+              ]
+            },
+            {
+              "heading": "Vessel Defense Strategies",
+              "items": [
+                "Immediate Outbreak Response: Isolate infected computer by removing network cable and shutting down immediately.",
+                "Secure Data Disposal: Use degaussing or physical destruction to ensure data is unrecoverable.",
+                "Onboard Best Practices: Encrypt ship-to-shore communications and maintain backups in physically distinct areas."
+              ]
+            },
+            {
+              "heading": "Responding to Observed Cyber Risks",
+              "items": [
+                "High Risk: Immediate corrective measures and a formal action plan required.",
+                "Medium Risk: Corrective actions and a plan developed within a reasonable timeframe.",
+                "Low Risk: Management determines if correction is needed or if risk is acceptable."
+              ]
+            }
+          ],
+          "figure": "Infographic 'Navigating Cyber Waves: A Vessel Security Guide' with attack lifecycle, phishing/malware threats, defense strategies, and a high/medium/low risk response bar. Slide labelled 'Part 2 Cyber security'.",
+          "image": "/slides/cyber/slide9.png",
+          "videos": []
+        },
+        {
+          "id": "cyber-l8",
+          "n": 8,
+          "orig": 10,
+          "chapterLabel": "Lesson 8",
+          "title": "Cyber Security — Part 2 (Video)",
+          "intro": "Watch the training video for this part of the course.",
+          "sections": [],
+          "figure": "Divider slide 'Part 2' with a hand-drawn 'Anatomy of Defense' title card.",
+          "image": "/slides/cyber/slide10.png",
+          "videos": [
+            "/media/cyber/slide10_4.mp4"
+          ]
+        },
+        {
+          "id": "cyber-l9",
+          "n": 9,
+          "orig": 11,
+          "chapterLabel": "Lesson 9",
+          "title": "Cyber Survival at Sea (Video)",
+          "intro": "Watch the training video for this part of the course.",
+          "sections": [],
+          "figure": "Divider slide with a hand-drawn 'Cyber Survival at Sea' title card (ship, lock/shield, binary graphics).",
+          "image": "/slides/cyber/slide11.png",
+          "videos": [
+            "/media/cyber/slide11_5.mp4"
+          ]
+        },
+        {
+          "id": "cyber-l10",
+          "n": 10,
+          "orig": 12,
+          "chapterLabel": "Lesson 10",
+          "title": "Differentiating Information and Operational Technologies",
+          "intro": "Comparison of IT and OT across key characteristics aboard a vessel.",
+          "sections": [
+            {
+              "heading": "Core Purpose",
+              "items": [
+                "IT: Manage data, communication, and business tasks",
+                "OT: Control physical ship movements, machinery, and safety"
+              ]
+            },
+            {
+              "heading": "Typical Devices",
+              "items": [
+                "IT: PCs, Laptops, Printers, Network servers",
+                "OT: ECDIS, GPS, AIS, Radar, Engine Automation, Steering Gear, Power Management"
+              ]
+            },
+            {
+              "heading": "Network Environment",
+              "items": [
+                "IT: Connected to external internet/VSAT",
+                "OT: Isolated, closed-loop systems"
+              ]
+            },
+            {
+              "heading": "Primary Cyber Risk",
+              "items": [
+                "IT: Data theft, administrative downtime",
+                "OT: Vessel safety compromise, environmental hazard, loss of life"
+              ]
+            },
+            {
+              "heading": "Downtime Tolerance",
+              "items": [
+                "IT: Hours to days—inconvenient",
+                "OT: Zero tolerance—immediate emergency"
+              ]
+            }
+          ],
+          "figure": "Two-column IT vs OT comparison table with laptop, server, and ship's wheel icons",
+          "image": "/slides/cyber/slide12.png",
+          "videos": []
+        },
+        {
+          "id": "cyber-l11",
+          "n": 11,
+          "orig": 13,
+          "chapterLabel": "Lesson 11",
+          "title": "Mapping System Vulnerabilities Across the Vessel",
+          "intro": "Vessel cutaway mapping cyber-vulnerable systems by location and risk level.",
+          "sections": [
+            {
+              "heading": "Navigation Bridge (OT / High Risk)",
+              "items": [
+                "ECDIS, GPS, AIS, Radar, VDR, Gyro."
+              ]
+            },
+            {
+              "heading": "Communication Deck (IT/OT Bridge)",
+              "items": [
+                "Inmarsat, GMDSS, VSAT, Email systems."
+              ]
+            },
+            {
+              "heading": "Cargo Control Room (OT / Medium-High Risk)",
+              "items": [
+                "Loadicator, Remote gauging, Cargo monitoring."
+              ]
+            },
+            {
+              "heading": "Engine Room (OT / High Risk)",
+              "items": [
+                "Engine Console, Power Management, Steering Gear."
+              ]
+            },
+            {
+              "heading": "Crew Quarters/Admin (IT / Primary Entry Vector)",
+              "items": [
+                "CCTV, Welfare PCs, Personal Devices."
+              ]
+            }
+          ],
+          "figure": "Cutaway ship diagram with callout labels; banner: 'Any device with a microchip is an asset. Any asset is a potential entry point for an adversary.'",
+          "image": "/slides/cyber/slide13.png",
+          "videos": []
+        },
+        {
+          "id": "cyber-l12",
+          "n": 12,
+          "orig": 14,
+          "chapterLabel": "Lesson 12",
+          "title": "The Adversary Arsenal: Threat Profiles",
+          "intro": "Six common cyber threat types facing maritime operations.",
+          "sections": [
+            {
+              "heading": "",
+              "items": [
+                "Malware: Viruses, Worms, and Trojans designed to infiltrate and disrupt systems.",
+                "Ransomware: Malicious code that encrypts critical ship files, accompanied by a demand for payment to unlock them.",
+                "Phishing: Fraudulent emails or websites designed to trick crew into revealing credentials or downloading payloads.",
+                "Spear Phishing: Highly personalized, targeted attacks researched and directed specifically at ship's staff or Master.",
+                "Insider Threats: Unintentional or malicious actions by crew, contractors, or vendors with physical access.",
+                "Denial of Service (DoS) & Data Theft: Overwhelming networks to crash systems or quietly exfiltrating sensitive business/crew data."
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cyber/slide14.png",
+          "videos": []
+        },
+        {
+          "id": "cyber-l13",
+          "n": 13,
+          "orig": 15,
+          "chapterLabel": "Lesson 13",
+          "title": "The Cyber Attack Lifecycle",
+          "intro": "Eight sequential stages of a cyber attack against a vessel.",
+          "sections": [
+            {
+              "heading": "",
+              "items": [
+                "Reconnaissance: Attacker gathers data on the vessel and crew.",
+                "Intrusion: Initial breach via phishing, USB, or exposed network.",
+                "Exploitation: Triggering malware to exploit software vulnerabilities.",
+                "Privilege Escalation: Gaining administrative control over systems.",
+                "Lateral Movement: Jumping from the IT network toward the OT network.",
+                "Obfuscation: Hiding tracks to avoid antivirus detection.",
+                "Denial of Service: Disabling system functions.",
+                "Data Exfiltration: Extracting stolen information."
+              ]
+            },
+            {
+              "heading": "Defensive Strategy",
+              "items": [
+                "Break the chain. Detecting and isolating a threat at Stage 2 prevents catastrophe at Stage 8."
+              ]
+            }
+          ],
+          "figure": "Horizontal timeline showing the eight attack stages",
+          "image": "/slides/cyber/slide15.png",
+          "videos": []
+        },
+        {
+          "id": "cyber-l14",
+          "n": 14,
+          "orig": 16,
+          "chapterLabel": "Lesson 14",
+          "title": "Deconstructing a Phishing Attempt",
+          "intro": "Annotated example email highlighting the warning signs of phishing.",
+          "sections": [
+            {
+              "heading": "Warning Signs",
+              "items": [
+                "Unknown Sender: Address slightly misspells the company name (e.g., @ozellarmarine-update.com).",
+                "Urgent Action Requested: Subject reads: URGENT: Port Clearance Document Overdue.",
+                "Unexpected Attachment: .zip or .exe file disguised as a standard PDF.",
+                "Poor Grammar: Awkwardly phrased or unprofessional sentences in the body text.",
+                "Requests for Passwords: Text asking the user to verify login credentials.",
+                "Suspicious Links: Hover-text reveals a strange URL not matching the text."
+              ]
+            },
+            {
+              "heading": "Key Rule",
+              "items": [
+                "When in doubt: Do not click, do not download, and verify directly with the sender via phone."
+              ]
+            }
+          ],
+          "figure": "Mock phishing email screenshot with orange callout boxes pointing to each red flag",
+          "image": "/slides/cyber/slide16.png",
+          "videos": []
+        },
+        {
+          "id": "cyber-l15",
+          "n": 15,
+          "orig": 17,
+          "chapterLabel": "Lesson 15",
+          "title": "The Infection Chain Reaction: The USB Threat",
+          "intro": "How a single unscanned USB device escalates into loss of safe navigation.",
+          "sections": [
+            {
+              "heading": "",
+              "items": [
+                "Contractor or crew inserts an unscanned USB containing hidden malware into a Crew PC.",
+                "The malware stealthily installs and searches the Shared Business Network (IT) for vulnerabilities.",
+                "The malware exploits a weak firewall port, bridging the gap and crossing into the Control Network (OT).",
+                "The malware corrupts charting data. ECDIS suddenly stops working or displays false positioning."
+              ]
+            },
+            {
+              "heading": "Key Rule",
+              "items": [
+                "A local convenience (using an unchecked USB) directly results in the loss of safe navigation. Never bypass USB control procedures."
+              ]
+            }
+          ],
+          "figure": "Four-stage infographic: USB, IT network, IT/OT firewall bridge, corrupted ECDIS display",
+          "image": "/slides/cyber/slide17.png",
+          "videos": []
+        },
+        {
+          "id": "cyber-l16",
+          "n": 16,
+          "orig": 18,
+          "chapterLabel": "Lesson 16",
+          "title": "Recognizing an Active Breach: Incident Indicators",
+          "intro": "Warning signs that indicate an active cyber breach in progress.",
+          "sections": [
+            {
+              "heading": "",
+              "items": [
+                "System Slowdown: Operations taking unusually long; excessive hard drive activity without prompt.",
+                "Unauthorized Access: Systems logging in autonomously; changed passwords; unknown users active.",
+                "Locked Files: Files suddenly end in strange extensions (e.g., .encrypted); ransom notes appear on desktop.",
+                "Unusual System Behavior: Mouse cursor moving on its own; pop-up windows launching; antivirus suddenly disabled.",
+                "Suspicious Communications: Massive spikes in outgoing network traffic; email system sending spam to contacts."
+              ]
+            }
+          ],
+          "figure": "",
+          "image": "/slides/cyber/slide18.png",
+          "videos": []
+        },
+        {
+          "id": "cyber-l17",
+          "n": 17,
+          "orig": 19,
+          "chapterLabel": "Lesson 17",
+          "title": "Emergency Escalation Protocol",
+          "intro": "Immediate containment actions and the incident reporting chain.",
+          "sections": [
+            {
+              "heading": "Immediate Containment Actions",
+              "items": [
+                "1. Stop Activity: Cease using the affected system immediately.",
+                "2. Isolate: Physically disconnect the computer from the network (pull the ethernet cable, turn off Wi-Fi). Do NOT turn off the power.",
+                "3. Preserve: Leave the screen as is to preserve digital evidence.",
+                "4. Await Guidance: Do not attempt to fix or run unauthorized scans."
+              ]
+            },
+            {
+              "heading": "Incident Reporting Chain",
+              "items": [
+                "Crew Member",
+                "Master (Ship's Cyber Security Officer)",
+                "DPA (Designated Person Ashore / Company Cyber Security Officer)",
+                "IT Team",
+                "Emergency Response Team"
+              ]
+            }
+          ],
+          "figure": "Reporting-chain flow diagram alongside four containment-action cards",
+          "image": "/slides/cyber/slide19.png",
+          "videos": []
+        },
+        {
+          "id": "cyber-l18",
+          "n": 18,
+          "orig": 20,
+          "chapterLabel": "Lesson 18",
+          "title": "Cyber Defense Is Modern Seamanship",
+          "intro": "Closing message framing cyber defense as core to safe seamanship.",
+          "sections": [
+            {
+              "heading": "",
+              "items": [
+                "The digitalization of the maritime industry brings unprecedented efficiency, but it requires a new standard of vigilance.",
+                "Protecting the digital systems of this vessel is no different than maintaining a watertight seal or standing a sharp navigational watch.",
+                "By identifying threats, securing your perimeter, and responding rapidly to incidents, you ensure the safety of the crew, the cargo, and the ship."
+              ]
+            },
+            {
+              "heading": "Key Message",
+              "items": [
+                "Vigilance is our strongest firewall. Safe, secure, and uninterrupted operations rely on you."
+              ]
+            }
+          ],
+          "figure": "Green wireframe cargo ship illustration on a technical grid background",
+          "image": "/slides/cyber/slide20.png",
+          "videos": []
+        },
+        {
+          "id": "cyber-l19",
+          "n": 19,
+          "orig": 21,
+          "chapterLabel": "Lesson 19",
+          "title": "Cyber Security = Ship Safety",
+          "intro": "Summary poster: protect navigation, machinery, and operations.",
+          "sections": [
+            {
+              "heading": "Vulnerable Ship Systems",
+              "items": [
+                "ECDIS Navigation Systems",
+                "GPS / AIS Positioning Systems",
+                "GMDSS / VSAT Communication Systems",
+                "Cargo Control Systems",
+                "Engine & Automation Systems",
+                "Ship Networks & IT Systems"
+              ]
+            },
+            {
+              "heading": "Think Before You Click",
+              "items": [
+                "Unknown Email?",
+                "Unverified USB?",
+                "Suspicious Link?",
+                "Unauthorized Device?",
+                "STOP • THINK • VERIFY"
+              ]
+            },
+            {
+              "heading": "Every Crew Member Is a Cyber Defender",
+              "items": [
+                "Protect Passwords: Use strong passwords and change them regularly.",
+                "Use Approved Software Only: Install software only if approved by the company.",
+                "Verify Emails: Check sender carefully before opening any email or attachment.",
+                "Scan USB Devices: Scan all removable media before use.",
+                "Never Share Credentials: Keep your login details private.",
+                "Report Suspicious Activity: Report anything unusual immediately."
+              ]
+            },
+            {
+              "heading": "Common Cyber Threats",
+              "items": [
+                "Phishing Emails: Fraudulent emails to steal information.",
+                "Malware & Viruses: Malicious software that can damage systems.",
+                "Ransomware: Locks your data and demands payment.",
+                "Fake Websites: Deceptive websites to steal credentials.",
+                "Unauthorized USB Devices: Malicious devices can infect ship systems.",
+                "Unsecured Remote Access: Unauthorized access can compromise systems."
+              ]
+            },
+            {
+              "heading": "If You Suspect a Cyber Incident",
+              "items": [
+                "1. STOP: Stop using the affected system.",
+                "2. INFORM THE MASTER: Inform the Master immediately.",
+                "3. ISOLATE THE SYSTEM: Disconnect from network if safe.",
+                "4. REPORT TO OFFICE / DPA: Report to the Office or DPA without delay.",
+                "5. PRESERVE EVIDENCE: Do not delete or change anything."
+              ]
+            },
+            {
+              "heading": "Remember",
+              "items": [
+                "One Email, One USB Device, One Mobile Phone, One Unsafe Connection CAN AFFECT THE ENTIRE SHIP.",
+                "Cyber Security Is Everyone's Responsibility: STOP • THINK • VERIFY • REPORT.",
+                "Protect People, Protect the Ship, Protect the Cargo, Protect the Environment."
+              ]
+            }
+          ],
+          "figure": "Full-page maritime cyber-security awareness poster with ship photo, system callouts, and color-coded panels",
+          "image": "/slides/cyber/slide21.png",
+          "videos": []
+        }
+      ],
+      "assessment": {
+        "passMark": 80,
+        "questions": [
+          {
+            "q": "Which company suffered a well-known major shipping cyber attack?",
+            "options": [
+              "Ozellar",
+              "Maersk",
+              "A random port",
+              "None"
+            ],
+            "answer": 1,
+            "explain": "The Maersk NotPetya attack is the case study used in this course."
+          },
+          {
+            "q": "What is the safest response to an unexpected USB drive found onboard?",
+            "options": [
+              "Plug it in to check",
+              "Do not use it and report it",
+              "Give it to a colleague",
+              "Keep it"
+            ],
+            "answer": 1,
+            "explain": "Never plug in unknown removable media — report it."
+          },
+          {
+            "q": "Which type of system directly controls physical ship functions like navigation and steering?",
+            "options": [
+              "IT",
+              "OT",
+              "Wi-Fi",
+              "Email"
+            ],
+            "answer": 1,
+            "explain": "OT (Operational Technology) controls physical functions such as ECDIS, GPS and steering."
+          },
+          {
+            "q": "On suspecting a cyber incident, what is the correct first action?",
+            "options": [
+              "Turn off the power",
+              "Stop using the system and inform the Master",
+              "Delete the files",
+              "Keep working"
+            ],
+            "answer": 1,
+            "explain": "Stop using the affected system and inform the Master; isolate from the network but do not power off."
+          }
+        ]
+      },
+      "cert": {
+        "titleUpper": "CYBER SECURITY AWARENESS TRAINING",
+        "topics": [
+          "Understand cyber threats affecting ships and shipping companies.",
+          "Recognize phishing, social engineering, and email scams.",
+          "Protect shipboard OT and IT systems.",
+          "Follow company cyber security procedures.",
+          "Respond correctly to cyber incidents.",
+          "Contribute to a cyber-safe culture onboard."
+        ]
+      }
+    }
+  ]
+}

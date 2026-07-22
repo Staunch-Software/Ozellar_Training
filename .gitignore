@@ -1,0 +1,22 @@
+# dependencies
+node_modules/
+.venv/
+__pycache__/
+*.pyc
+
+# builds
+frontend/dist/
+
+# local db & env
+backend/dev.db
+.env
+
+# extracted videos — large (1.4 GB); belong on a streaming service, not in git
+frontend/public/media/
+
+# os
+.DS_Store
+Thumbs.db
+
+# local tooling state
+.claude/settings.local.json
