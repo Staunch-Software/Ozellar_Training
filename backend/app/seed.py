@@ -1,9 +1,14 @@
 """Seed the database from courses_seed.json (the single source of truth,
-generated from the frontend seed data). Run:  python -m app.seed
+generated from the frontend seed data).
+
+  python -m app.seed                # dev: admin + demo crew + enrollments
+  SEED_MODE=prod python -m app.seed  # production: admin + courses ONLY
 
 Non-destructive: this refreshes course *content* (courses/chapters/questions)
-and ensures the demo users + their enrollments exist, but it never drops the
-schema or touches real learner progress, attempts, or certificates. Schema is
+and ensures seed users exist, but it never drops the schema or touches real
+learner progress, attempts, or certificates. In prod mode it seeds only the
+admin and the courses — no demo crew and no enrollments — so a live server
+starts clean and admins create/assign real crew via the admin panel. Schema is
 owned by Alembic migrations (`alembic upgrade head`), not by this script.
 """
 import json
@@ -15,10 +20,14 @@ from .auth import hash_password
 
 SEED_FILE = os.path.join(os.path.dirname(__file__), "courses_seed.json")
 
-# Seed users. Crew log in with full name + DOB (DDMMYYYY); admin with email + password.
-SEED_USERS = [
-    dict(role="admin", email="admin@ozellarmarine.com", full_name="Fleet Training Admin",
-         rank="Training Administrator", password="Admin@123"),
+# The admin is always seeded (dev + prod). Crew log in with full name + DOB;
+# admin with email + password.
+ADMIN_USER = dict(role="admin", email="admin@ozellarmarine.com",
+                  full_name="Fleet Training Admin", rank="Training Administrator",
+                  password="Admin@123")
+
+# Demo crew — seeded in dev only (never in prod).
+DEMO_CREW = [
     dict(role="learner", crew_id="OZ1024", full_name="Rajan Kumar",
          rank="Chief Officer", date_of_birth=date(1990, 5, 14), pp_no="PP-4471"),  # DOB 14051990
     dict(role="learner", crew_id="OZ1088", full_name="Arjun Nair",
@@ -91,6 +100,8 @@ def _ensure_enrollment(db, learner_id, course_id):
 
 
 def run():
+    prod = os.getenv("SEED_MODE", "dev").lower() == "prod"
+
     with open(SEED_FILE, encoding="utf-8") as f:
         data = json.load(f)
 
@@ -101,20 +112,25 @@ def run():
             _upsert_course(db, ci, c)
             course_ids.append(c["id"])
 
-        learners = []
-        for u in SEED_USERS:
-            user = _ensure_user(db, u)
-            if user.role == "learner":
-                learners.append(user)
+        # admin is always seeded
+        _ensure_user(db, ADMIN_USER)
 
-        # Demo: assign every seeded course to every demo learner.
+        if prod:
+            db.commit()
+            print(f"[prod] Seeded {len(course_ids)} courses and the admin only "
+                  f"(no demo crew, no enrollments).")
+            print("  Admin login: admin@ozellarmarine.com / Admin@123")
+            return
+
+        # dev only: demo crew + enrollments
+        learners = [_ensure_user(db, u) for u in DEMO_CREW]
         for learner in learners:
             for cid in course_ids:
                 _ensure_enrollment(db, learner.id, cid)
 
         db.commit()
-        print(f"Seeded {len(course_ids)} courses; "
-              f"ensured {len(SEED_USERS)} users and their enrollments.")
+        print(f"[dev] Seeded {len(course_ids)} courses; admin + "
+              f"{len(DEMO_CREW)} demo crew and their enrollments.")
         print("  Admin login: admin@ozellarmarine.com / Admin@123")
         print("  Crew login:  Rajan Kumar / 14051990")
         print("  Crew login:  Arjun Nair / 02111995")
