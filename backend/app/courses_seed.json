@@ -3052,9 +3052,8 @@
       "subtitle": "Maritime cyber security",
       "icon": "ShieldCheck",
       "durationLabel": "1h 05m",
-      "status": "completed",
-      "statusNote": "Passed · 92%",
-      "progressOverride": 100,
+      "status": "not-started",
+      "statusNote": "Assigned",
       "chapters": [
         {
           "id": "cyber-l1",

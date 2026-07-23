@@ -2,10 +2,28 @@
 Course -> Chapter -> Block, Course -> Assessment -> Question,
 Learner -> Progress / Attempt -> Certificate."""
 from sqlalchemy import (
-    Column, Integer, String, Text, Boolean, ForeignKey, JSON, DateTime, func
+    Column, Integer, String, Text, Boolean, ForeignKey, JSON, DateTime, Date,
+    UniqueConstraint, func
 )
 from sqlalchemy.orm import relationship
 from .database import Base
+
+
+class User(Base):
+    """Crew (learners) log in with crew_id + date of birth (DDMMYYYY);
+    admins log in with email + password."""
+    __tablename__ = "users"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    role = Column(String, nullable=False)              # 'learner' | 'admin'
+    crew_id = Column(String, unique=True, index=True)  # learner login id
+    email = Column(String, unique=True, index=True)    # admin login id
+    full_name = Column(String, nullable=False)
+    rank = Column(String)                              # learner rank / admin title
+    date_of_birth = Column(Date)                       # learner credential
+    pp_no = Column(String)                             # for the certificate
+    password_hash = Column(String)                     # admin credential (bcrypt)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
 
 
 class Course(Base):
@@ -20,6 +38,7 @@ class Course(Base):
     status = Column(String, default="not-started")
     status_note = Column(String)
     pass_mark = Column(Integer, default=80)
+    max_attempts = Column(Integer)   # null = unlimited (admin-configurable)
     cert = Column(JSON)          # {titleUpper, topics[]} for the certificate
     order = Column(Integer, default=0)
 
@@ -78,3 +97,44 @@ class Certificate(Base):
     course_id = Column(String, ForeignKey("courses.id"), nullable=False)
     score = Column(Integer)
     issued_at = Column(DateTime, server_default=func.now())
+
+
+class Enrollment(Base):
+    """A course assigned to a learner. Courses only appear for learners they
+    are enrolled in; admins assign/unassign them. `learner_id` / `assigned_by`
+    are integer FKs to users.id."""
+    __tablename__ = "enrollments"
+    __table_args__ = (UniqueConstraint("learner_id", "course_id", name="uq_enrollment_learner_course"),)
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    learner_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    course_id = Column(String, ForeignKey("courses.id"), nullable=False)
+    assigned_by = Column(Integer, ForeignKey("users.id"))   # admin who assigned (nullable)
+    assigned_at = Column(DateTime, server_default=func.now())
+
+
+class Attempt(Base):
+    """One row per assessment submission — the audit trail behind Progress.
+    Progress holds the latest/best result; Attempt keeps the full history for
+    compliance (score, pass/fail, timestamp) and attempt-limit enforcement."""
+    __tablename__ = "attempts"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    learner_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    course_id = Column(String, ForeignKey("courses.id"), nullable=False)
+    score = Column(Integer)
+    passed = Column(Boolean, default=False)
+    answers = Column(JSON)       # the submitted answer indices, for audit
+    created_at = Column(DateTime, server_default=func.now())
+
+
+class Notification(Base):
+    """In-app notification for a user (course assigned, assessment result,
+    certificate issued). Surfaced via the top-nav bell."""
+    __tablename__ = "notifications"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    kind = Column(String)                 # 'assigned' | 'passed' | 'failed' | 'certificate'
+    title = Column(String, nullable=False)
+    body = Column(String)
+    link = Column(String)                 # optional in-app path
+    is_read = Column(Boolean, default=False)
+    created_at = Column(DateTime, server_default=func.now())

@@ -2,22 +2,36 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Download, ArrowLeft } from 'lucide-react'
 import { TopNav } from '../App.jsx'
-import { getCourse, getLearner, getResult } from '../api.js'
+import { getCourse, fetchCertificatePdfUrl } from '../api.js'
 
-/* Formal Ozellar Marine certificate — matches the provided PDF layout. */
+/* The on-screen preview embeds the very same PDF that downloads, so there is
+   no drift between what the learner sees and what they get. */
 export default function Certificate() {
   const { slug } = useParams()
   const navigate = useNavigate()
   const [course, setCourse] = useState(null)
-  const learner = getLearner()
+  const [pdfUrl, setPdfUrl] = useState(null)
+  const [ready, setReady] = useState(false)
 
-  useEffect(() => { getCourse(slug).then(setCourse) }, [slug])
-  if (!course) return (<><TopNav /><div className="spinner">Loading…</div></>)
+  useEffect(() => {
+    let url
+    getCourse(slug).then((c) => {
+      setCourse(c)
+      if (c.passed) {
+        fetchCertificatePdfUrl(c.id)
+          .then((u) => { url = u; setPdfUrl(u) })
+          .catch(() => {})
+          .finally(() => setReady(true))
+      } else {
+        setReady(true)
+      }
+    })
+    return () => { if (url) URL.revokeObjectURL(url) }
+  }, [slug])
 
-  const result = getResult(course.id)
-  const passed = result?.passed ?? course.passed
+  if (!course || !ready) return (<><TopNav /><div className="spinner">Loading…</div></>)
 
-  if (!passed) {
+  if (!course.passed || !pdfUrl) {
     return (
       <>
         <TopNav />
@@ -31,50 +45,17 @@ export default function Certificate() {
     )
   }
 
-  const issueDate = '2026-07-22'
-  const certNo = `OM-${course.id.toUpperCase().replace(/[^A-Z]/g, '').slice(0, 4)}-0417`
-  const topics = course.cert?.topics || []
-  const titleUpper = course.cert?.titleUpper || course.title.toUpperCase()
-
   return (
     <>
       <TopNav />
       <div className="page">
         <div className="cert-actions">
           <button className="btn" onClick={() => navigate('/my-courses')}><ArrowLeft size={15} /> Back to my courses</button>
-          <button className="btn primary" onClick={() => window.print()}><Download size={16} /> Download / print</button>
+          <a className="btn primary" href={pdfUrl} download="ozellar-certificate.pdf">
+            <Download size={16} /> Download PDF
+          </a>
         </div>
-
-        <div className="cert-sheet">
-          <div className="cert-inner">
-            <div className="cert-co">OZELLAR MARINE PRIVATE LIMITED</div>
-            <div className="cert-addr">Aneja Towers, B Block 4th Floor,<br />Perungudi, Chennai – 600096</div>
-
-            <div className="cert-no">Certificate No: <span className="cert-fill">{certNo}</span></div>
-
-            <div className="cert-line1">This is to certify that <span className="cert-fill">{learner.name}</span></div>
-            <div className="cert-line2">PP No <span className="cert-fill">{learner.ppNo}</span> has successfully completed</div>
-
-            <div className="cert-title">{titleUpper}</div>
-            <div className="cert-conducted">
-              Conducted on <span className="cert-fill">{issueDate}</span> at <span className="cert-fill">Chennai</span>
-            </div>
-
-            <div className="cert-covered">This course covered the following topics:</div>
-            <ul className="cert-topics">
-              {topics.map((t, i) => <li key={i}>{t}</li>)}
-            </ul>
-
-            <div className="cert-sign">
-              <div className="sl">Course In-Charge Signature</div>
-            </div>
-
-            <div className="cert-foot">
-              <div>Date of Issue: <span className="cert-fill">{issueDate}</span></div>
-              <div className="cert-rev">Rev No 00/2026/11-03-2026</div>
-            </div>
-          </div>
-        </div>
+        <iframe className="cert-frame" src={pdfUrl} title="Certificate" />
       </div>
     </>
   )

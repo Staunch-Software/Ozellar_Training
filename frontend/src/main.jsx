@@ -5,12 +5,15 @@ import '@fontsource/inter/400.css'
 import '@fontsource/inter/500.css'
 import '@fontsource/inter/600.css'
 import App from './App.jsx'
+import { AuthProvider } from './auth.jsx'
 import './styles.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <BrowserRouter>
-      <App />
+      <AuthProvider>
+        <App />
+      </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>,
 )

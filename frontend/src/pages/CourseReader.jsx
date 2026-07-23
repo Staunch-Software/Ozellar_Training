@@ -51,13 +51,12 @@ export default function CourseReader() {
   const allDone = course.chapters.every((c) => c.done)
   const goto = (i) => { setIdx(i); window.scrollTo(0, 0) }
 
-  const complete = () => {
-    markChapterComplete(course.id, ch.id)
-    getCourse(slug).then((c) => {
-      setCourse(c)
-      if (idx < c.chapters.length - 1) goto(idx + 1)
-      else navigate(`/course/${slug}/assessment`)
-    })
+  const complete = async () => {
+    await markChapterComplete(course.id, ch.id)
+    const c = await getCourse(slug)
+    setCourse(c)
+    if (idx < c.chapters.length - 1) goto(idx + 1)
+    else navigate(`/course/${slug}/assessment`)
   }
 
   return (

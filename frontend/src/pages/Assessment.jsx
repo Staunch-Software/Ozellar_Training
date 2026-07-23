@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Check, X, Dot, ArrowRight, ArrowLeft, Award, RotateCcw } from 'lucide-react'
+import { Check, X, Dot, ArrowRight, ArrowLeft, Award, RotateCcw, AlertCircle } from 'lucide-react'
 import { TopNav } from '../App.jsx'
-import { getCourse, recordAssessment } from '../api.js'
+import { getCourse, submitAssessment } from '../api.js'
 
 export default function Assessment() {
   const { slug } = useParams()
@@ -10,8 +10,9 @@ export default function Assessment() {
   const [course, setCourse] = useState(null)
   const [qi, setQi] = useState(0)
   const [answers, setAnswers] = useState({})
-  const [checked, setChecked] = useState(false)
-  const [finished, setFinished] = useState(false)
+  const [finished, setFinished] = useState(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   useEffect(() => { getCourse(slug).then(setCourse) }, [slug])
   if (!course) return (<><TopNav /><div className="spinner">Loading assessment…</div></>)
@@ -20,25 +21,34 @@ export default function Assessment() {
   const q = questions[qi]
   const passMark = course.assessment.passMark
   const selected = answers[qi]
+  const answeredCount = questions.filter((_, i) => answers[i] != null).length
+  const allAnswered = answeredCount === questions.length
+  const isLast = qi === questions.length - 1
 
-  const choose = (i) => { if (!checked) setAnswers({ ...answers, [qi]: i }) }
-  const next = () => {
-    setChecked(false)
-    if (qi < questions.length - 1) setQi(qi + 1)
-    else finish()
+  const choose = (i) => setAnswers({ ...answers, [qi]: i })
+
+  const submit = async () => {
+    setError('')
+    setSubmitting(true)
+    try {
+      // send answers in question order; the server grades authoritatively and
+      // returns the correct answers + explanations only now (never up front)
+      const ordered = questions.map((_, i) => answers[i])
+      const result = await submitAssessment(course.id, ordered)
+      setFinished(result)
+      window.scrollTo(0, 0)
+    } catch (e) {
+      setError(e.message || 'Could not submit your assessment.')
+    } finally {
+      setSubmitting(false)
+    }
   }
-  const finish = () => {
-    const correct = questions.reduce((n, qq, i) => n + (answers[i] === qq.answer ? 1 : 0), 0)
-    const score = Math.round((correct / questions.length) * 100)
-    const passed = score >= passMark
-    recordAssessment(course.id, score, passed)
-    setFinished({ score, passed, correct })
-  }
+
+  const retry = () => { setAnswers({}); setQi(0); setFinished(null); setError('') }
 
   if (finished) return (
-    <Result course={course} finished={finished} passMark={passMark}
-      onCert={() => navigate(`/course/${slug}/certificate`)}
-      onRetry={() => { setAnswers({}); setQi(0); setChecked(false); setFinished(false) }} />
+    <Result course={course} result={finished} passMark={passMark}
+      onCert={() => navigate(`/course/${slug}/certificate`)} onRetry={retry} />
   )
 
   return (
@@ -52,42 +62,41 @@ export default function Assessment() {
             <span>Pass mark {passMark}%</span>
           </div>
           <div className="prog" style={{ margin: '8px 0 4px' }}>
-            <i style={{ width: `${((qi + (checked ? 1 : 0)) / questions.length) * 100}%` }} />
+            <i style={{ width: `${(answeredCount / questions.length) * 100}%` }} />
           </div>
+          <div className="hint" style={{ marginBottom: 6 }}>{answeredCount} of {questions.length} answered</div>
           <h1 className="qtext">{q.q}</h1>
 
           {q.options.map((opt, i) => {
-            let cls = 'opt'
-            if (checked) {
-              if (i === q.answer) cls += ' correct'
-              else if (i === selected) cls += ' wrong'
-            } else if (i === selected) cls += ' sel'
+            // no correct/incorrect styling here — grading happens on submit
+            const cls = 'opt' + (selected === i ? ' sel' : '')
             return (
               <div key={i} className={cls} onClick={() => choose(i)}>
-                <span className="box">
-                  {checked && i === q.answer ? <Check size={14} /> :
-                   checked && i === selected ? <X size={14} /> :
-                   selected === i ? <Dot size={16} /> : null}
-                </span>{opt}
+                <span className="box">{selected === i ? <Dot size={16} /> : null}</span>{opt}
               </div>
             )
           })}
 
-          {checked && (
-            <div className="explain" style={selected === q.answer ? {} : { background: 'var(--danger-weak)', color: 'var(--danger)' }}>
-              {selected === q.answer ? 'Correct — ' : 'Not quite. '}{q.explain}
-            </div>
-          )}
+          {error && <div className="form-error" style={{ marginTop: 14 }}><AlertCircle size={15} /> {error}</div>}
 
           <div className="pager">
-            <button className="btn" onClick={() => navigate(`/course/${slug}`)}>
-              <ArrowLeft size={15} /> Back to course
-            </button>
-            {!checked ? (
-              <button className="btn primary" disabled={selected == null} onClick={() => setChecked(true)}>Check answer</button>
+            {qi === 0 ? (
+              <button className="btn" onClick={() => navigate(`/course/${slug}`)}>
+                <ArrowLeft size={15} /> Back to course
+              </button>
             ) : (
-              <button className="btn primary" onClick={next}>
-                {qi < questions.length - 1 ? <>Next question <ArrowRight size={15} /></> : <>See result <ArrowRight size={15} /></>}
+              <button className="btn" onClick={() => setQi(qi - 1)}>
+                <ArrowLeft size={15} /> Previous
+              </button>
+            )}
+            {!isLast ? (
+              <button className="btn primary" disabled={selected == null} onClick={() => setQi(qi + 1)}>
+                Next question <ArrowRight size={15} />
+              </button>
+            ) : (
+              <button className="btn primary" disabled={!allAnswered || submitting} onClick={submit}
+                title={allAnswered ? '' : 'Answer every question before submitting'}>
+                {submitting ? 'Submitting…' : <>Submit assessment <ArrowRight size={15} /></>}
               </button>
             )}
           </div>
@@ -97,24 +106,60 @@ export default function Assessment() {
   )
 }
 
-function Result({ course, finished, passMark, onCert, onRetry }) {
-  const { score, passed, correct } = finished
+function Result({ course, result, passMark, onCert, onRetry }) {
+  const { score, passed, correct, total, review = [] } = result
   return (
     <>
       <TopNav />
       <div className="page">
-        <div className="assess" style={{ textAlign: 'center' }}>
-          <div className="result-seal" style={{ width: 78, height: 78, background: passed ? 'var(--success)' : 'var(--danger)' }}>
-            {passed ? <Award size={36} /> : <RotateCcw size={34} />}
+        <div className="assess">
+          <div style={{ textAlign: 'center' }}>
+            <div className="result-seal" style={{ width: 78, height: 78, margin: '0 auto', background: passed ? 'var(--success)' : 'var(--danger)' }}>
+              {passed ? <Award size={36} /> : <RotateCcw size={34} />}
+            </div>
+            <h1 style={{ fontSize: 28, marginTop: 14 }}>{passed ? 'Assessment passed' : 'Not passed yet'}</h1>
+            <p className="mut" style={{ fontSize: 16, marginTop: 8 }}>
+              You scored <b style={{ color: 'var(--text)' }}>{score}%</b> ({correct} of {total} correct). Pass mark is {passMark}%.
+            </p>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 22 }}>
+              {passed
+                ? <button className="btn primary" onClick={onCert}><Award size={16} /> View your certificate</button>
+                : <button className="btn primary" onClick={onRetry}><RotateCcw size={16} /> Retry assessment</button>}
+            </div>
           </div>
-          <h1 style={{ fontSize: 28 }}>{passed ? 'Assessment passed' : 'Not passed yet'}</h1>
-          <p className="mut" style={{ fontSize: 16, marginTop: 8 }}>
-            You scored <b style={{ color: 'var(--text)' }}>{score}%</b> ({correct} of {course.assessment.questions.length} correct). Pass mark is {passMark}%.
-          </p>
-          <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 22 }}>
-            {passed
-              ? <button className="btn primary" onClick={onCert}><Award size={16} /> View your certificate</button>
-              : <button className="btn primary" onClick={onRetry}><RotateCcw size={16} /> Retry assessment</button>}
+
+          {/* per-question review — from the server response, shown only after grading */}
+          <div className="review" style={{ marginTop: 32 }}>
+            <div className="eyebrow" style={{ marginBottom: 12 }}>Review your answers</div>
+            {review.map((r, ri) => (
+              <div key={ri} className="review-q" style={{ marginBottom: 20 }}>
+                <div className="qhead">
+                  <span style={{ fontWeight: 600 }}>Question {ri + 1}</span>
+                  <span style={{ color: r.isCorrect ? 'var(--success)' : 'var(--danger)', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                    {r.isCorrect ? <><Check size={14} /> Correct</> : <><X size={14} /> Incorrect</>}
+                  </span>
+                </div>
+                <h3 className="qtext" style={{ fontSize: 17, margin: '6px 0 10px' }}>{r.q}</h3>
+                {r.options.map((opt, i) => {
+                  let cls = 'opt'
+                  if (i === r.correct) cls += ' correct'
+                  else if (i === r.chosen) cls += ' wrong'
+                  return (
+                    <div key={i} className={cls} style={{ cursor: 'default' }}>
+                      <span className="box">
+                        {i === r.correct ? <Check size={14} /> :
+                         i === r.chosen ? <X size={14} /> : null}
+                      </span>{opt}
+                    </div>
+                  )
+                })}
+                {r.explain && (
+                  <div className="explain" style={r.isCorrect ? {} : { background: 'var(--danger-weak)', color: 'var(--danger)' }}>
+                    {r.explain}
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         </div>
       </div>

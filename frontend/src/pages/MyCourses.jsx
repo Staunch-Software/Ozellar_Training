@@ -2,20 +2,23 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Anchor, HardHat, ShieldCheck, ArrowRight, Download, PlayCircle, BookOpen } from 'lucide-react'
 import { TopNav } from '../App.jsx'
-import { getCourses, getLearner } from '../api.js'
+import { useAuth } from '../auth.jsx'
+import { getCourses } from '../api.js'
 
 const ICONS = { Anchor, HardHat, ShieldCheck }
 
 export default function MyCourses() {
   const [courses, setCourses] = useState(null)
-  const learner = getLearner()
+  const { user: learner } = useAuth()
   const navigate = useNavigate()
 
   useEffect(() => { getCourses().then(setCourses) }, [])
   if (!courses) return (<><TopNav /><div className="spinner">Loading your courses…</div></>)
 
-  const inProgress = courses.filter((c) => c.progressPct > 0 && c.progressPct < 100).length
-  const completed = courses.filter((c) => c.progressPct >= 100).length
+  // a course "counts" as completed when its assessment is passed (a cert is
+  // issued on pass) — not merely when all chapters were scrolled
+  const completed = courses.filter((c) => c.passed).length
+  const inProgress = courses.filter((c) => !c.passed && c.progressPct > 0).length
 
   return (
     <>
@@ -45,14 +48,15 @@ export default function MyCourses() {
 
 function CourseCard({ c, onOpen }) {
   const Icon = ICONS[c.icon] || BookOpen
-  const pct = c.progressPct
+  // a passed course reads as complete regardless of how many chapters were scrolled
+  const pct = c.passed ? 100 : c.progressPct
   let badge = 'Not started'
   let action = <span className="chip accent">Start <ArrowRight size={13} /></span>
-  if (pct >= 100) {
+  if (c.passed) {
     badge = 'Completed'
     action = <Link to={`/course/${c.slug}/certificate`} className="chip success" onClick={(e) => e.stopPropagation()}>
       <Download size={13} /> Certificate</Link>
-  } else if (pct > 0) {
+  } else if (c.progressPct > 0) {
     badge = 'In progress'
     action = <span className="chip accent"><PlayCircle size={13} /> Resume</span>
   }
@@ -70,7 +74,7 @@ function CourseCard({ c, onOpen }) {
         <div className="meta"><span>{c.total} slides</span><span>{c.durationLabel}</span></div>
         <div className="prog"><i style={{ width: `${pct}%` }} /></div>
         <div className="status">
-          <span>{pct >= 100 ? c.statusNote : pct > 0 ? `${c.completedCount} of ${c.total} done` : c.statusNote}</span>
+          <span>{c.passed ? `Passed · ${c.score}%` : c.progressPct > 0 ? `${c.completedCount} of ${c.total} done` : c.statusNote}</span>
           {action}
         </div>
       </div>

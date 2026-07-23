@@ -1,78 +1,108 @@
 /* ------------------------------------------------------------------
-   Data access layer. Today it reads local seed data and stores
-   progress in the browser (localStorage) so the app is fully usable
-   with no backend. When the FastAPI backend is ready, set USE_API =
-   true and these functions fetch the same shapes from /api instead.
+   API client. Talks to the FastAPI backend at /api (proxied to :8000 in
+   dev by vite.config.js). Attaches the JWT bearer token on every call and
+   clears the session on a 401 from an authenticated request.
    ------------------------------------------------------------------ */
-import { courses as seedCourses, learner as seedLearner } from './data/courses.js'
+const API = '/api'
+const TOKEN_KEY = 'ozellar.token'
 
-const USE_API = false // flip to true once the FastAPI backend is running
-const PROGRESS_KEY = 'ozellar.progress.v1'
+export const getToken = () => localStorage.getItem(TOKEN_KEY)
+export const setToken = (t) => (t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY))
 
-function loadProgress() {
-  try { return JSON.parse(localStorage.getItem(PROGRESS_KEY)) || {} }
-  catch { return {} }
-}
-function saveProgress(p) {
-  localStorage.setItem(PROGRESS_KEY, JSON.stringify(p))
-}
+async function req(path, opts = {}) {
+  const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) }
+  const t = getToken()
+  if (t) headers.Authorization = `Bearer ${t}`
+  const res = await fetch(API + path, { ...opts, headers })
 
-/* progress shape: { [courseId]: { done: [chapterId...], passed: bool, score: number } } */
-
-export function getLearner() {
-  return seedLearner
-}
-
-export function getCourses() {
-  if (USE_API) return fetch('/api/courses').then((r) => r.json())
-  const progress = loadProgress()
-  return Promise.resolve(
-    seedCourses.map((c) => decorate(c, progress[c.id])),
-  )
-}
-
-export function getCourse(slug) {
-  if (USE_API) return fetch(`/api/courses/${slug}`).then((r) => r.json())
-  const course = seedCourses.find((c) => c.slug === slug)
-  if (!course) return Promise.resolve(null)
-  const progress = loadProgress()
-  return Promise.resolve(decorate(course, progress[course.id]))
-}
-
-function decorate(course, cp) {
-  const done = new Set(cp?.done || [])
-  const total = course.chapters.length
-  const completedCount = course.chapters.filter((ch) => done.has(ch.id)).length
-  let pct = total ? Math.round((completedCount / total) * 100) : 0
-  if (course.progressOverride != null && !cp) pct = course.progressOverride
-  return {
-    ...course,
-    completedCount,
-    total,
-    progressPct: pct,
-    passed: cp?.passed ?? course.status === 'completed',
-    score: cp?.score ?? (course.status === 'completed' ? 92 : null),
-    chapters: course.chapters.map((ch) => ({ ...ch, done: done.has(ch.id) })),
+  if (res.status === 401) {
+    const err = await res.json().catch(() => ({}))
+    // an authenticated request failing 401 = expired/invalid session → sign out
+    if (getToken()) {
+      setToken(null)
+      if (window.location.pathname !== '/') window.location.href = '/'
+    }
+    throw new Error(err.detail || 'Unauthorized')
   }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    const err = new Error(body.detail || `Request failed (${res.status})`)
+    err.status = res.status
+    throw err
+  }
+  return res.status === 204 ? null : res.json()
 }
 
-export function markChapterComplete(courseId, chapterId) {
-  const p = loadProgress()
-  const cp = p[courseId] || { done: [] }
-  if (!cp.done.includes(chapterId)) cp.done.push(chapterId)
-  p[courseId] = cp
-  saveProgress(p)
+// auth
+export const login = (body) => req('/auth/login', { method: 'POST', body: JSON.stringify(body) })
+export const getMe = () => req('/auth/me')
+
+// courses / progress
+export const getCourses = () => req('/courses')
+export const getCourse = (slug) => req(`/courses/${slug}`)
+export const markChapterComplete = (courseId, chapterId) =>
+  req(`/courses/${courseId}/chapters/${chapterId}/complete`, { method: 'POST' })
+export const submitAssessment = (courseId, answers) =>
+  req(`/courses/${courseId}/assessment`, { method: 'POST', body: JSON.stringify({ answers }) })
+export const getCertificate = (courseId) => req(`/courses/${courseId}/certificate`)
+export const getCertificates = () => req('/certificates')
+export const verifyCertificate = (id) => req(`/verify/${id}`)
+
+// fetch the certificate PDF (auth) as an object URL — used to PREVIEW the exact
+// PDF in an <iframe> so what's shown is identical to what downloads
+export async function fetchCertificatePdfUrl(courseId) {
+  const res = await fetch(`${API}/courses/${courseId}/certificate.pdf`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  })
+  if (!res.ok) throw new Error('Could not load the certificate')
+  return URL.createObjectURL(await res.blob())
 }
 
-export function recordAssessment(courseId, score, passed) {
-  const p = loadProgress()
-  const cp = p[courseId] || { done: [] }
-  cp.score = score
-  cp.passed = passed
-  p[courseId] = cp
-  saveProgress(p)
+// certificate PDF needs the auth header, so fetch as a blob and download
+export async function downloadCertificatePdf(courseId, certId) {
+  const res = await fetch(`${API}/courses/${courseId}/certificate.pdf`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  })
+  if (!res.ok) throw new Error('Could not download the certificate')
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${certId || 'ozellar-certificate'}.pdf`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
 
-export function getResult(courseId) {
-  return loadProgress()[courseId] || null
+// notifications
+export const getNotifications = () => req('/notifications')
+export const markNotificationRead = (id) => req(`/notifications/${id}/read`, { method: 'POST' })
+export const markAllNotificationsRead = () => req('/notifications/read-all', { method: 'POST' })
+
+// admin
+export const adminListUsers = () => req('/admin/users')
+export const adminCreateUser = (body) => req('/admin/users', { method: 'POST', body: JSON.stringify(body) })
+export const adminUpdateUser = (id, body) => req(`/admin/users/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+export const adminAssign = (id, courseId) =>
+  req(`/admin/users/${id}/enrollments`, { method: 'POST', body: JSON.stringify({ courseId }) })
+export const adminUnassign = (id, courseId) =>
+  req(`/admin/users/${id}/enrollments/${courseId}`, { method: 'DELETE' })
+export const adminReport = () => req('/admin/report')
+
+// CSV needs the auth header, so fetch as a blob and trigger a download
+export async function adminDownloadReportCsv() {
+  const res = await fetch(API + '/admin/report.csv', {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  })
+  if (!res.ok) throw new Error('Could not download the report')
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'ozellar-compliance-report.csv'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
 }
