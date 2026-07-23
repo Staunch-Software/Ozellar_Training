@@ -1,0 +1,20 @@
+# Ozellar Marine Training API — FastAPI/uvicorn under systemd.
+# Install:  sudo cp deploy/ozellar-api.service /etc/systemd/system/ozellar-api.service
+#           sudo systemctl daemon-reload && sudo systemctl enable --now ozellar-api
+# Assumes the repo is at /opt/ozellar and a venv at /opt/ozellar/backend/.venv.
+[Unit]
+Description=Ozellar Marine Training API (FastAPI/uvicorn)
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=simple
+User=Deployer
+WorkingDirectory=/opt/ozellar/backend
+EnvironmentFile=/opt/ozellar/backend/.env
+ExecStart=/opt/ozellar/backend/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8021
+Restart=on-failure
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target
