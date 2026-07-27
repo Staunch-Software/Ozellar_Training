@@ -1,11 +1,64 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
-  CheckCircle2, Circle, Play, Lock, Star, Check, Download, Info,
+  CheckCircle2, Circle, Play, Lock, Star, Check, Download, Info, X, Dot,
   ChevronLeft, ChevronRight, Image as ImageIcon, ClipboardCheck, ArrowDown,
+  HelpCircle,
 } from 'lucide-react'
 import { TopNav } from '../App.jsx'
 import { getCourse, markChapterComplete } from '../api.js'
+
+// non-blocking checkpoint quiz — instant local feedback, never gates progress
+function ChapterQuiz({ questions }) {
+  const [answers, setAnswers] = useState({})
+  const [checked, setChecked] = useState({})
+  const choose = (qi, oi) => {
+    if (checked[qi]) return
+    setAnswers((a) => ({ ...a, [qi]: oi }))
+  }
+  const check = (qi) => setChecked((c) => ({ ...c, [qi]: true }))
+
+  return (
+    <div className="lesson-body">
+      <div className="novis" style={{ marginBottom: 18 }}>
+        <HelpCircle size={16} style={{ verticalAlign: -3, marginRight: 6 }} />
+        Quick check — this is a practice quiz and won't stop you moving on.
+      </div>
+      {questions.map((q, qi) => {
+        const sel = answers[qi]
+        const isChecked = !!checked[qi]
+        return (
+          <div key={qi} className="review-q" style={{ marginBottom: 24 }}>
+            <h3 className="qtext" style={{ fontSize: 17, margin: '6px 0 10px' }}>{qi + 1}. {q.q}</h3>
+            {q.options.map((opt, oi) => {
+              let cls = 'opt'
+              if (isChecked && oi === q.answer) cls += ' correct'
+              else if (isChecked && oi === sel) cls += ' wrong'
+              else if (sel === oi) cls += ' sel'
+              return (
+                <div key={oi} className={cls} onClick={() => choose(qi, oi)}>
+                  <span className="box">
+                    {isChecked
+                      ? (oi === q.answer ? <Check size={14} /> : oi === sel ? <X size={14} /> : null)
+                      : (sel === oi ? <Dot size={16} /> : null)}
+                  </span>{opt}
+                </div>
+              )
+            })}
+            {!isChecked ? (
+              <button className="btn sm" style={{ marginTop: 8 }} disabled={sel == null}
+                onClick={() => check(qi)}>Check answer</button>
+            ) : q.explain && (
+              <div className="explain" style={sel === q.answer ? {} : { background: 'var(--danger-weak)', color: 'var(--danger)' }}>
+                {q.explain}
+              </div>
+            )}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
 
 export default function CourseReader() {
   const { slug } = useParams()
@@ -75,7 +128,8 @@ export default function CourseReader() {
             {course.chapters.map((c, i) => (
               <button key={c.id} className={`ch ${i === idx ? 'on' : ''} ${c.done ? 'done' : ''}`}
                 onClick={() => goto(i)}>
-                {c.done ? <CheckCircle2 className="ci" /> : i === idx ? <Play className="ci" /> : <Circle className="ci" />}
+                {c.done ? <CheckCircle2 className="ci" /> : i === idx ? <Play className="ci" /> :
+                 c.kind === 'quiz' ? <HelpCircle className="ci" /> : <Circle className="ci" />}
                 <span className="chn">{c.n}. {c.title}</span>
               </button>
             ))}
@@ -88,54 +142,64 @@ export default function CourseReader() {
         </aside>
 
         <section className="content">
-          {/* video, if the lesson has one */}
-          {ch.videos && ch.videos.length > 0 && (
-            <div className="media" style={{ marginBottom: 22 }}>
-              <video controls poster={ch.image} preload="metadata">
-                <source src={ch.videos[0]} type="video/mp4" />
+          {/* video(s), if the lesson has any */}
+          {ch.videos && ch.videos.map((v, vi) => (
+            <div className="media" style={{ marginBottom: 22 }} key={vi}>
+              <video controls poster={vi === 0 ? ch.image : undefined} preload="metadata">
+                <source src={v} type="video/mp4" />
               </video>
             </div>
-          )}
+          ))}
 
           <div className="chead">
             <div>
-              <div className="eyebrow">Lesson {ch.n} of {course.total}</div>
+              <div className="eyebrow">
+                {ch.kind === 'quiz' ? 'Checkpoint quiz' : `Lesson ${ch.n} of ${course.total}`}
+              </div>
               <h1>{ch.title}</h1>
             </div>
           </div>
 
-          {ch.intro && <p className="lead-p">{ch.intro}</p>}
+          {ch.kind === 'quiz' ? (
+            <ChapterQuiz questions={ch.quizQuestions || []} />
+          ) : (
+            <>
+              {ch.intro && <p className="lead-p">{ch.intro}</p>}
 
-          {/* structured content */}
-          <div className="lesson-body">
-            {ch.sections && ch.sections.map((s, si) => (
-              <div className="grp" key={si}>
-                {s.heading && <h4>{s.heading}</h4>}
-                <ul>{s.items.map((it, li) => (
-                  <li key={li}><span className="b" />{it}</li>
-                ))}</ul>
+              {/* structured content */}
+              <div className="lesson-body">
+                {ch.sections && ch.sections.map((s, si) => (
+                  <div className="grp" key={si}>
+                    {s.heading && <h4>{s.heading}</h4>}
+                    <ul>{s.items.map((it, li) => (
+                      <li key={li}><span className="b" />{it}</li>
+                    ))}</ul>
+                  </div>
+                ))}
+                {(!ch.sections || ch.sections.length === 0) && !ch.videos.length && (
+                  <div className="novis"><Info size={16} style={{ verticalAlign: -3, marginRight: 6 }} />
+                    This lesson is delivered visually — open the original slide below.</div>
+                )}
+                {ch.figure && (
+                  <div className="figure-note"><ImageIcon size={15} /> {ch.figure}</div>
+                )}
               </div>
-            ))}
-            {(!ch.sections || ch.sections.length === 0) && !ch.videos.length && (
-              <div className="novis"><Info size={16} style={{ verticalAlign: -3, marginRight: 6 }} />
-                This lesson is delivered visually — open the original slide below.</div>
-            )}
-            {ch.figure && (
-              <div className="figure-note"><ImageIcon size={15} /> {ch.figure}</div>
-            )}
-          </div>
 
-          {/* original slide reference */}
-          <button className="reveal" onClick={() => setShowSlide(!showSlide)}>
-            <ImageIcon size={15} /> {showSlide ? 'Hide' : 'View'} original slide
-            <ChevronRight size={14} style={{ transform: showSlide ? 'rotate(90deg)' : 'none', transition: '.15s' }} />
-          </button>
-          {showSlide && (
-            <div className="slidefull">
-              <img src={ch.image} alt={`Slide ${ch.n}`} />
-              <div className="cap"><span>Original slide {ch.n}</span>
-                <a href={ch.image} download className="dl"><Download size={13} /> Download</a></div>
-            </div>
+              {/* original slide reference */}
+              {ch.image && (
+                <button className="reveal" onClick={() => setShowSlide(!showSlide)}>
+                  <ImageIcon size={15} /> {showSlide ? 'Hide' : 'View'} original slide
+                  <ChevronRight size={14} style={{ transform: showSlide ? 'rotate(90deg)' : 'none', transition: '.15s' }} />
+                </button>
+              )}
+              {showSlide && ch.image && (
+                <div className="slidefull">
+                  <img src={ch.image} alt={`Slide ${ch.n}`} />
+                  <div className="cap"><span>Original slide {ch.n}</span>
+                    <a href={ch.image} download className="dl"><Download size={13} /> Download</a></div>
+                </div>
+              )}
+            </>
           )}
 
           {/* scroll gate hint */}

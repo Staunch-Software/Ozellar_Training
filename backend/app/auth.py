@@ -101,11 +101,12 @@ _MAX_ATTEMPTS = 6
 _WINDOW_SECONDS = 300
 
 
-def check_rate_limit(identifier: str):
+def check_rate_limit(identifier: str, max_attempts: int = _MAX_ATTEMPTS,
+                     window_seconds: int = _WINDOW_SECONDS):
     now = time.time()
-    hits = [t for t in _attempts.get(identifier, []) if now - t < _WINDOW_SECONDS]
-    if len(hits) >= _MAX_ATTEMPTS:
-        raise HTTPException(429, "Too many attempts. Try again in a few minutes.")
+    hits = [t for t in _attempts.get(identifier, []) if now - t < window_seconds]
+    if len(hits) >= max_attempts:
+        raise HTTPException(429, "Too many requests. Try again shortly.")
     hits.append(now)
     _attempts[identifier] = hits
 

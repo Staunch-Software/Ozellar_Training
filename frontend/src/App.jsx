@@ -15,6 +15,8 @@ import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import AdminUsers from './pages/admin/AdminUsers.jsx'
 import AdminAssignments from './pages/admin/AdminAssignments.jsx'
 import AdminReport from './pages/admin/AdminReport.jsx'
+import AdminCourses from './pages/admin/AdminCourses.jsx'
+import AdminCourseBuilder from './pages/admin/AdminCourseBuilder.jsx'
 import { AuthProvider, useAuth, ProtectedRoute, AdminRoute } from './auth.jsx'
 
 /* ---- theme ---- */
@@ -91,6 +93,8 @@ export default function App() {
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
+          <Route path="courses" element={<AdminCourses />} />
+          <Route path="courses/:id" element={<AdminCourseBuilder />} />
           <Route path="assignments" element={<AdminAssignments />} />
           <Route path="report" element={<AdminReport />} />
         </Route>

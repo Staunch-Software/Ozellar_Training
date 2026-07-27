@@ -36,6 +36,7 @@ async function req(path, opts = {}) {
 // auth
 export const login = (body) => req('/auth/login', { method: 'POST', body: JSON.stringify(body) })
 export const getMe = () => req('/auth/me')
+export const searchCrewNames = (q) => req(`/auth/crew-search?q=${encodeURIComponent(q)}`)
 
 // courses / progress
 export const getCourses = () => req('/courses')
@@ -105,4 +106,48 @@ export async function adminDownloadReportCsv() {
   a.click()
   a.remove()
   URL.revokeObjectURL(url)
+}
+
+// admin course builder
+export const adminListCourses = () => req('/admin/courses')
+export const adminCreateCourse = (body) => req('/admin/courses', { method: 'POST', body: JSON.stringify(body) })
+export const adminGetCourseBuilder = (courseId) => req(`/admin/courses/${courseId}`)
+export const adminCreateQuizChapter = (courseId, body) =>
+  req(`/admin/courses/${courseId}/quiz-chapters`, { method: 'POST', body: JSON.stringify(body) })
+export const adminSaveQuizQuestions = (courseId, chapterId, questions) =>
+  req(`/admin/courses/${courseId}/chapters/${chapterId}/quiz-questions`,
+    { method: 'PUT', body: JSON.stringify({ questions }) })
+export const adminReorderChapters = (courseId, order) =>
+  req(`/admin/courses/${courseId}/reorder`, { method: 'PUT', body: JSON.stringify({ order }) })
+export const adminDeleteChapter = (courseId, chapterId) =>
+  req(`/admin/courses/${courseId}/chapters/${chapterId}`, { method: 'DELETE' })
+export const adminSaveAssessment = (courseId, body) =>
+  req(`/admin/courses/${courseId}/assessment`, { method: 'PUT', body: JSON.stringify(body) })
+
+// file uploads need FormData, so they can't go through req()'s JSON-only body
+async function uploadReq(path, formData) {
+  const res = await fetch(API + path, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${getToken()}` },
+    body: formData,
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail || `Upload failed (${res.status})`)
+  }
+  return res.json()
+}
+
+export const adminUploadPptx = (courseId, file) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  return uploadReq(`/admin/courses/${courseId}/upload-pptx`, fd)
+}
+
+export const adminUploadVideo = (courseId, file, { chapterId, title } = {}) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  if (chapterId) fd.append('chapterId', chapterId)
+  if (title) fd.append('title', title)
+  return uploadReq(`/admin/courses/${courseId}/upload-video`, fd)
 }

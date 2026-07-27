@@ -9,10 +9,15 @@ frontend/dist/
 
 # local db & env
 backend/dev.db
+backend/dev.db.bak-*
+dev.db
 .env
 
 # extracted videos — large (1.4 GB); belong on a streaming service, not in git
 frontend/public/media/
+
+# admin course-builder uploads (runtime data, not checked in)
+backend/uploads/
 
 # os
 .DS_Store

@@ -9,11 +9,16 @@ Run:  uvicorn app.main:app --reload
 import csv
 import io
 import os
+import re
+import shutil
+import subprocess
+import tempfile
 from datetime import datetime, timezone
 
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
@@ -29,6 +34,13 @@ from .auth import (
 # public origin used in the certificate's verification line / verify links
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://training.ozellar.com")
 
+# admin course-builder uploads (slide images rendered from .pptx, uploaded
+# videos) — served back out under /api/uploads so nginx's existing /api
+# proxy (see deploy/nginx-ozellar.conf) covers it with no further config.
+UPLOAD_DIR = os.getenv(
+    "UPLOAD_DIR", os.path.join(os.path.dirname(__file__), "..", "uploads"))
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
 app = FastAPI(title="Ozellar Marine Training API", version="0.2.0")
 
 app.add_middleware(
@@ -38,6 +50,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.mount("/api/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
 
 
 @app.on_event("startup")
@@ -55,6 +69,32 @@ def startup():
               f"Run:  alembic upgrade head  &&  python -m app.seed")
     finally:
         db.close()
+
+
+smartpal_scheduler = None
+
+
+@app.on_event("startup")
+async def start_smartpal_scheduler():
+    # Runs the SmartPAL crew-data sync (app/smartpal_sync.py) at 7am/7pm IST.
+    # Disabled if credentials aren't configured, so a plain dev checkout
+    # doesn't try to log into SmartPAL on every reload.
+    global smartpal_scheduler
+    if not os.getenv("SMARTPAL_USERNAME") or not os.getenv("SMARTPAL_PASSWORD"):
+        print("[startup] SmartPAL sync disabled (SMARTPAL_USERNAME/PASSWORD not set)")
+        return
+    from apscheduler.schedulers.asyncio import AsyncIOScheduler
+    from .smartpal_sync import schedule_jobs
+    smartpal_scheduler = AsyncIOScheduler()
+    schedule_jobs(smartpal_scheduler)
+    smartpal_scheduler.start()
+    print("[startup] SmartPAL sync scheduled for 7:00 and 19:00 IST")
+
+
+@app.on_event("shutdown")
+def stop_smartpal_scheduler():
+    if smartpal_scheduler:
+        smartpal_scheduler.shutdown(wait=False)
 
 
 # ======================= AUTH =======================
@@ -111,6 +151,26 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     return {"token": create_token(user), "user": user_public(user)}
 
 
+@app.get("/api/auth/crew-search")
+def crew_search(q: str, request: Request, db: Session = Depends(get_db)):
+    """Public (pre-login) name autocomplete for the crew sign-in form.
+    Deliberately minimal: only name + rank (never crew_id/DOB/passport/etc.),
+    active learners only, capped result count, and a per-IP rate limit
+    separate from the stricter login-attempt limiter — this endpoint has no
+    credential to check, just a lookup, so it needs its own looser budget
+    that still blocks bulk roster scraping."""
+    check_rate_limit(f"crew-search:{request.client.host if request.client else 'unknown'}",
+                     max_attempts=40, window_seconds=60)
+    query = normalize_name(q)
+    if len(query) < 2:
+        return []
+    candidates = (db.query(models.User)
+                  .filter_by(role="learner", is_active=True).all())
+    matches = [u for u in candidates if query in normalize_name(u.full_name)]
+    matches.sort(key=lambda u: (not normalize_name(u.full_name).startswith(query), u.full_name))
+    return [{"name": u.full_name, "rank": u.rank} for u in matches[:8]]
+
+
 @app.get("/api/auth/me")
 def me(user: models.User = Depends(get_current_user)):
     return user_public(user)
@@ -162,6 +222,12 @@ def serialize_course(course, progress, detail=False):
             "id": ch.id, "n": ch.n, "chapterLabel": ch.chapter_label, "title": ch.title,
             "intro": ch.intro, "sections": ch.sections, "figure": ch.figure,
             "image": ch.image, "videos": ch.videos, "done": ch.id in done,
+            "kind": ch.kind,
+            # checkpoint quizzes are ungraded (non-blocking) — safe to send
+            # the answer key straight to the client, unlike the final assessment
+            "quizQuestions": [{
+                "q": qq.prompt, "options": qq.options, "answer": qq.answer, "explain": qq.explain,
+            } for qq in ch.quiz_questions] if ch.kind == "quiz" else [],
         } for ch in course.chapters]
         data["cert"] = course.cert
         # Integrity: the answer key and explanations are NOT sent to the client.
@@ -616,3 +682,328 @@ def admin_report_csv(admin: models.User = Depends(require_admin), db: Session = 
                         cell["passedOn"] or ""])
     return Response(content=buf.getvalue(), media_type="text/csv",
                     headers={"Content-Disposition": "attachment; filename=ozellar-compliance-report.csv"})
+
+
+# ======================= ADMIN COURSE BUILDER =======================
+# Lets an admin create a brand-new course from scratch: upload a .pptx
+# (one slide -> one lesson chapter), upload standalone/attached videos,
+# insert non-blocking checkpoint quizzes anywhere in the chapter sequence,
+# freely reorder everything, and author the mandatory graded final
+# assessment. Scoped to new courses only — the 3 seeded courses stay
+# managed via courses_seed.json + reseed.
+
+def _slugify(title: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", title.strip().lower()).strip("-") or "course"
+
+
+def _unique_course_id(db, base: str) -> str:
+    cid = base
+    i = 2
+    while db.get(models.Course, cid):
+        cid = f"{base}-{i}"
+        i += 1
+    return cid
+
+
+def _next_chapter_order(course) -> int:
+    return (max((ch.order for ch in course.chapters), default=-1)) + 1
+
+
+def _next_chapter_n(course) -> int:
+    return (max((ch.n or 0 for ch in course.chapters), default=0)) + 1
+
+
+def admin_course_summary(course):
+    return {
+        "id": course.id, "slug": course.slug, "title": course.title,
+        "subtitle": course.subtitle, "passMark": course.pass_mark,
+        "maxAttempts": course.max_attempts,
+        "chapterCount": len(course.chapters), "questionCount": len(course.questions),
+    }
+
+
+def admin_chapter_detail(ch):
+    return {
+        "id": ch.id, "kind": ch.kind, "n": ch.n, "title": ch.title,
+        "image": ch.image, "videos": ch.videos, "order": ch.order,
+        "quizQuestions": [{
+            "id": qq.id, "q": qq.prompt, "options": qq.options,
+            "answer": qq.answer, "explain": qq.explain,
+        } for qq in ch.quiz_questions] if ch.kind == "quiz" else [],
+    }
+
+
+class CreateCourseRequest(BaseModel):
+    title: str
+    subtitle: str | None = None
+    icon: str | None = None
+    gradient: str | None = None
+    durationLabel: str | None = None
+    passMark: int = 80
+    maxAttempts: int | None = None
+
+
+class CreateQuizChapterRequest(BaseModel):
+    title: str
+    afterChapterId: str | None = None
+
+
+class QuizQuestionIn(BaseModel):
+    q: str
+    options: list[str]
+    answer: int
+    explain: str | None = None
+
+
+class SaveQuizQuestionsRequest(BaseModel):
+    questions: list[QuizQuestionIn]
+
+
+class SaveAssessmentRequest(BaseModel):
+    passMark: int
+    maxAttempts: int | None = None
+    questions: list[QuizQuestionIn]
+
+
+class ReorderRequest(BaseModel):
+    order: list[str]
+
+
+@app.get("/api/admin/courses")
+def admin_list_courses(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    courses = db.query(models.Course).order_by(models.Course.order).all()
+    return [admin_course_summary(c) for c in courses]
+
+
+@app.post("/api/admin/courses")
+def admin_create_course(req: CreateCourseRequest, admin: models.User = Depends(require_admin),
+                        db: Session = Depends(get_db)):
+    title = req.title.strip()
+    if not title:
+        raise HTTPException(400, "Title is required")
+    cid = _unique_course_id(db, _slugify(title))
+    existing_orders = [c.order for c in db.query(models.Course).all()]
+    course = models.Course(
+        id=cid, slug=cid, title=title, subtitle=req.subtitle,
+        icon=req.icon, gradient=req.gradient, duration_label=req.durationLabel,
+        status="not-started", pass_mark=req.passMark, max_attempts=req.maxAttempts,
+        order=(max(existing_orders) + 1) if existing_orders else 0,
+    )
+    db.add(course)
+    db.commit()
+    db.refresh(course)
+    return admin_course_summary(course)
+
+
+@app.get("/api/admin/courses/{course_id}")
+def admin_get_course_builder(course_id: str, admin: models.User = Depends(require_admin),
+                             db: Session = Depends(get_db)):
+    course = db.get(models.Course, course_id)
+    if not course:
+        raise HTTPException(404, "Course not found")
+    return {
+        "id": course.id, "slug": course.slug, "title": course.title,
+        "subtitle": course.subtitle, "passMark": course.pass_mark,
+        "maxAttempts": course.max_attempts,
+        "chapters": [admin_chapter_detail(ch) for ch in
+                     sorted(course.chapters, key=lambda c: c.order)],
+        "assessment": {
+            "passMark": course.pass_mark, "maxAttempts": course.max_attempts,
+            "questions": [{
+                "id": q.id, "q": q.prompt, "options": q.options,
+                "answer": q.answer, "explain": q.explain,
+            } for q in sorted(course.questions, key=lambda q: q.order)],
+        },
+    }
+
+
+@app.post("/api/admin/courses/{course_id}/upload-pptx")
+async def admin_upload_pptx(course_id: str, file: UploadFile = File(...),
+                            admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    course = db.get(models.Course, course_id)
+    if not course:
+        raise HTTPException(404, "Course not found")
+    if not (file.filename or "").lower().endswith(".pptx"):
+        raise HTTPException(400, "File must be a .pptx")
+
+    course_dir = os.path.join(UPLOAD_DIR, course_id)
+    os.makedirs(course_dir, exist_ok=True)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        pptx_path = os.path.join(tmp, file.filename)
+        with open(pptx_path, "wb") as f:
+            shutil.copyfileobj(file.file, f)
+
+        try:
+            subprocess.run(
+                ["soffice", "--headless", "--convert-to", "pdf", "--outdir", tmp, pptx_path],
+                check=True, capture_output=True, timeout=120,
+            )
+        except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
+            raise HTTPException(
+                500, "Could not convert the presentation. Make sure LibreOffice "
+                     "(soffice) is installed on the server.") from e
+
+        pdf_path = os.path.join(tmp, os.path.splitext(file.filename)[0] + ".pdf")
+        if not os.path.exists(pdf_path):
+            raise HTTPException(500, "Presentation conversion did not produce a PDF")
+
+        import fitz  # PyMuPDF — imported lazily so it's only required when this route is hit
+        doc = fitz.open(pdf_path)
+        start_n = max((ch.n or 0 for ch in course.chapters), default=0)
+        next_order = _next_chapter_order(course)
+        created = []
+        for i, page in enumerate(doc):
+            n = start_n + i + 1
+            pix = page.get_pixmap(dpi=150)
+            filename = f"slide{n}.png"
+            pix.save(os.path.join(course_dir, filename))
+            ch = models.Chapter(
+                id=f"{course_id}-slide-{n}", course_id=course_id, n=n,
+                title=f"Slide {n}", sections=[], videos=[],
+                image=f"/api/uploads/{course_id}/{filename}",
+                order=next_order + i, kind="lesson",
+            )
+            db.add(ch)
+            created.append(ch)
+        doc.close()
+
+    db.commit()
+    return {"created": len(created)}
+
+
+@app.post("/api/admin/courses/{course_id}/upload-video")
+async def admin_upload_video(course_id: str, file: UploadFile = File(...),
+                             chapterId: str | None = Form(None), title: str | None = Form(None),
+                             admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    course = db.get(models.Course, course_id)
+    if not course:
+        raise HTTPException(404, "Course not found")
+
+    course_dir = os.path.join(UPLOAD_DIR, course_id)
+    os.makedirs(course_dir, exist_ok=True)
+    ext = os.path.splitext(file.filename or "")[1] or ".mp4"
+    prefix = f"/api/uploads/{course_id}/video"
+    existing = sum(1 for ch in course.chapters for v in (ch.videos or []) if v.startswith(prefix))
+    filename = f"video{existing + 1}{ext}"
+    with open(os.path.join(course_dir, filename), "wb") as f:
+        shutil.copyfileobj(file.file, f)
+    url = f"/api/uploads/{course_id}/{filename}"
+
+    if chapterId:
+        ch = db.get(models.Chapter, chapterId)
+        if not ch or ch.course_id != course_id:
+            raise HTTPException(404, "Chapter not found")
+        ch.videos = [*(ch.videos or []), url]
+        db.commit()
+        return admin_chapter_detail(ch)
+
+    ch = models.Chapter(
+        id=f"{course_id}-video-{_next_chapter_n(course)}", course_id=course_id,
+        n=_next_chapter_n(course), title=(title or "Video").strip() or "Video",
+        sections=[], videos=[url], order=_next_chapter_order(course), kind="lesson",
+    )
+    db.add(ch)
+    db.commit()
+    db.refresh(ch)
+    return admin_chapter_detail(ch)
+
+
+@app.post("/api/admin/courses/{course_id}/quiz-chapters")
+def admin_create_quiz_chapter(course_id: str, req: CreateQuizChapterRequest,
+                              admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    course = db.get(models.Course, course_id)
+    if not course:
+        raise HTTPException(404, "Course not found")
+    chapters = sorted(course.chapters, key=lambda c: c.order)
+
+    if req.afterChapterId:
+        idx = next((i for i, ch in enumerate(chapters) if ch.id == req.afterChapterId), None)
+        if idx is None:
+            raise HTTPException(404, "Reference chapter not found")
+        insert_at = idx + 1
+    else:
+        insert_at = len(chapters)
+
+    quiz = models.Chapter(
+        id=f"{course_id}-quiz-{_next_chapter_n(course)}", course_id=course_id,
+        n=_next_chapter_n(course), title=req.title.strip() or "Quiz",
+        sections=[], videos=[], kind="quiz", order=0,
+    )
+    chapters.insert(insert_at, quiz)
+    db.add(quiz)
+    for i, ch in enumerate(chapters):
+        ch.order = i
+    db.commit()
+    db.refresh(quiz)
+    return admin_chapter_detail(quiz)
+
+
+@app.put("/api/admin/courses/{course_id}/chapters/{chapter_id}/quiz-questions")
+def admin_save_quiz_questions(course_id: str, chapter_id: str, req: SaveQuizQuestionsRequest,
+                              admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    ch = db.get(models.Chapter, chapter_id)
+    if not ch or ch.course_id != course_id:
+        raise HTTPException(404, "Chapter not found")
+    if ch.kind != "quiz":
+        raise HTTPException(400, "This chapter is not a quiz")
+    db.query(models.ChapterQuestion).filter_by(chapter_id=chapter_id).delete()
+    for i, q in enumerate(req.questions):
+        db.add(models.ChapterQuestion(
+            chapter_id=chapter_id, prompt=q.q, options=q.options,
+            answer=q.answer, explain=q.explain, order=i,
+        ))
+    db.commit()
+    db.refresh(ch)
+    return admin_chapter_detail(ch)
+
+
+@app.put("/api/admin/courses/{course_id}/reorder")
+def admin_reorder_chapters(course_id: str, req: ReorderRequest,
+                           admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    course = db.get(models.Course, course_id)
+    if not course:
+        raise HTTPException(404, "Course not found")
+    if set(req.order) != {ch.id for ch in course.chapters}:
+        raise HTTPException(400, "Order must include exactly the course's current chapters")
+    by_id = {ch.id: ch for ch in course.chapters}
+    for i, cid in enumerate(req.order):
+        by_id[cid].order = i
+    db.commit()
+    return {"ok": True}
+
+
+@app.delete("/api/admin/courses/{course_id}/chapters/{chapter_id}")
+def admin_delete_chapter(course_id: str, chapter_id: str,
+                         admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    ch = db.get(models.Chapter, chapter_id)
+    if not ch or ch.course_id != course_id:
+        raise HTTPException(404, "Chapter not found")
+    prefix = f"/api/uploads/{course_id}/"
+    files_to_remove = [p for p in [ch.image, *(ch.videos or [])] if p and p.startswith(prefix)]
+    db.delete(ch)
+    db.commit()
+    for p in files_to_remove:
+        try:
+            os.remove(os.path.join(UPLOAD_DIR, course_id, os.path.basename(p)))
+        except OSError:
+            pass
+    return {"ok": True}
+
+
+@app.put("/api/admin/courses/{course_id}/assessment")
+def admin_save_assessment(course_id: str, req: SaveAssessmentRequest,
+                          admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    course = db.get(models.Course, course_id)
+    if not course:
+        raise HTTPException(404, "Course not found")
+    course.pass_mark = req.passMark
+    course.max_attempts = req.maxAttempts
+    db.query(models.Question).filter_by(course_id=course_id).delete()
+    for i, q in enumerate(req.questions):
+        db.add(models.Question(
+            course_id=course_id, prompt=q.q, options=q.options,
+            answer=q.answer, explain=q.explain, order=i,
+        ))
+    db.commit()
+    return admin_get_course_builder(course_id, admin, db)

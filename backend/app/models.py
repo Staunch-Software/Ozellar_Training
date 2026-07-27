@@ -24,6 +24,17 @@ class User(Base):
     password_hash = Column(String)                     # admin credential (bcrypt)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
+    # SmartPAL crew-data sync (see smartpal_sync.py) — emp_id is the stable
+    # internal key upserts match on; crew_id (above) stays the human-facing
+    # login ID, populated from SmartPAL's empNo. These columns are never
+    # touched by anything except the sync job.
+    emp_id = Column(Integer, unique=True, index=True)
+    nationality = Column(String)
+    emp_status = Column(String)                        # SmartPAL empStatus, e.g. Active/SAIL/LEAVE
+    current_vessel = Column(String)                    # SmartPAL vslName
+    seamen_book_no = Column(String)
+    birth_place = Column(String)
+    smartpal_synced_at = Column(DateTime, nullable=True)
 
 
 class Course(Base):
@@ -61,8 +72,12 @@ class Chapter(Base):
     image = Column(String)           # /slides/<id>/slideN.png (original slide)
     videos = Column(JSON)            # ["/media/<id>/..."]
     order = Column(Integer, default=0)
+    kind = Column(String, nullable=False, default="lesson")  # 'lesson' | 'quiz'
 
     course = relationship("Course", back_populates="chapters")
+    quiz_questions = relationship("ChapterQuestion", back_populates="chapter",
+                                  order_by="ChapterQuestion.order",
+                                  cascade="all, delete-orphan")
 
 
 class Question(Base):
@@ -76,6 +91,23 @@ class Question(Base):
     order = Column(Integer, default=0)
 
     course = relationship("Course", back_populates="questions")
+
+
+class ChapterQuestion(Base):
+    """Non-blocking checkpoint quiz question attached to a chapter (kind='quiz').
+    Unlike Question (the graded final assessment), these are ungraded — the
+    answer/explain are safe to send to the client and there is no Attempt
+    trail; a quiz chapter's 'done' state is just 'viewed', same as a lesson."""
+    __tablename__ = "chapter_questions"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    chapter_id = Column(String, ForeignKey("chapters.id"), nullable=False, index=True)
+    prompt = Column(Text, nullable=False)
+    options = Column(JSON)
+    answer = Column(Integer)
+    explain = Column(Text)
+    order = Column(Integer, default=0)
+
+    chapter = relationship("Chapter", back_populates="quiz_questions")
 
 
 class Progress(Base):
@@ -124,6 +156,20 @@ class Attempt(Base):
     passed = Column(Boolean, default=False)
     answers = Column(JSON)       # the submitted answer indices, for audit
     created_at = Column(DateTime, server_default=func.now())
+
+
+class SyncLog(Base):
+    """One row per SmartPAL crew-data sync run (see smartpal_sync.py),
+    scheduled 7am/7pm IST. Written unconditionally, success or failure."""
+    __tablename__ = "sync_logs"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    started_at = Column(DateTime, server_default=func.now())
+    finished_at = Column(DateTime)
+    status = Column(String, nullable=False)   # 'success' | 'failed' | 'partial'
+    records_fetched = Column(Integer, default=0)
+    records_created = Column(Integer, default=0)
+    records_updated = Column(Integer, default=0)
+    error_message = Column(Text)
 
 
 class Notification(Base):
