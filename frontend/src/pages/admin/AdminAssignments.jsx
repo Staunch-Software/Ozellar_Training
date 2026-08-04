@@ -51,17 +51,19 @@ export default function AdminAssignments() {
                   const assigned = !!cell
                   const key = `${row.learnerId}:${c.id}`
                   return (
-                    <td key={c.id} style={{ textAlign: 'center' }}>
-                      <button
-                        className={`cellbox${assigned ? ' on' : ''}`}
-                        disabled={!!pending[key]}
-                        title={assigned ? 'Assigned — click to unassign' : 'Not assigned — click to assign'}
-                        onClick={() => toggle(row.learnerId, c.id, assigned)}
-                      >
-                        {assigned && <Check size={15} />}
-                      </button>
-                      {cell && cell.status === 'passed' && <div className="cell-tag ok"><Award size={12} /> {cell.score}%</div>}
-                      {cell && cell.status === 'in-progress' && <div className="cell-tag"><Clock size={12} /> started</div>}
+                    <td key={c.id}>
+                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                        <button
+                          className={`cellbox${assigned ? ' on' : ''}`}
+                          disabled={!!pending[key]}
+                          title={assigned ? 'Assigned — click to unassign' : 'Not assigned — click to assign'}
+                          onClick={() => toggle(row.learnerId, c.id, assigned)}
+                        >
+                          {assigned && <Check size={15} />}
+                        </button>
+                        {cell && cell.status === 'passed' && <div className="cell-tag ok"><Award size={12} /> {cell.score}%</div>}
+                        {cell && cell.status === 'in-progress' && <div className="cell-tag"><Clock size={12} /> started</div>}
+                      </div>
                     </td>
                   )
                 })}

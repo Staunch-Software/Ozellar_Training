@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, ArrowUp, ArrowDown, Trash2, Upload, Video, Image as ImageIcon,
-  HelpCircle, Plus, X, AlertCircle, ChevronDown, ChevronUp, Save,
+  HelpCircle, Plus, X, AlertCircle, ChevronDown, ChevronUp, Save, Check, Edit2,
 } from 'lucide-react'
 import {
   adminGetCourseBuilder, adminUploadPptx, adminUploadVideo, adminCreateQuizChapter,
@@ -157,7 +157,7 @@ function ModuleRow({ chapter: ch, index, total, busy, onMove, onDelete, onInsert
 
         {isQuiz && (
           <button className="btn sm" onClick={onToggleQuiz}>
-            Edit questions {quizOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+            Manage quiz {quizOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
         )}
         <button className="btn sm" disabled={busy} title="Insert quiz after this module"
@@ -180,8 +180,46 @@ function ModuleRow({ chapter: ch, index, total, busy, onMove, onDelete, onInsert
 
       {isQuiz && quizOpen && (
         <div style={{ padding: '0 16px 16px' }}>
-          <QuestionEditor initial={ch.quizQuestions} onSave={onSaveQuiz} saveLabel="Save quiz" />
+          <ModuleQuizEditor initial={ch.quizQuestions} onSave={onSaveQuiz} onCancelQuiz={onToggleQuiz} />
         </div>
+      )}
+    </div>
+  )
+}
+
+function ModuleQuizEditor({ initial, onSave, onCancelQuiz }) {
+  const hasQuestions = initial && initial.length > 0
+  const [mode, setMode] = useState(hasQuestions ? 'view' : 'edit')
+  const [success, setSuccess] = useState(false)
+
+  const handleSave = async (questions) => {
+    await onSave(questions)
+    setSuccess(true)
+    setMode('view')
+    setTimeout(() => setSuccess(false), 3000)
+  }
+
+  return (
+    <div style={{ marginTop: 8 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="eyebrow" style={{ margin: 0 }}>Checkpoint Quiz Questions</div>
+          {success && <span style={{ color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 4, fontSize: 13, fontWeight: 500 }}><Check size={14} /> Successfully saved!</span>}
+        </div>
+        {mode === 'view' && (
+          <button className="btn sm" onClick={() => setMode('edit')}><Edit2 size={14} /> Edit Quiz</button>
+        )}
+      </div>
+
+      {mode === 'view' ? (
+        <div>
+          {initial.map((q, i) => (
+            <QuestionViewRow key={i} q={q} index={i} />
+          ))}
+        </div>
+      ) : (
+        <QuestionEditor initial={initial} saveLabel="Save quiz"
+          onSave={handleSave} onCancel={hasQuestions ? () => setMode('view') : onCancelQuiz} />
       )}
     </div>
   )
@@ -233,7 +271,7 @@ function VideoUploadForm({ chapters, onUpload, onCancel }) {
   )
 }
 
-function QuestionEditor({ initial, onSave, saveLabel }) {
+function QuestionEditor({ initial, onSave, saveLabel, onCancel }) {
   const [questions, setQuestions] = useState(initial && initial.length ? initial.map((q) => ({ ...q, options: [...q.options] })) : [EMPTY_Q()])
 
   const setQ = (i, patch) => setQuestions((qs) => qs.map((q, qi) => (qi === i ? { ...q, ...patch } : q)))
@@ -251,75 +289,164 @@ function QuestionEditor({ initial, onSave, saveLabel }) {
   const removeQuestion = (i) => setQuestions((qs) => qs.filter((_, qi) => qi !== i))
 
   const valid = questions.length > 0 && questions.every((q) =>
-    q.q.trim() && q.options.length >= 2 && q.options.every((o) => o.trim()))
+    q.q.trim() && q.options.filter((o) => o.trim()).length >= 2)
+
+  const handleSave = () => {
+    const cleaned = questions.map(q => {
+      const options = []
+      let newAnswer = 0
+      for (let i = 0; i < q.options.length; i++) {
+        if (q.options[i].trim()) {
+          if (i === q.answer) newAnswer = options.length
+          options.push(q.options[i].trim())
+        }
+      }
+      return { ...q, q: q.q.trim(), options, answer: newAnswer, explain: q.explain?.trim() || '' }
+    })
+    onSave(cleaned)
+  }
 
   return (
     <div>
       {questions.map((q, i) => (
-        <div key={i} className="admin-card" style={{ marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10 }}>
-            <label className="admin-field" style={{ flex: 1 }}>
-              <span>Question {i + 1}</span>
-              <input value={q.q} onChange={(e) => setQ(i, { q: e.target.value })} placeholder="Question text" />
-            </label>
-            <button type="button" className="btn sm" style={{ alignSelf: 'flex-end' }}
-              onClick={() => removeQuestion(i)}><Trash2 size={14} /></button>
+        <div key={i} className="q-edit-card">
+          <div className="q-edit-header">
+            <span className="badge">Question {i + 1}</span>
+            <button type="button" className="btn sm" onClick={() => removeQuestion(i)} title="Delete Question"><Trash2 size={14} /></button>
           </div>
-          {q.options.map((opt, oi) => (
-            <div key={oi} style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8 }}>
-              <input type="radio" checked={q.answer === oi} onChange={() => setQ(i, { answer: oi })}
-                title="Correct answer" />
-              <input style={{ flex: 1 }} value={opt} onChange={(e) => setOpt(i, oi, e.target.value)}
-                placeholder={`Option ${oi + 1}`} />
-              {q.options.length > 2 && (
-                <button type="button" className="iconbtn" onClick={() => removeOption(i, oi)}><X size={14} /></button>
-              )}
-            </div>
-          ))}
-          <button type="button" className="btn sm" style={{ marginTop: 8 }} onClick={() => addOption(i)}>
-            <Plus size={13} /> Add option
-          </button>
-          <label className="admin-field" style={{ marginTop: 10 }}>
-            <span>Explanation (shown after answering)</span>
-            <textarea rows={2} value={q.explain || ''} onChange={(e) => setQ(i, { explain: e.target.value })} />
-          </label>
+          
+          <input className="q-edit-title-input" value={q.q} onChange={(e) => setQ(i, { q: e.target.value })} placeholder="Type your question here..." />
+          
+          <div className="q-edit-options">
+            {q.options.map((opt, oi) => (
+              <div key={oi} className="q-edit-opt-row">
+                <button type="button" className={`q-edit-radio ${q.answer === oi ? 'on' : ''}`}
+                  onClick={() => setQ(i, { answer: oi })} title="Mark as correct answer">
+                  <Check size={14} />
+                </button>
+                <input className="q-edit-opt-input" value={opt} onChange={(e) => setOpt(i, oi, e.target.value)}
+                  placeholder={`Option ${oi + 1}`} />
+                {q.options.length > 2 && (
+                  <button type="button" className="iconbtn q-edit-remove" onClick={() => removeOption(i, oi)} title="Remove option">
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+            <button type="button" className="q-edit-add-btn" onClick={() => addOption(i)}>
+              <Plus size={14} /> Add another option
+            </button>
+          </div>
+
+          <div className="q-edit-explain">
+            <label>Explanation (Optional — shown to user after answering)</label>
+            <textarea value={q.explain || ''} onChange={(e) => setQ(i, { explain: e.target.value })} placeholder="Explain why the answer is correct..." />
+          </div>
         </div>
       ))}
-      <div style={{ display: 'flex', gap: 10 }}>
-        <button type="button" className="btn" onClick={addQuestion}><Plus size={14} /> Add question</button>
-        <button type="button" className="btn primary" disabled={!valid} onClick={() => onSave(questions)}>
-          <Save size={14} /> {saveLabel}
-        </button>
+      <div style={{ display: 'flex', gap: 10, justifyContent: 'space-between' }}>
+        <div>
+          {onCancel && <button type="button" className="btn" onClick={onCancel}>Cancel</button>}
+        </div>
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button type="button" className="btn" onClick={addQuestion}><Plus size={14} /> Add question</button>
+          <button type="button" className="btn primary" disabled={!valid} onClick={handleSave}>
+            <Save size={14} /> {saveLabel}
+          </button>
+        </div>
       </div>
     </div>
   )
 }
 
+function QuestionViewRow({ q, index }) {
+  const [open, setOpen] = useState(false)
+  return (
+    <div className="admin-card" style={{ padding: '12px 16px', marginBottom: 12 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}
+        onClick={() => setOpen(!open)}>
+        <div style={{ fontWeight: 500 }}>{index + 1}. {q.q}</div>
+        <button className="iconbtn" title="Toggle options">{open ? <ChevronUp size={16} /> : <ChevronDown size={16} />}</button>
+      </div>
+      {open && (
+        <div style={{ marginTop: 12, borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+          {q.options.map((opt, i) => (
+            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', color: i === q.answer ? 'var(--success)' : 'inherit' }}>
+              {i === q.answer ? <Check size={16} /> : <div style={{ width: 16 }} />}
+              <span style={{ fontWeight: i === q.answer ? 500 : 400 }}>{opt}</span>
+            </div>
+          ))}
+          {q.explain && (
+            <div className="mut" style={{ marginTop: 8, fontSize: 13, background: 'var(--bg-card)', padding: '8px 12px', borderRadius: 4 }}>
+              <strong>Explanation:</strong> {q.explain}
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function AssessmentEditor({ course, onSave }) {
+  const hasQuestions = course.assessment.questions && course.assessment.questions.length > 0
+  const [mode, setMode] = useState(hasQuestions ? 'view' : 'edit')
+  const [success, setSuccess] = useState(false)
+  
   const [passMark, setPassMark] = useState(course.assessment.passMark ?? 80)
   const [maxAttempts, setMaxAttempts] = useState(course.assessment.maxAttempts ?? '')
 
+  const handleSave = async (questions) => {
+    await onSave({
+      passMark: Number(passMark) || 80,
+      maxAttempts: maxAttempts === '' ? null : Number(maxAttempts),
+      questions,
+    })
+    setSuccess(true)
+    setMode('view')
+    setTimeout(() => setSuccess(false), 3000)
+  }
+
   return (
     <div style={{ marginTop: 28 }}>
-      <div className="eyebrow" style={{ marginBottom: 8 }}>Final assessment (graded, required for certificate)</div>
-      <div className="admin-card" style={{ marginBottom: 14 }}>
-        <div className="form-grid">
-          <label className="admin-field">
-            <span>Pass mark (%)</span>
-            <input type="number" min={1} max={100} value={passMark} onChange={(e) => setPassMark(e.target.value)} />
-          </label>
-          <label className="admin-field">
-            <span>Max attempts (blank = unlimited)</span>
-            <input type="number" min={1} value={maxAttempts} onChange={(e) => setMaxAttempts(e.target.value)} placeholder="Unlimited" />
-          </label>
-        </div>
+      <div className="eyebrow" style={{ marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        <span>Final assessment (graded, required for certificate)</span>
+        {success && <span style={{ color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 4, textTransform: 'none', fontWeight: 500 }}><Check size={14} /> Successfully saved!</span>}
       </div>
-      <QuestionEditor initial={course.assessment.questions} saveLabel="Save final assessment"
-        onSave={(questions) => onSave({
-          passMark: Number(passMark) || 80,
-          maxAttempts: maxAttempts === '' ? null : Number(maxAttempts),
-          questions,
-        })} />
+      
+      {mode === 'view' ? (
+        <div className="admin-card" style={{ marginBottom: 14 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+            <div style={{ display: 'flex', gap: 24, fontSize: 14 }}>
+              <div><span className="mut">Pass mark:</span> <strong>{passMark}%</strong></div>
+              <div><span className="mut">Max attempts:</span> <strong>{maxAttempts === '' || maxAttempts === null ? 'Unlimited' : maxAttempts}</strong></div>
+            </div>
+            <button className="btn sm" onClick={() => setMode('edit')}><Edit2 size={14} /> Edit Assessment</button>
+          </div>
+          
+          <div>
+            {course.assessment.questions.map((q, i) => (
+              <QuestionViewRow key={i} q={q} index={i} />
+            ))}
+          </div>
+        </div>
+      ) : (
+        <>
+          <div className="admin-card" style={{ marginBottom: 14 }}>
+            <div className="form-grid">
+              <label className="admin-field">
+                <span>Pass mark (%)</span>
+                <input type="number" min={1} max={100} value={passMark} onChange={(e) => setPassMark(e.target.value)} />
+              </label>
+              <label className="admin-field">
+                <span>Max attempts (blank = unlimited)</span>
+                <input type="number" min={1} value={maxAttempts} onChange={(e) => setMaxAttempts(e.target.value)} placeholder="Unlimited" />
+              </label>
+            </div>
+          </div>
+          <QuestionEditor initial={course.assessment.questions} saveLabel="Save final assessment"
+            onSave={handleSave} onCancel={hasQuestions ? () => setMode('view') : null} />
+        </>
+      )}
     </div>
   )
 }

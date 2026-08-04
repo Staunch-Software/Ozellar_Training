@@ -41,12 +41,20 @@ export default function Certificates() {
                   </div>
                 </div>
                 <div className="cert-item-actions">
-                  <button className="btn sm" onClick={() => navigate(`/course/${c.slug}/certificate`)}>
-                    <Eye size={14} /> View
-                  </button>
-                  <button className="btn primary sm" onClick={() => downloadCertificatePdf(c.courseId, c.id)}>
-                    <Download size={14} /> PDF
-                  </button>
+                  {c.pending ? (
+                    <div style={{ color: 'var(--warning-strong)', fontWeight: 500, fontSize: 13, background: 'var(--warning-weak)', padding: '6px 12px', borderRadius: 6 }}>
+                      Pending Approval
+                    </div>
+                  ) : (
+                    <>
+                      <button className="btn sm" onClick={() => navigate(`/course/${c.slug}/certificate`)}>
+                        <Eye size={14} /> View
+                      </button>
+                      <button className="btn primary sm" onClick={() => downloadCertificatePdf(c.courseId, c.id)}>
+                        <Download size={14} /> PDF
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
             ))}

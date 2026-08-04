@@ -86,12 +86,16 @@ def require_admin(user: "models.User" = Depends(get_current_user)) -> "models.Us
     return user
 
 
+UPLOAD_DIR = os.getenv("UPLOAD_DIR", os.path.join(os.path.dirname(__file__), "..", "uploads"))
+
 def user_public(u: "models.User") -> dict:
     parts = (u.full_name or "").split()
     initials = "".join(p[0] for p in parts[:2]).upper() or "?"
+    photo_path = os.path.join(UPLOAD_DIR, "photos", f"{u.id}.jpg")
     return {
         "id": u.id, "role": u.role, "name": u.full_name, "rank": u.rank,
         "crewId": u.crew_id, "email": u.email, "ppNo": u.pp_no, "initials": initials,
+        "hasPhoto": os.path.exists(photo_path),
     }
 
 

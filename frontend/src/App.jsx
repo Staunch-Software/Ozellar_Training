@@ -10,6 +10,7 @@ import Certificate from './pages/Certificate.jsx'
 import Certificates from './pages/Certificates.jsx'
 import Help from './pages/Help.jsx'
 import Verify from './pages/Verify.jsx'
+import UploadPhoto from './pages/UploadPhoto.jsx'
 import AdminLayout from './pages/admin/AdminLayout.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import AdminUsers from './pages/admin/AdminUsers.jsx'
@@ -83,6 +84,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/verify/:id" element={<Verify />} />
+        <Route path="/upload-photo" element={P(<UploadPhoto />)} />
         <Route path="/my-courses" element={P(<MyCourses />)} />
         <Route path="/certificates" element={P(<Certificates />)} />
         <Route path="/help" element={P(<Help />)} />

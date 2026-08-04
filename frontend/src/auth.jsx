@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import * as api from './api.js'
 
 const AuthCtx = createContext()
@@ -31,8 +31,12 @@ export function AuthProvider({ children }) {
 
 export function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
+  const location = useLocation()
   if (loading) return <div className="spinner">Loading…</div>
   if (!user) return <Navigate to="/" replace />
+  if (user.role === 'learner' && !user.hasPhoto && location.pathname !== '/upload-photo') {
+    return <Navigate to="/upload-photo" replace />
+  }
   return children
 }
 

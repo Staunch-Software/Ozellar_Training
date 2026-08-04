@@ -184,3 +184,18 @@ class Notification(Base):
     link = Column(String)                 # optional in-app path
     is_read = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
+
+
+class AssessmentApproval(Base):
+    """Pending approval queue: one row per passed assessment awaiting admin sign-off."""
+    __tablename__ = "assessment_approvals"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    learner_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    course_id = Column(String, ForeignKey("courses.id"), index=True, nullable=False)
+    score = Column(Integer)
+    attempt_id = Column(Integer, ForeignKey("attempts.id"))
+    status = Column(String, default="pending")  # 'pending' | 'approved' | 'rejected'
+    digest_sent = Column(Boolean, default=False)  # included in a digest email?
+    approval_token = Column(String, unique=True, index=True)  # signed JWT for one-click action
+    decided_at = Column(DateTime)
+    created_at = Column(DateTime, server_default=func.now())

@@ -28,7 +28,7 @@ def upgrade() -> None:
     sa.Column('body', sa.String(), nullable=True),
     sa.Column('link', sa.String(), nullable=True),
     sa.Column('is_read', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
     sa.ForeignKeyConstraint(['user_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

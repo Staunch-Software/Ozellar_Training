@@ -38,6 +38,12 @@ export const login = (body) => req('/auth/login', { method: 'POST', body: JSON.s
 export const getMe = () => req('/auth/me')
 export const searchCrewNames = (q) => req(`/auth/crew-search?q=${encodeURIComponent(q)}`)
 
+export const uploadCrewPhoto = (file) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  return uploadReq('/crew/photo', fd)
+}
+
 // courses / progress
 export const getCourses = () => req('/courses')
 export const getCourse = (slug) => req(`/courses/${slug}`)
@@ -90,6 +96,8 @@ export const adminAssign = (id, courseId) =>
 export const adminUnassign = (id, courseId) =>
   req(`/admin/users/${id}/enrollments/${courseId}`, { method: 'DELETE' })
 export const adminReport = () => req('/admin/report')
+export const adminDashboardStats = () => req('/admin/dashboard-stats')
+
 
 // CSV needs the auth header, so fetch as a blob and trigger a download
 export async function adminDownloadReportCsv() {
@@ -107,6 +115,50 @@ export async function adminDownloadReportCsv() {
   a.remove()
   URL.revokeObjectURL(url)
 }
+
+// Admin: download full compliance report as a styled Excel workbook (.xlsx)
+// Accepts optional filters: { crewSearch, courseId, status }
+// The backend applies the same filters before generating the file so the
+// downloaded Excel matches exactly what the user sees on screen.
+export async function adminDownloadReportXlsx({ crewSearch, courseId, status } = {}) {
+  const params = new URLSearchParams()
+  if (crewSearch) params.set('crew_search', crewSearch)
+  if (courseId)   params.set('course_id',   courseId)
+  if (status)     params.set('status',      status)
+  const qs = params.toString()
+  const res = await fetch(API + '/admin/report.xlsx' + (qs ? '?' + qs : ''), {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  })
+  if (!res.ok) throw new Error('Could not download the Excel report')
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'ozellar-compliance-report.xlsx'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
+// Crew: download personal training record as a styled Excel workbook (.xlsx)
+export async function crewDownloadMyReportXlsx(status = 'all') {
+  const query = status !== 'all' ? `?status=${status}` : ''
+  const res = await fetch(API + `/crew/my-report.xlsx${query}`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  })
+  if (!res.ok) throw new Error('Could not download your training report')
+  const blob = await res.blob()
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'my-training-report.xlsx'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}
+
 
 // admin course builder
 export const adminListCourses = () => req('/admin/courses')

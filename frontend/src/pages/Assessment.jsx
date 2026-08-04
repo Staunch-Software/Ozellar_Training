@@ -14,7 +14,12 @@ export default function Assessment() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState('')
 
-  useEffect(() => { getCourse(slug).then(setCourse) }, [slug])
+  useEffect(() => { 
+    getCourse(slug).then(c => {
+      setCourse(c)
+      if (c.latestAttempt) setFinished(c.latestAttempt)
+    })
+  }, [slug])
   if (!course) return (<><TopNav /><div className="spinner">Loading assessment…</div></>)
 
   const questions = course.assessment.questions
@@ -107,7 +112,11 @@ export default function Assessment() {
 }
 
 function Result({ course, result, passMark, onCert, onRetry }) {
-  const { score, passed, correct, total, review = [] } = result
+  const { score, passed, correct, total, review = [], attemptsUsed, maxAttempts } = result
+  
+  const isLastAttempt = maxAttempts && attemptsUsed === maxAttempts - 1
+  const exhausted = maxAttempts && attemptsUsed >= maxAttempts
+
   return (
     <>
       <TopNav />
@@ -122,9 +131,26 @@ function Result({ course, result, passMark, onCert, onRetry }) {
               You scored <b style={{ color: 'var(--text)' }}>{score}%</b> ({correct} of {total} correct). Pass mark is {passMark}%.
             </p>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginTop: 22 }}>
-              {passed
-                ? <button className="btn primary" onClick={onCert}><Award size={16} /> View your certificate</button>
-                : <button className="btn primary" onClick={onRetry}><RotateCcw size={16} /> Retry assessment</button>}
+              {passed ? (
+                result.certPending ? (
+                  <div style={{ color: 'var(--warning-strong)', fontWeight: 500, padding: '10px 16px', background: 'var(--warning-weak)', borderRadius: 6, display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <AlertCircle size={16} /> Certificate pending admin approval
+                  </div>
+                ) : (
+                  <button className="btn primary" onClick={onCert}><Award size={16} /> View your certificate</button>
+                )
+              ) : exhausted ? (
+                <div style={{ color: 'var(--danger)', fontWeight: 500, padding: '10px 16px', background: 'var(--danger-weak)', borderRadius: 6 }}>
+                  No assessment attempts remaining. Contact your training officer.
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <button className="btn primary" onClick={onRetry}>
+                    <RotateCcw size={16} /> Retry assessment {maxAttempts ? `(Attempt ${attemptsUsed + 1} of ${maxAttempts})` : ''}
+                  </button>
+                  {isLastAttempt && <span style={{ color: 'var(--danger)', fontSize: 13, fontWeight: 500 }}>⚠️ This is your last attempt!</span>}
+                </div>
+              )}
             </div>
           </div>
 
@@ -142,7 +168,7 @@ function Result({ course, result, passMark, onCert, onRetry }) {
                 <h3 className="qtext" style={{ fontSize: 17, margin: '6px 0 10px' }}>{r.q}</h3>
                 {r.options.map((opt, i) => {
                   let cls = 'opt'
-                  if (i === r.correct) cls += ' correct'
+                  if (r.correct !== null && i === r.correct) cls += ' correct'
                   else if (i === r.chosen) cls += ' wrong'
                   return (
                     <div key={i} className={cls} style={{ cursor: 'default' }}>

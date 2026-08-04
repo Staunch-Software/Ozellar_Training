@@ -49,38 +49,48 @@ export default function AdminCourses() {
           <div className="eyebrow">Fleet training · Content</div>
           <h1 style={{ fontSize: 26, margin: '6px 0 0' }}>Courses</h1>
         </div>
-        <button className="btn primary" onClick={() => { setShowForm((s) => !s); setError('') }}>
+        <button className={showForm ? "btn" : "btn primary"} onClick={() => { setShowForm((s) => !s); setError('') }}>
           {showForm ? <><X size={16} /> Close</> : <><Plus size={16} /> New course</>}
         </button>
       </div>
 
       {showForm && (
         <form className="admin-card" onSubmit={create} style={{ marginBottom: 20 }}>
-          <div className="form-grid">
-            <Field label="Title" required>
-              <input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="e.g. Fire Prevention & Firefighting" />
-            </Field>
-            <Field label="Subtitle">
-              <input value={form.subtitle} onChange={(e) => set('subtitle', e.target.value)} placeholder="One-line description" />
-            </Field>
-            <Field label="Duration label">
-              <input value={form.durationLabel} onChange={(e) => set('durationLabel', e.target.value)} placeholder="e.g. 2 hours" />
-            </Field>
-            <Field label="Final assessment pass mark (%)" required>
-              <input type="number" min={1} max={100} value={form.passMark}
-                onChange={(e) => set('passMark', e.target.value)} />
-            </Field>
-            <Field label="Max attempts (blank = unlimited)">
-              <input type="number" min={1} value={form.maxAttempts}
-                onChange={(e) => set('maxAttempts', e.target.value)} placeholder="Unlimited" />
-            </Field>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px', alignItems: 'flex-end' }}>
+            <div style={{ flex: '1 1 200px' }}>
+              <Field label="Title" required>
+                <input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="e.g. Firefighting" />
+              </Field>
+            </div>
+            <div style={{ flex: '1 1 200px' }}>
+              <Field label="Subtitle">
+                <input value={form.subtitle} onChange={(e) => set('subtitle', e.target.value)} placeholder="Short desc" />
+              </Field>
+            </div>
+            <div style={{ flex: '1 1 120px' }}>
+              <Field label="Duration">
+                <input value={form.durationLabel} onChange={(e) => set('durationLabel', e.target.value)} placeholder="2 hours" />
+              </Field>
+            </div>
+            <div style={{ flex: '0 1 100px' }}>
+              <Field label="Pass (%)" required>
+                <input type="number" min={1} max={100} value={form.passMark}
+                  onChange={(e) => set('passMark', e.target.value)} />
+              </Field>
+            </div>
+            <div style={{ flex: '0 1 100px' }}>
+              <Field label="Attempts">
+                <input type="number" min={1} value={form.maxAttempts}
+                  onChange={(e) => set('maxAttempts', e.target.value)} placeholder="Unlim." />
+              </Field>
+            </div>
+            <div style={{ flex: '0 0 auto', marginBottom: '1px' }}>
+              <button className="btn primary" disabled={busy}>{busy ? 'Creating…' : 'Create'}</button>
+            </div>
           </div>
 
           {error && <div className="form-error" style={{ marginTop: 14 }}><AlertCircle size={15} /> {error}</div>}
-          <div style={{ marginTop: 16 }}>
-            <button className="btn primary" disabled={busy}>{busy ? 'Creating…' : 'Create course'}</button>
-          </div>
-          <p className="mut" style={{ marginTop: 10, fontSize: 13 }}>
+          <p className="mut" style={{ marginTop: 16, fontSize: 13 }}>
             You'll upload slides/videos and add quizzes on the next screen.
           </p>
         </form>
@@ -94,11 +104,36 @@ export default function AdminCourses() {
           <tbody>
             {courses.map((c) => (
               <tr key={c.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/admin/courses/${c.id}`)}>
-                <td><b><BookOpen size={14} style={{ verticalAlign: -2, marginRight: 6 }} />{c.title}</b>
-                  {c.subtitle && <div className="mut" style={{ fontSize: 13 }}>{c.subtitle}</div>}</td>
-                <td>{c.chapterCount} module{c.chapterCount === 1 ? '' : 's'}</td>
-                <td>{c.questionCount} question{c.questionCount === 1 ? '' : 's'} · pass {c.passMark}%</td>
-                <td style={{ textAlign: 'right' }}><ChevronRight size={16} /></td>
+                <td>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                    <div style={{ width: 42, height: 42, borderRadius: 12, background: 'var(--surface-2)', color: 'var(--accent)', display: 'grid', placeItems: 'center', flex: 'none', border: '1px solid var(--border)' }}>
+                      <BookOpen size={20} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: 14.5 }}>{c.title}</div>
+                      {c.subtitle ? <div className="mut" style={{ fontSize: 12.5, marginTop: 4 }}>{c.subtitle}</div> : <div className="mut" style={{ fontSize: 12.5, marginTop: 4 }}>No description provided</div>}
+                    </div>
+                  </div>
+                </td>
+                <td>
+                  <span className="pill" style={{ background: 'var(--surface-2)' }}>{c.chapterCount} Module{c.chapterCount === 1 ? '' : 's'}</span>
+                </td>
+                <td>
+                  <div style={{ fontSize: 12.5, color: 'var(--text-mut)' }}>
+                    <span style={{ fontWeight: 600, color: 'var(--text)' }}>{c.questionCount}</span> Qs
+                    <span style={{ margin: '0 6px' }}>&middot;</span>
+                    Pass <b>{c.passMark}%</b>
+                    {c.maxAttempts ? (
+                      <>
+                        <span style={{ margin: '0 6px' }}>&middot;</span>
+                        <b>{c.maxAttempts}</b> attempt{c.maxAttempts === 1 ? '' : 's'}
+                      </>
+                    ) : null}
+                  </div>
+                </td>
+                <td style={{ textAlign: 'right', color: 'var(--text-faint)' }}>
+                  <ChevronRight size={18} />
+                </td>
               </tr>
             ))}
             {courses.length === 0 && (

@@ -47,7 +47,7 @@ def upgrade() -> None:
     sa.Column('pp_no', sa.String(), nullable=True),
     sa.Column('password_hash', sa.String(), nullable=True),
     sa.Column('is_active', sa.Boolean(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
     sa.PrimaryKeyConstraint('id')
     )
     op.create_index(op.f('ix_users_crew_id'), 'users', ['crew_id'], unique=True)
@@ -59,7 +59,7 @@ def upgrade() -> None:
     sa.Column('score', sa.Integer(), nullable=True),
     sa.Column('passed', sa.Boolean(), nullable=True),
     sa.Column('answers', sa.JSON(), nullable=True),
-    sa.Column('created_at', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
+    sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
     sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
     sa.ForeignKeyConstraint(['learner_id'], ['users.id'], ),
     sa.PrimaryKeyConstraint('id')
@@ -70,7 +70,7 @@ def upgrade() -> None:
     sa.Column('learner_id', sa.String(), nullable=False),
     sa.Column('course_id', sa.String(), nullable=False),
     sa.Column('score', sa.Integer(), nullable=True),
-    sa.Column('issued_at', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
+    sa.Column('issued_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
     sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
     sa.PrimaryKeyConstraint('id')
     )
@@ -95,7 +95,7 @@ def upgrade() -> None:
     sa.Column('learner_id', sa.Integer(), nullable=False),
     sa.Column('course_id', sa.String(), nullable=False),
     sa.Column('assigned_by', sa.Integer(), nullable=True),
-    sa.Column('assigned_at', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
+    sa.Column('assigned_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
     sa.ForeignKeyConstraint(['assigned_by'], ['users.id'], ),
     sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
     sa.ForeignKeyConstraint(['learner_id'], ['users.id'], ),
@@ -110,7 +110,7 @@ def upgrade() -> None:
     sa.Column('completed_chapters', sa.JSON(), nullable=True),
     sa.Column('score', sa.Integer(), nullable=True),
     sa.Column('passed', sa.Boolean(), nullable=True),
-    sa.Column('updated_at', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
+    sa.Column('updated_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
     sa.ForeignKeyConstraint(['course_id'], ['courses.id'], ),
     sa.PrimaryKeyConstraint('id')
     )

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell } from 'lucide-react'
+import { Bell, BellOff, Info } from 'lucide-react'
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from './api.js'
 
 export default function NotificationBell() {
@@ -26,32 +26,49 @@ export default function NotificationBell() {
   const toggle = () => { const n = !open; setOpen(n); if (n) load() }
 
   const openItem = async (it) => {
-    if (!it.isRead) { await markNotificationRead(it.id).catch(() => {}); load() }
-    setOpen(false)
-    if (it.link) navigate(it.link)
+    if (!it.isRead) { 
+      await markNotificationRead(it.id).catch(() => {})
+      load() 
+    }
   }
 
   const readAll = async () => { await markAllNotificationsRead().catch(() => {}); load() }
 
   return (
     <div className="notif" ref={ref}>
-      <button className="iconbtn" aria-label="Notifications" onClick={toggle}>
-        <Bell size={18} />
+      <button className={`iconbtn ${open ? 'open' : ''}`} aria-label="Notifications" onClick={toggle}>
+        <Bell size={20} />
         {data.unread > 0 && <span className="notif-badge">{data.unread > 9 ? '9+' : data.unread}</span>}
       </button>
       {open && (
         <div className="notif-pop">
           <div className="notif-head">
             <span>Notifications</span>
-            {data.unread > 0 && <button className="linklike" onClick={readAll}>Mark all read</button>}
+            {data.unread > 0 && <button className="linklike" onClick={readAll}>MARK ALL AS READ</button>}
           </div>
           <div className="notif-list">
-            {data.items.length === 0 && <div className="notif-empty">No notifications yet.</div>}
+            {data.items.length === 0 && (
+              <div className="notif-empty">
+                <BellOff size={42} strokeWidth={1.5} />
+                <span>You're all caught up!</span>
+              </div>
+            )}
             {data.items.map((it) => (
-              <button key={it.id} className={`notif-item${it.isRead ? '' : ' unread'}`} onClick={() => openItem(it)}>
-                <div className="notif-title">{it.title}</div>
-                {it.body && <div className="notif-body">{it.body}</div>}
-              </button>
+              <div key={it.id} className={`notif-item${it.isRead ? '' : ' unread'}`} onClick={() => openItem(it)}>
+                <div className="notif-icon-wrap">
+                  <Info size={20} strokeWidth={2} />
+                </div>
+                <div className="notif-content">
+                  <div className="notif-title-row">
+                    <div className="notif-title">{it.title}</div>
+                    <div className="notif-meta">
+                      <span className="notif-time">2m ago</span>
+                      {!it.isRead && <div className="notif-dot" />}
+                    </div>
+                  </div>
+                  {it.body && <div className="notif-body">{it.body}</div>}
+                </div>
+              </div>
             ))}
           </div>
         </div>

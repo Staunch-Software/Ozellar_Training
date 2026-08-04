@@ -31,7 +31,7 @@ def upgrade() -> None:
 
     op.create_table('sync_logs',
     sa.Column('id', sa.Integer(), autoincrement=True, nullable=False),
-    sa.Column('started_at', sa.DateTime(), server_default=sa.text('now()'), nullable=True),
+    sa.Column('started_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
     sa.Column('finished_at', sa.DateTime(), nullable=True),
     sa.Column('status', sa.String(), nullable=False),
     sa.Column('records_fetched', sa.Integer(), nullable=True),
