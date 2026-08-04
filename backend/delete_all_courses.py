@@ -12,6 +12,7 @@ db.query(models.AssessmentApproval).delete()
 
 print("Deleting chapters and questions...")
 db.query(models.Question).delete()
+db.query(models.ChapterQuestion).delete()
 db.query(models.Chapter).delete()
 
 print("Deleting all courses...")
