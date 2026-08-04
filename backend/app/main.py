@@ -1632,7 +1632,7 @@ async def admin_upload_pptx(course_id: str, file: UploadFile = File(...),
             try:
                 subprocess.run(
                     [sp, "--headless", "--convert-to", "pdf", "--outdir", tmp, pptx_path],
-                    check=True, capture_output=True, timeout=120,
+                    check=True, capture_output=True, timeout=600,
                 )
                 success = True
                 break
