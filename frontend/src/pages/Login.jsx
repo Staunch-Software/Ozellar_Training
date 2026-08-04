@@ -35,7 +35,7 @@ export default function Login() {
       return
     }
     const q = name.trim()
-    if (mode !== 'crew' || q.length < 2) {
+    if (mode !== 'crew' || q.length < 1) {
       setSuggestions([])
       return
     }

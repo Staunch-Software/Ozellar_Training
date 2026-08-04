@@ -217,7 +217,7 @@ def crew_search(q: str, request: Request, db: Session = Depends(get_db)):
     check_rate_limit(f"crew-search:{request.client.host if request.client else 'unknown'}",
                      max_attempts=40, window_seconds=60)
     query = normalize_name(q)
-    if len(query) < 2:
+    if len(query) < 1:
         return []
     candidates = (db.query(models.User)
                   .filter_by(role="learner", is_active=True).all())
