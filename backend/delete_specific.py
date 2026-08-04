@@ -12,7 +12,7 @@ if user:
     db.query(models.Progress).filter(models.Progress.learner_id == str(user.id)).delete()
     db.query(models.Attempt).filter(models.Attempt.learner_id == user.id).delete()
     db.query(models.Certificate).filter(models.Certificate.learner_id == str(user.id)).delete()
-    db.query(models.Notification).filter(models.Notification.learner_id == user.id).delete()
+    db.query(models.Notification).filter(models.Notification.user_id == user.id).delete()
     db.query(models.AssessmentApproval).filter(models.AssessmentApproval.learner_id == user.id).delete()
     
     print("Deleting user...")
