@@ -1643,9 +1643,10 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                 print(f"Background PPTX conversion failed: {last_err}")
                 return
 
-            pdf_path = os.path.join(tmp, os.path.splitext(original_filename)[0] + ".pdf")
+            pdf_filename = os.path.splitext(os.path.basename(pptx_path))[0] + ".pdf"
+            pdf_path = os.path.join(tmp, pdf_filename)
             if not os.path.exists(pdf_path):
-                print("PDF not produced by LibreOffice")
+                print(f"PDF not produced by LibreOffice. Looked for {pdf_path}")
                 return
 
             import fitz
@@ -1799,7 +1800,10 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
             os.remove(pptx_path)
 
 @app.post("/api/admin/courses/{course_id}/upload-pptx")
-async def upload_course_pptx(course_id: str, background_tasks: BackgroundTasks, file: UploadFile = File(...), db: Session = Depends(get_db)):
+async def upload_course_pptx(course_id: str, background_tasks: BackgroundTasks,
+                             file: UploadFile = File(...),
+                             admin: models.User = Depends(require_admin),
+                             db: Session = Depends(get_db)):
     course = db.query(models.Course).filter(models.Course.id == course_id).first()
     if not course:
         raise HTTPException(404, "Course not found")

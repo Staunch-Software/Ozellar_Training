@@ -17,13 +17,46 @@ export default function AdminCourseBuilder() {
   const [course, setCourse] = useState(null)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [pptxProcessing, setPptxProcessing] = useState(
+    () => sessionStorage.getItem(`pptx-processing-${id}`) === '1'
+  )
   const [openQuiz, setOpenQuiz] = useState(null)   // chapter id whose quiz editor is open
   const [showVideoForm, setShowVideoForm] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const pptxInput = useRef(null)
+  const [successMsg, setSuccessMsg] = useState('')
+  const pollRef = useRef(null)
+
+  const startPolling = (prevChapterCount) => {
+    sessionStorage.setItem(`pptx-processing-${id}`, String(prevChapterCount))
+    setPptxProcessing(true)
+    if (pollRef.current) clearInterval(pollRef.current)
+    pollRef.current = setInterval(async () => {
+      try {
+        const updated = await adminGetCourseBuilder(id)
+        const storedCount = Number(sessionStorage.getItem(`pptx-processing-${id}`))
+        if (updated.chapters.length > storedCount) {
+          clearInterval(pollRef.current)
+          sessionStorage.removeItem(`pptx-processing-${id}`)
+          setPptxProcessing(false)
+          setCourse(updated)
+          setSuccessMsg('PPT processed successfully! Your new slides are ready.')
+          setTimeout(() => setSuccessMsg(''), 8000)
+        }
+      } catch (_) {}
+    }, 3000)
+  }
 
   const load = () => adminGetCourseBuilder(id).then(setCourse)
-  useEffect(() => { load() }, [id])
+  useEffect(() => {
+    const storedCount = sessionStorage.getItem(`pptx-processing-${id}`)
+    load()
+    // If we came back to this page and processing was already in flight, resume polling
+    if (storedCount !== null) {
+      startPolling(Number(storedCount))
+    }
+    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+  }, [id])
 
   const withBusy = async (fn) => {
     setError('')
@@ -37,8 +70,9 @@ export default function AdminCourseBuilder() {
   const chapters = course.chapters
 
   const uploadPptx = (file) => withBusy(async () => {
+    const currentCount = course.chapters.length
     await adminUploadPptx(id, file)
-    await load()
+    startPolling(currentCount)
   })
 
   const uploadVideo = (file, opts) => withBusy(async () => {
@@ -81,10 +115,13 @@ export default function AdminCourseBuilder() {
       {course.subtitle && <p className="mut" style={{ marginBottom: 18 }}>{course.subtitle}</p>}
 
       {error && <div className="form-error" style={{ marginBottom: 14 }}><AlertCircle size={15} /> {error}</div>}
+      {successMsg && <div style={{ color: 'var(--success)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: 6, fontSize: 14, fontWeight: 500 }}><Check size={16} /> {successMsg}</div>}
 
       <div className="admin-card" style={{ marginBottom: 20, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <button className="btn primary" disabled={busy} onClick={() => pptxInput.current?.click()}>
-          <Upload size={15} /> Upload PPT
+        <button className="btn primary" disabled={busy || pptxProcessing} onClick={() => !pptxProcessing && pptxInput.current?.click()}>
+          {pptxProcessing
+            ? <><span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle', marginRight: 6 }} />Processing slides…</>
+            : <><Upload size={15} /> Upload PPT</>}
         </button>
         <input ref={pptxInput} type="file" accept=".pptx" style={{ display: 'none' }}
           onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) uploadPptx(f) }} />
