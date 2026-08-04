@@ -1390,9 +1390,13 @@ def crew_my_report_xlsx(status: Optional[str] = None, user: models.User = Depend
         passed_flag = bool(prog.passed) if prog else False
 
         if passed_flag:
-            calc_status = "Passed"
-            fill = PASS_FILL
-            total_passed += 1
+            if not cert:
+                calc_status = "Pending Approval"
+                fill = WIP_FILL
+            else:
+                calc_status = "Passed"
+                fill = PASS_FILL
+                total_passed += 1
         elif prog and (done_count > 0 or score is not None):
             calc_status = "In Progress"
             fill = WIP_FILL
@@ -1402,7 +1406,7 @@ def crew_my_report_xlsx(status: Optional[str] = None, user: models.User = Depend
 
         # Apply status filter
         if status == 'completed' and calc_status != "Passed": continue
-        if status == 'in-progress' and calc_status != "In Progress": continue
+        if status == 'in-progress' and calc_status not in ["In Progress", "Pending Approval"]: continue
         if status == 'not-started' and calc_status != "Not Started": continue
 
         # grade letter
@@ -1430,7 +1434,10 @@ def crew_my_report_xlsx(status: Optional[str] = None, user: models.User = Depend
         if attempts == 0: attempts = ""
 
         cert_id   = cert.id if cert else ""
-        passed_on = cert.issued_at.strftime("%d %b %Y") if cert and cert.issued_at else ""
+        if passed_flag and not cert:
+            passed_on = "Pending Approval"
+        else:
+            passed_on = cert.issued_at.strftime("%d %b %Y") if cert and cert.issued_at else ""
         score_str = score if score is not None else ""
 
         row_data = [c.title, calc_status, attempts, done_count, total_ch,
