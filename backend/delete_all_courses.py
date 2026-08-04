@@ -10,6 +10,10 @@ db.query(models.Attempt).delete()
 db.query(models.Certificate).delete()
 db.query(models.AssessmentApproval).delete()
 
+print("Deleting chapters and questions...")
+db.query(models.Question).delete()
+db.query(models.Chapter).delete()
+
 print("Deleting all courses...")
 db.query(models.Course).delete()
 
