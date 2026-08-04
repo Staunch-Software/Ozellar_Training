@@ -1609,10 +1609,198 @@ def admin_get_course_builder(course_id: str, admin: models.User = Depends(requir
     }
 
 
+from fastapi import BackgroundTasks
+import time
+
+def process_pptx_background(course_id: str, pptx_path: str, original_filename: str, course_dir: str):
+    db = SessionLocal()
+    try:
+        course = db.query(models.Course).filter(models.Course.id == course_id).first()
+        if not course: return
+
+        with tempfile.TemporaryDirectory() as tmp:
+            soffice_paths = [
+                "soffice",
+                r"C:\Program Files\LibreOffice\program\soffice.exe",
+                r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
+                r"C:\LibreOffice\program\soffice.exe"
+            ]
+            
+            success = False
+            last_err = None
+            for sp in soffice_paths:
+                try:
+                    subprocess.run(
+                        [sp, "--headless", "--convert-to", "pdf", "--outdir", tmp, pptx_path],
+                        check=True, capture_output=True, timeout=3600,
+                    )
+                    success = True
+                    break
+                except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
+                    last_err = e
+
+            if not success:
+                print(f"Background PPTX conversion failed: {last_err}")
+                return
+
+            pdf_path = os.path.join(tmp, os.path.splitext(original_filename)[0] + ".pdf")
+            if not os.path.exists(pdf_path):
+                print("PDF not produced by LibreOffice")
+                return
+
+            import fitz
+            from pptx import Presentation
+
+            try:
+                prs = Presentation(pptx_path)
+                slide_titles = []
+                slide_full_texts = []
+                for slide in prs.slides:
+                    text = ""
+                    full_text_parts = []
+                    for shape in slide.shapes:
+                        if getattr(shape, "has_text_frame", False):
+                            full_text_parts.append(shape.text_frame.text.strip())
+                        elif getattr(shape, "shape_type", None) == 6:
+                            def _get_group_text(shp):
+                                res = []
+                                for s in shp.shapes:
+                                    if getattr(s, "has_text_frame", False):
+                                        res.append(s.text_frame.text.strip())
+                                    elif getattr(s, "shape_type", None) == 6:
+                                        res.extend(_get_group_text(s))
+                                return res
+                            full_text_parts.extend(_get_group_text(shape))
+                    slide_full_texts.append("\n".join(full_text_parts))
+
+                    title_shape = slide.shapes.title
+                    if title_shape and title_shape.has_text_frame:
+                        text = title_shape.text_frame.text.strip()
+                    
+                    if not text:
+                        def _get_texts(shapes):
+                            res = []
+                            for s in shapes:
+                                if getattr(s, "shape_type", None) == 6:
+                                    res.extend(_get_texts(s.shapes))
+                                elif getattr(s, "has_text_frame", False):
+                                    t = s.text_frame.text.strip()
+                                    if len(t) > 3:
+                                        res.append((getattr(s, "top", 0) or 0, t))
+                            return res
+                        texts = _get_texts(slide.shapes)
+                        if texts:
+                            texts.sort(key=lambda x: x[0])
+                            text = texts[0][1].split('\n')[0].strip()
+                            
+                    slide_titles.append(text if text else "")
+            except Exception:
+                slide_titles = []
+                slide_full_texts = []
+            
+            import zipfile
+            import xml.etree.ElementTree as ET
+            
+            slide_videos = {}
+            try:
+                with zipfile.ZipFile(pptx_path, "r") as z:
+                    for name in z.namelist():
+                        if name.startswith("ppt/slides/_rels/slide") and name.endswith(".xml.rels"):
+                            try:
+                                slide_num_str = name.split("slide")[2].split(".")[0]
+                                slide_idx = int(slide_num_str) - 1
+                                
+                                rels_data = z.read(name)
+                                root = ET.fromstring(rels_data)
+                                ns = {"r": "http://schemas.openxmlformats.org/package/2006/relationships"}
+                                for rel in root.findall("r:Relationship", ns):
+                                    target = rel.get("Target")
+                                    if target and target.startswith("../media/") and target.lower().endswith(".mp4"):
+                                        media_path = "ppt/" + target[3:]
+                                        if media_path in z.namelist():
+                                            media_data = z.read(media_path)
+                                            basename = os.path.basename(target)
+                                            vid_filename = f"slide{slide_num_str}_{basename}"
+                                            vid_path = os.path.join(course_dir, vid_filename)
+                                            with open(vid_path, "wb") as vf:
+                                                vf.write(media_data)
+                                            vid_url = f"/api/uploads/{course_id}/{vid_filename}"
+                                            if slide_idx not in slide_videos:
+                                                slide_videos[slide_idx] = set()
+                                            slide_videos[slide_idx].add(vid_url)
+                            except Exception as e:
+                                print(f"Error parsing {name}: {e}")
+            except Exception as e:
+                print(f"Error parsing PPTX zip for videos: {e}")
+
+            doc = fitz.open(pdf_path)
+            start_n = max((ch.n or 0 for ch in course.chapters), default=0)
+            next_order = _next_chapter_order(course)
+            
+            for i, page in enumerate(doc):
+                n = start_n + i + 1
+                pix = page.get_pixmap(dpi=150)
+                filename = f"slide{n}.png"
+                pix.save(os.path.join(course_dir, filename))
+                
+                slide_title = slide_titles[i] if i < len(slide_titles) and slide_titles[i] else f"Slide {n}"
+                vids = list(slide_videos.get(i, set()))
+                
+                full_text = slide_full_texts[i] if i < len(slide_full_texts) else ""
+                is_quiz = ("quiz" in slide_title.lower()) or ("A. " in full_text and "B. " in full_text)
+                ch_kind = "quiz" if is_quiz else "lesson"
+                
+                quiz_questions = []
+                if is_quiz:
+                    import re
+                    lines = full_text.split('\n')
+                    prompt_lines = []
+                    options = []
+                    ans_idx = 0
+                    for line in lines:
+                        line_s = line.strip()
+                        if not line_s: continue
+                        
+                        ans_match = re.search(r'answer:\s*([A-E])', line_s, re.IGNORECASE)
+                        if ans_match:
+                            ans_idx = ord(ans_match.group(1).upper()) - ord('A')
+                            continue
+
+                        if re.match(r'^[A-E]\.', line_s):
+                            options.append(line_s)
+                        else:
+                            if not options and line_s.lower() != "quiz":
+                                prompt_lines.append(line_s)
+                    
+                    if options:
+                        quiz_questions = [models.ChapterQuestion(
+                            prompt=" ".join(prompt_lines).strip() or slide_title,
+                            options=options,
+                            answer=ans_idx,
+                            explain="Auto-extracted from slide."
+                        )]
+                
+                ch = models.Chapter(
+                    id=f"{course_id}-slide-{n}", course_id=course_id, n=n,
+                    title=slide_title,
+                    sections=[], videos=vids, order=next_order + i, kind=ch_kind,
+                    image=f"/api/uploads/{course_id}/{filename}",
+                    quiz_questions=quiz_questions
+                )
+                db.add(ch)
+            doc.close()
+        db.commit()
+        print(f"Background PPTX processing finished for {course_id}")
+    except Exception as e:
+        print(f"Background PPTX processing failed entirely: {e}")
+    finally:
+        db.close()
+        if os.path.exists(pptx_path):
+            os.remove(pptx_path)
+
 @app.post("/api/admin/courses/{course_id}/upload-pptx")
-async def admin_upload_pptx(course_id: str, file: UploadFile = File(...),
-                            admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
-    course = db.get(models.Course, course_id)
+async def upload_course_pptx(course_id: str, background_tasks: BackgroundTasks, file: UploadFile = File(...), db: Session = Depends(get_db)):
+    course = db.query(models.Course).filter(models.Course.id == course_id).first()
     if not course:
         raise HTTPException(404, "Course not found")
     if not (file.filename or "").lower().endswith(".pptx"):
@@ -1620,195 +1808,14 @@ async def admin_upload_pptx(course_id: str, file: UploadFile = File(...),
 
     course_dir = os.path.join(UPLOAD_DIR, course_id)
     os.makedirs(course_dir, exist_ok=True)
+    
+    pptx_filename = f"pending_{int(time.time())}_{file.filename}"
+    pptx_path = os.path.join(course_dir, pptx_filename)
+    with open(pptx_path, "wb") as f:
+        shutil.copyfileobj(file.file, f)
 
-    with tempfile.TemporaryDirectory() as tmp:
-        pptx_path = os.path.join(tmp, file.filename)
-        with open(pptx_path, "wb") as f:
-            shutil.copyfileobj(file.file, f)
-
-        soffice_paths = [
-            "soffice",
-            r"C:\Program Files\LibreOffice\program\soffice.exe",
-            r"C:\Program Files (x86)\LibreOffice\program\soffice.exe",
-            r"C:\LibreOffice\program\soffice.exe"
-        ]
-        
-        success = False
-        last_err = None
-        for sp in soffice_paths:
-            try:
-                subprocess.run(
-                    [sp, "--headless", "--convert-to", "pdf", "--outdir", tmp, pptx_path],
-                    check=True, capture_output=True, timeout=600,
-                )
-                success = True
-                break
-            except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
-                last_err = e
-
-        if not success:
-            raise HTTPException(
-                500, "Could not convert the presentation. Make sure LibreOffice "
-                     "(soffice) is installed on the server.") from last_err
-
-        pdf_path = os.path.join(tmp, os.path.splitext(file.filename)[0] + ".pdf")
-        if not os.path.exists(pdf_path):
-            raise HTTPException(500, "Presentation conversion did not produce a PDF")
-
-        import fitz  # PyMuPDF — imported lazily so it's only required when this route is hit
-        from pptx import Presentation  # python-pptx — extract slide title placeholders
-
-        # --- extract slide titles and texts from the original .pptx -----------------
-        try:
-            prs = Presentation(pptx_path)
-            slide_titles = []
-            slide_full_texts = []
-            for slide in prs.slides:
-                text = ""
-                full_text_parts = []
-                for shape in slide.shapes:
-                    if getattr(shape, "has_text_frame", False):
-                        full_text_parts.append(shape.text_frame.text.strip())
-                    elif getattr(shape, "shape_type", None) == 6:  # Group
-                        def _get_group_text(shp):
-                            res = []
-                            for s in shp.shapes:
-                                if getattr(s, "has_text_frame", False):
-                                    res.append(s.text_frame.text.strip())
-                                elif getattr(s, "shape_type", None) == 6:
-                                    res.extend(_get_group_text(s))
-                            return res
-                        full_text_parts.extend(_get_group_text(shape))
-                slide_full_texts.append("\n".join(full_text_parts))
-
-                title_shape = slide.shapes.title
-                if title_shape and title_shape.has_text_frame:
-                    text = title_shape.text_frame.text.strip()
-                
-                if not text:
-                    # Fallback: recursively find all non-trivial text boxes (skipping slide numbers etc)
-                    def _get_texts(shapes):
-                        res = []
-                        for s in shapes:
-                            if getattr(s, "shape_type", None) == 6:  # MSO_SHAPE_TYPE.GROUP
-                                res.extend(_get_texts(s.shapes))
-                            elif getattr(s, "has_text_frame", False):
-                                t = s.text_frame.text.strip()
-                                if len(t) > 3:  # ignore short artifacts/page numbers
-                                    res.append((getattr(s, "top", 0) or 0, t))
-                        return res
-                    texts = _get_texts(slide.shapes)
-                    if texts:
-                        texts.sort(key=lambda x: x[0])
-                        # Take the first line of the topmost text shape
-                        text = texts[0][1].split('\n')[0].strip()
-                        
-                slide_titles.append(text if text else "")
-        except Exception:
-            slide_titles = []
-            slide_full_texts = []
-        
-        # --- extract embedded videos from the original .pptx -----------------
-        import zipfile
-        import xml.etree.ElementTree as ET
-        
-        slide_videos = {}  # slide index (0-based) -> set of video URLs
-        try:
-            with zipfile.ZipFile(pptx_path, "r") as z:
-                for name in z.namelist():
-                    if name.startswith("ppt/slides/_rels/slide") and name.endswith(".xml.rels"):
-                        try:
-                            slide_num_str = name.split("slide")[2].split(".")[0]
-                            slide_idx = int(slide_num_str) - 1
-                            
-                            rels_data = z.read(name)
-                            root = ET.fromstring(rels_data)
-                            ns = {"r": "http://schemas.openxmlformats.org/package/2006/relationships"}
-                            for rel in root.findall("r:Relationship", ns):
-                                target = rel.get("Target")
-                                if target and target.startswith("../media/") and target.lower().endswith(".mp4"):
-                                    media_path = "ppt/" + target[3:]
-                                    if media_path in z.namelist():
-                                        media_data = z.read(media_path)
-                                        basename = os.path.basename(target)
-                                        vid_filename = f"slide{slide_num_str}_{basename}"
-                                        vid_path = os.path.join(course_dir, vid_filename)
-                                        with open(vid_path, "wb") as vf:
-                                            vf.write(media_data)
-                                        vid_url = f"/api/uploads/{course_id}/{vid_filename}"
-                                        if slide_idx not in slide_videos:
-                                            slide_videos[slide_idx] = set()
-                                        slide_videos[slide_idx].add(vid_url)
-                        except Exception as e:
-                            print(f"Error parsing {name}: {e}")
-        except Exception as e:
-            print(f"Error parsing PPTX zip for videos: {e}")
-        # -------------------------------------------------------------------
-
-        doc = fitz.open(pdf_path)
-        start_n = max((ch.n or 0 for ch in course.chapters), default=0)
-        next_order = _next_chapter_order(course)
-        created = []
-        for i, page in enumerate(doc):
-            n = start_n + i + 1
-            pix = page.get_pixmap(dpi=150)
-            filename = f"slide{n}.png"
-            pix.save(os.path.join(course_dir, filename))
-            # Use the slide's title placeholder text; fall back to "Slide N"
-            slide_title = slide_titles[i] if i < len(slide_titles) and slide_titles[i] else f"Slide {n}"
-            vids = list(slide_videos.get(i, set()))
-            
-            full_text = slide_full_texts[i] if i < len(slide_full_texts) else ""
-            is_quiz = ("quiz" in slide_title.lower()) or ("A. " in full_text and "B. " in full_text)
-            ch_kind = "quiz" if is_quiz else "lesson"
-            
-            quiz_questions = []
-            if is_quiz:
-                import re
-                lines = full_text.split('\n')
-                prompt_lines = []
-                options = []
-                ans_idx = 0
-                for line in lines:
-                    line_s = line.strip()
-                    if not line_s:
-                        continue
-                    
-                    # Check for "Answer: C"
-                    ans_match = re.search(r'answer:\s*([A-E])', line_s, re.IGNORECASE)
-                    if ans_match:
-                        ans_char = ans_match.group(1).upper()
-                        ans_idx = ord(ans_char) - ord('A')
-                        continue
-
-                    if re.match(r'^[A-E]\.', line_s):
-                        options.append(line_s)
-                    else:
-                        if not options and line_s.lower() != "quiz":
-                            prompt_lines.append(line_s)
-                
-                if options:
-                    quiz_questions = [models.ChapterQuestion(
-                        prompt=" ".join(prompt_lines).strip() or slide_title,
-                        options=options,
-                        answer=ans_idx,
-                        explain="Auto-extracted from slide."
-                    )]
-            
-            ch = models.Chapter(
-                id=f"{course_id}-slide-{n}", course_id=course_id, n=n,
-                title=slide_title,
-                sections=[], videos=vids, order=next_order + i, kind=ch_kind,
-                image=f"/api/uploads/{course_id}/{filename}",
-                quiz_questions=quiz_questions
-            )
-            db.add(ch)
-            created.append(ch)
-        doc.close()
-
-    db.commit()
-    return {"created": len(created)}
-
+    background_tasks.add_task(process_pptx_background, course_id, pptx_path, file.filename, course_dir)
+    return {"message": "Processing started in background."}
 
 @app.post("/api/admin/courses/{course_id}/upload-video")
 async def admin_upload_video(course_id: str, file: UploadFile = File(...),
