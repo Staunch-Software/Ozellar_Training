@@ -4,10 +4,12 @@ import {
   RefreshCw, CheckCircle, Clock, BookOpen, Target, Zap
 } from 'lucide-react'
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
-  AreaChart, Area, PieChart, Pie, Cell, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
+  AreaChart, Area
 } from 'recharts'
 import { adminDashboardStats } from '../../api.js'
+import { useTheme } from '../../App.jsx'
+import AdminHeader from '../../components/AdminHeader.jsx'
 
 const CHART_COLORS = {
   blue:    '#4c8dff',
@@ -26,9 +28,7 @@ const CHART_COLORS = {
 const PIE_COLORS = Object.values(CHART_COLORS)
 
 function useThemeColors() {
-  const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
-    (!document.documentElement.getAttribute('data-theme') &&
-      window.matchMedia('(prefers-color-scheme: dark)').matches)
+  const { isDark } = useTheme()
   return {
     gridStroke:   isDark ? 'rgba(255,255,255,0.07)' : 'rgba(0,0,0,0.06)',
     tickFill:     isDark ? '#6b7178' : '#8a909b',
@@ -221,19 +221,17 @@ export default function AdminDashboard() {
 
   return (
     <div className="dash-root">
-      <div className="dash-header">
-        <div>
-          <div className="eyebrow">Ozellar Marine · Fleet Command</div>
-          <h1 className="dash-title">Training Dashboard</h1>
-          <p className="dash-subtitle">Real-time overview of crew training progress &amp; compliance</p>
-        </div>
-        <div className="dash-header-right">
-          <button id="dashboard-refresh-btn" className="btn sm" onClick={() => load(true)} disabled={refreshing}>
-            <RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
-            {refreshing ? 'Refreshing…' : 'Refresh'}
-          </button>
-        </div>
-      </div>
+      <AdminHeader 
+        icon={BarChart3} 
+        title="Training Dashboard" 
+        eyebrow="Ozellar Marine · Fleet Command" 
+        subtitle="Real-time overview of crew training progress & compliance"
+      >
+        <button id="dashboard-refresh-btn" className="btn sm" onClick={() => load(true)} disabled={refreshing}>
+          <RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
+          {refreshing ? 'Refreshing…' : 'Refresh'}
+        </button>
+      </AdminHeader>
 
       <div className="dash-kpi-grid-row">
         {kpiCards.map((k) => <KpiCard key={k.label} {...k} />)}

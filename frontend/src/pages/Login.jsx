@@ -143,9 +143,10 @@ export default function Login() {
                     onChange={(e) => setName(e.target.value)}
                     onFocus={() => suggestions.length > 0 && setShowSuggestions(true)}
                     onKeyDown={onNameKeyDown}
-                    role="combobox" aria-expanded={showSuggestions} aria-autocomplete="list" />
+                    role="combobox" aria-expanded={showSuggestions} aria-autocomplete="list"
+                    aria-controls="crew-name-listbox" aria-haspopup="listbox" />
                   {showSuggestions && suggestions.length > 0 && (
-                    <div className="ac-pop" role="listbox">
+                    <div id="crew-name-listbox" className="ac-pop" role="listbox" aria-label="Crew name suggestions">
                       {suggestions.map((s, i) => (
                         <button type="button" key={s.name} role="option"
                           className={`ac-item${i === activeIndex ? ' active' : ''}`}

@@ -18,10 +18,11 @@ from typing import Optional
 
 from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
+from sqlalchemy import func
 
 from .database import get_db, SessionLocal
 from . import models, email_service
@@ -43,14 +44,14 @@ UPLOAD_DIR = os.getenv(
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
 from contextlib import asynccontextmanager
+from apscheduler.schedulers.asyncio import AsyncIOScheduler
+import jwt
 
 smartpal_scheduler = None
 email_scheduler = None
 
 def send_pending_digest_job():
     # Job to scan for pending approvals and send the digest
-    from apscheduler.schedulers.asyncio import AsyncIOScheduler
-    import jwt
     from datetime import datetime, timezone, timedelta
     
     admin_email = os.getenv("ADMIN_EMAIL")
@@ -74,6 +75,7 @@ def send_pending_digest_job():
             from .auth import SECRET_KEY, ALGORITHM
             token_payload = {
                 "sub": f"approve:{ap.id}",
+                "type": "approval",
                 "exp": datetime.now(timezone.utc) + timedelta(days=7)
             }
             token = jwt.encode(token_payload, SECRET_KEY, algorithm=ALGORITHM)
@@ -149,7 +151,75 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.mount("/api/uploads", StaticFiles(directory=UPLOAD_DIR), name="uploads")
+# NOTE: We do NOT use StaticFiles for uploads because it does not support
+# HTTP Range requests, which are required for HTML5 video seeking.
+# Instead, we use a custom endpoint below that handles Range headers properly.
+
+import mimetypes
+
+@app.get("/api/uploads/{course_id}/{filename}")
+async def serve_upload(course_id: str, filename: str, request: Request):
+    file_path = os.path.join(UPLOAD_DIR, course_id, filename)
+    if not os.path.exists(file_path) or not os.path.isfile(file_path):
+        raise HTTPException(status_code=404, detail="File not found")
+
+    file_size = os.path.getsize(file_path)
+    mime_type, _ = mimetypes.guess_type(file_path)
+    if not mime_type:
+        mime_type = "application/octet-stream"
+
+    range_header = request.headers.get("range")
+    if range_header:
+        # Parse Range: bytes=start-end
+        range_match = re.match(r"bytes=(\d+)-(\d*)", range_header)
+        if range_match:
+            start = int(range_match.group(1))
+            end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+            end = min(end, file_size - 1)
+            chunk_size = end - start + 1
+
+            def iter_file():
+                with open(file_path, "rb") as f:
+                    f.seek(start)
+                    remaining = chunk_size
+                    while remaining > 0:
+                        read_size = min(65536, remaining)
+                        data = f.read(read_size)
+                        if not data:
+                            break
+                        remaining -= len(data)
+                        yield data
+
+            return StreamingResponse(
+                iter_file(),
+                status_code=206,
+                media_type=mime_type,
+                headers={
+                    "Content-Range": f"bytes {start}-{end}/{file_size}",
+                    "Accept-Ranges": "bytes",
+                    "Content-Length": str(chunk_size),
+                    "Cache-Control": "public, max-age=3600",
+                }
+            )
+
+    # No range header - serve entire file
+    def iter_full():
+        with open(file_path, "rb") as f:
+            while True:
+                data = f.read(65536)
+                if not data:
+                    break
+                yield data
+
+    return StreamingResponse(
+        iter_full(),
+        media_type=mime_type,
+        headers={
+            "Accept-Ranges": "bytes",
+            "Content-Length": str(file_size),
+            "Cache-Control": "public, max-age=3600",
+        }
+    )
 
 
 # ======================= AUTH =======================
@@ -167,7 +237,7 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     if req.mode == "crew":
         name = (req.name or "").strip()
         dob_raw = (req.dob or "").strip()
-        check_rate_limit(f"crew:{normalize_name(name)}:{dob_raw}")
+        check_rate_limit(db, f"crew:{normalize_name(name)}:{dob_raw}")
         dob = parse_ddmmyyyy(dob_raw)
         if not name or dob is None:
             raise HTTPException(401, "Invalid name or date of birth")
@@ -189,15 +259,15 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
             if len(matches) != 1:
                 raise HTTPException(401, "Invalid Crew ID for that name and date of birth")
         user = matches[0]
-        clear_rate_limit(f"crew:{normalize_name(name)}:{dob_raw}")
+        clear_rate_limit(db, f"crew:{normalize_name(name)}:{dob_raw}")
 
     elif req.mode == "admin":
         email = (req.email or "").strip().lower()
-        check_rate_limit(f"admin:{email}")
+        check_rate_limit(db, f"admin:{email}")
         user = db.query(models.User).filter_by(email=email, role="admin").first()
         if not user or not user.password_hash or not verify_password(req.password or "", user.password_hash):
             raise HTTPException(401, "Invalid email or password")
-        clear_rate_limit(f"admin:{email}")
+        clear_rate_limit(db, f"admin:{email}")
     else:
         raise HTTPException(400, "Invalid login mode")
 
@@ -214,7 +284,7 @@ def crew_search(q: str, request: Request, db: Session = Depends(get_db)):
     separate from the stricter login-attempt limiter — this endpoint has no
     credential to check, just a lookup, so it needs its own looser budget
     that still blocks bulk roster scraping."""
-    check_rate_limit(f"crew-search:{request.client.host if request.client else 'unknown'}",
+    check_rate_limit(db, f"crew-search:{request.client.host if request.client else 'unknown'}",
                      max_attempts=40, window_seconds=60)
     query = normalize_name(q)
     if len(query) < 1:
@@ -281,6 +351,11 @@ def serialize_course(db, course, progress, detail=False):
         ).first() is not None
     data["certPending"] = cert_pending
     if detail:
+        attempts_used = 0
+        if progress:
+            attempts_used = db.query(models.Attempt).filter_by(
+                learner_id=progress.learner_id, course_id=course.id
+            ).count()
         data["chapters"] = [{
             "id": ch.id, "n": ch.n, "chapterLabel": ch.chapter_label, "title": ch.title,
             "intro": ch.intro, "sections": ch.sections, "figure": ch.figure,
@@ -299,6 +374,7 @@ def serialize_course(db, course, progress, detail=False):
         data["assessment"] = {
             "passMark": course.pass_mark,
             "maxAttempts": course.max_attempts,
+            "attemptsUsed": attempts_used,
             "questions": [{
                 "q": q.prompt, "options": q.options,
             } for q in course.questions],
@@ -310,9 +386,6 @@ def serialize_course(db, course, progress, detail=False):
                 learner_id=progress.learner_id, course_id=course.id
             ).order_by(models.Attempt.id.desc()).first()
             if latest:
-                attempts_used = db.query(models.Attempt).filter_by(
-                    learner_id=progress.learner_id, course_id=course.id
-                ).count()
                 can_retry = False
                 if not latest.passed:
                     if course.max_attempts is None:
@@ -351,7 +424,7 @@ def learner(user: models.User = Depends(get_current_user)):
 
 @app.get("/api/courses")
 def list_courses(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    lid = str(user.id)
+    lid = user.id
     q = db.query(models.Course).order_by(models.Course.order)
     if user.role != "admin":
         # learners see only the courses assigned to them
@@ -368,14 +441,14 @@ def get_course(slug: str, user: models.User = Depends(get_current_user), db: Ses
     if not c:
         raise HTTPException(404, "Course not found")
     require_enrollment(db, user, c.id)
-    return serialize_course(db, c, get_progress(db, str(user.id), c.id), detail=True)
+    return serialize_course(db, c, get_progress(db, user.id, c.id), detail=True)
 
 
 @app.post("/api/courses/{course_id}/chapters/{chapter_id}/complete")
 def complete_chapter(course_id: str, chapter_id: str,
                      user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     require_enrollment(db, user, course_id)
-    lid = str(user.id)
+    lid = user.id
     p = get_progress(db, lid, course_id)
     if not p:
         p = models.Progress(learner_id=lid, course_id=course_id, completed_chapters=[])
@@ -403,7 +476,7 @@ def submit_assessment(course_id: str, sub: AssessmentSubmission,
     if len(sub.answers) != len(questions):
         raise HTTPException(400, "Answer count does not match question count")
 
-    lid = str(user.id)
+    lid = user.id
     p = get_progress(db, lid, course_id)
     already_passed = bool(p and p.passed)
 
@@ -443,9 +516,21 @@ def submit_assessment(course_id: str, sub: AssessmentSubmission,
                    f"/course/{course.slug}/certificate")
         else:
             # Queue for approval
-            db.add(models.AssessmentApproval(
+            ap = models.AssessmentApproval(
                 learner_id=user.id, course_id=course.id, score=score, attempt_id=attempt.id
-            ))
+            )
+            db.add(ap)
+            db.flush()
+            
+            # Generate the approval token immediately
+            from .auth import SECRET_KEY, ALGORITHM
+            token_payload = {
+                "sub": f"approve:{ap.id}",
+                "type": "approval",
+                "exp": datetime.now(timezone.utc) + timedelta(days=7)
+            }
+            ap.approval_token = jwt.encode(token_payload, SECRET_KEY, algorithm=ALGORITHM)
+            
             notify(db, user.id, "passed", "Assessment passed",
                    f"You passed {course.title} with {score}%. Your result is pending admin approval for certificate generation.",
                    f"/course/{course.slug}/assessment")
@@ -483,13 +568,18 @@ def submit_assessment(course_id: str, sub: AssessmentSubmission,
 
 
 def issue_certificate(db, user, course):
-    lid = str(user.id)
+    lid = user.id
     existing = (db.query(models.Certificate)
                 .filter_by(learner_id=lid, course_id=course.id).first())
     if existing:
         return cert_dict(existing, user, course)
     year = datetime.now(timezone.utc).year
-    seq = db.query(models.Certificate).count() + 1
+    
+    seq_record = models.CertificateSequence()
+    db.add(seq_record)
+    db.flush() # flush to get seq_record.id
+    
+    seq = seq_record.id
     cid = f"OM-{course.id.upper()}-{year}-{seq:04d}"
     cert = models.Certificate(id=cid, learner_id=lid, course_id=course.id,
                               score=get_progress(db, lid, course.id).score)
@@ -512,7 +602,7 @@ def get_certificate(course_id: str, user: models.User = Depends(get_current_user
     if not course:
         raise HTTPException(404, "Course not found")
     cert = (db.query(models.Certificate)
-            .filter_by(learner_id=str(user.id), course_id=course_id).first())
+            .filter_by(learner_id=user.id, course_id=course_id).first())
     if not cert:
         raise HTTPException(404, "No certificate — assessment not passed yet")
     return cert_dict(cert, user, course)
@@ -527,7 +617,7 @@ def cert_pdf_data(cert, user, course):
         "titleUpper": c.get("titleUpper") or course.title.upper(),
         "topics": c.get("topics") or [],
         "issued": cert.issued_at.strftime("%Y-%m-%d") if cert.issued_at else "",
-        "location": "Chennai",
+        "location": os.getenv("CERT_LOCATION", "Chennai"),
         "photoPath": os.path.join(UPLOAD_DIR, "photos", f"{user.id}.jpg"),
         "verifyUrl": f"{PUBLIC_BASE_URL}/verify/{cert.id}",
     }
@@ -621,6 +711,8 @@ def _styled_html_response(title: str, message: str, is_success: bool = True):
 def approve_assessment(token: str, db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "approval":
+            raise ValueError("Invalid token type")
         sub = payload.get("sub", "")
         if not sub.startswith("approve:"):
             raise ValueError()
@@ -662,6 +754,8 @@ def approve_assessment(token: str, db: Session = Depends(get_db)):
 def reject_assessment(token: str, db: Session = Depends(get_db)):
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "approval":
+            raise ValueError("Invalid token type")
         sub = payload.get("sub", "")
         if not sub.startswith("approve:"):
             raise ValueError()
@@ -684,7 +778,7 @@ def reject_assessment(token: str, db: Session = Depends(get_db)):
            f"/course/{course.slug}/assessment")
            
     # Update progress so they can retake
-    p = db.query(models.Progress).filter_by(learner_id=str(user.id), course_id=course.id).first()
+    p = db.query(models.Progress).filter_by(learner_id=user.id, course_id=course.id).first()
     if p:
         p.passed = False
         
@@ -701,18 +795,28 @@ def reject_assessment(token: str, db: Session = Depends(get_db)):
 
 @app.post("/api/crew/photo")
 async def upload_crew_photo(file: UploadFile = File(...), user: models.User = Depends(get_current_user)):
+    from PIL import Image
     if user.role != "learner":
         raise HTTPException(403, "Only crew members can upload photos")
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(400, "File must be an image")
     
+    content = await file.read()
+    
+    try:
+        image = Image.open(io.BytesIO(content))
+        image.verify() # verify it's an image
+    except Exception:
+        raise HTTPException(400, "Invalid image file")
+    
+    # Need to reopen because verify() moves the file pointer
+    image = Image.open(io.BytesIO(content))
+    
     photos_dir = os.path.join(UPLOAD_DIR, "photos")
     os.makedirs(photos_dir, exist_ok=True)
     
     file_path = os.path.join(photos_dir, f"{user.id}.jpg")
-    content = await file.read()
-    with open(file_path, "wb") as f:
-        f.write(content)
+    image.convert("RGB").save(file_path, format="JPEG", quality=85)
         
     return {"status": "success"}
 
@@ -725,7 +829,7 @@ def get_certificate_pdf(course_id: str, user: models.User = Depends(get_current_
     if not course:
         raise HTTPException(404, "Course not found")
     cert = (db.query(models.Certificate)
-            .filter_by(learner_id=str(user.id), course_id=course_id).first())
+            .filter_by(learner_id=user.id, course_id=course_id).first())
     if not cert:
         raise HTTPException(404, "No certificate — assessment not passed yet")
     pdf = build_certificate_pdf(cert_pdf_data(cert, user, course))
@@ -735,7 +839,7 @@ def get_certificate_pdf(course_id: str, user: models.User = Depends(get_current_
 
 @app.get("/api/certificates")
 def list_certificates(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    certs = db.query(models.Certificate).filter_by(learner_id=str(user.id)).all()
+    certs = db.query(models.Certificate).filter_by(learner_id=user.id).all()
     out = []
     for cert in certs:
         course = db.query(models.Course).filter_by(id=cert.course_id).first()
@@ -769,8 +873,7 @@ def verify_certificate(cert_id: str, db: Session = Depends(get_db)):
     if not cert:
         return {"valid": False}
     course = db.query(models.Course).filter_by(id=cert.course_id).first()
-    user = (db.get(models.User, int(cert.learner_id))
-            if (cert.learner_id or "").isdigit() else None)
+    user = db.get(models.User, cert.learner_id)
     return {
         "valid": True, "id": cert.id,
         "holder": user.full_name if user else None,
@@ -848,7 +951,7 @@ def admin_user_view(db, u):
     if u.role == "learner":
         v["assignedCount"] = db.query(models.Enrollment).filter_by(learner_id=u.id).count()
         v["passedCount"] = (db.query(models.Progress)
-                            .filter_by(learner_id=str(u.id), passed=True).count())
+                            .filter_by(learner_id=u.id, passed=True).count())
     return v
 
 
@@ -950,39 +1053,46 @@ def admin_unassign(user_id: int, course_id: str,
 
 
 # ----- compliance reporting -----
-def _course_cell(db, learner, course):
-    prog = get_progress(db, str(learner.id), course.id)
-    cert = (db.query(models.Certificate)
-            .filter_by(learner_id=str(learner.id), course_id=course.id).first())
-    enr = (db.query(models.Enrollment)
-           .filter_by(learner_id=learner.id, course_id=course.id).first())
-    attempts = (db.query(models.Attempt)
-                .filter_by(learner_id=learner.id, course_id=course.id).count())
-
-    if prog and prog.passed:
-        status = "passed"
-    elif prog and ((prog.completed_chapters and len(prog.completed_chapters) > 0)
-                   or prog.score is not None):
-        status = "in-progress"
-    else:
-        status = "assigned"
-    return {
-        "status": status,
-        "score": prog.score if prog else None,
-        "startedOn": enr.assigned_at.strftime("%Y-%m-%d") if enr and enr.assigned_at else None,
-        "passedOn": cert.issued_at.strftime("%Y-%m-%d") if cert and cert.issued_at else None,
-        "attempts": attempts,
-    }
-
-
 def _report(db):
     courses = db.query(models.Course).order_by(models.Course.order).all()
     learners = (db.query(models.User).filter_by(role="learner")
                 .order_by(models.User.full_name).all())
+    
+    enrollments = db.query(models.Enrollment).all()
+    progress_all = db.query(models.Progress).all()
+    certs = db.query(models.Certificate).all()
+    attempts_counts = db.query(models.Attempt.learner_id, models.Attempt.course_id, func.count(models.Attempt.id)).group_by(models.Attempt.learner_id, models.Attempt.course_id).all()
+    
+    e_map = {(e.learner_id, e.course_id): e for e in enrollments}
+    p_map = {(p.learner_id, p.course_id): p for p in progress_all}
+    c_map = {(c.learner_id, c.course_id): c for c in certs}
+    a_map = {(l, c): count for l, c, count in attempts_counts}
+    
     rows = []
     for lr in learners:
-        assigned = set(enrolled_course_ids(db, lr.id))
-        cells = {c.id: _course_cell(db, lr, c) for c in courses if c.id in assigned}
+        assigned_courses = [c for c in courses if (lr.id, c.id) in e_map]
+        cells = {}
+        for c in assigned_courses:
+            enr = e_map.get((lr.id, c.id))
+            prog = p_map.get((lr.id, c.id))
+            cert = c_map.get((lr.id, c.id))
+            attempts = a_map.get((lr.id, c.id), 0)
+            
+            if prog and prog.passed:
+                status = "passed"
+            elif prog and ((prog.completed_chapters and len(prog.completed_chapters) > 0) or prog.score is not None):
+                status = "in-progress"
+            else:
+                status = "assigned"
+            
+            cells[c.id] = {
+                "status": status,
+                "score": prog.score if prog else None,
+                "startedOn": enr.assigned_at.strftime("%Y-%m-%d") if enr and enr.assigned_at else None,
+                "passedOn": cert.issued_at.strftime("%Y-%m-%d") if cert and cert.issued_at else None,
+                "attempts": attempts,
+            }
+        
         rows.append({
             "learnerId": lr.id, "name": lr.full_name, "crewId": lr.crew_id,
             "rank": lr.rank, "isActive": bool(lr.is_active), "cells": cells,
@@ -1026,11 +1136,18 @@ def admin_dashboard_stats(admin: models.User = Depends(require_admin), db: Sessi
 
     # --- course stats ---
     courses = db.query(models.Course).order_by(models.Course.order).all()
+    enrollments = db.query(models.Enrollment).all()
+    progress_all = db.query(models.Progress).all()
+    
+    e_map = defaultdict(set)
+    for e in enrollments:
+        e_map[e.course_id].add(e.learner_id)
+        
+    p_map = {(p.learner_id, p.course_id): p for p in progress_all}
+    
     course_stats = []
     for c in courses:
-        enrolled_ids = set(
-            e.learner_id for e in db.query(models.Enrollment).filter_by(course_id=c.id).all()
-        )
+        enrolled_ids = e_map[c.id]
         total = len(enrolled_ids)
         if total == 0:
             course_stats.append({
@@ -1041,9 +1158,7 @@ def admin_dashboard_stats(admin: models.User = Depends(require_admin), db: Sessi
             continue
         passed = inprogress = 0
         for lid in enrolled_ids:
-            prog = db.query(models.Progress).filter_by(
-                learner_id=str(lid), course_id=c.id
-            ).first()
+            prog = p_map.get((lid, c.id))
             if prog and prog.passed:
                 passed += 1
             elif prog and ((prog.completed_chapters and len(prog.completed_chapters) > 0) or prog.score is not None):
@@ -1084,7 +1199,7 @@ def admin_dashboard_stats(admin: models.User = Depends(require_admin), db: Sessi
                     .limit(8).all())
     recent_cert_list = []
     for cert in recent_certs:
-        user_obj = db.get(models.User, int(cert.learner_id)) if (cert.learner_id or "").isdigit() else None
+        user_obj = db.get(models.User, cert.learner_id)
         course_obj = db.query(models.Course).filter_by(id=cert.course_id).first()
         recent_cert_list.append({
             "id": cert.id,
@@ -1379,9 +1494,9 @@ def crew_my_report_xlsx(status: Optional[str] = None, user: models.User = Depend
     row_idx = 4
     total_passed = 0
     for c in courses:
-        prog = get_progress(db, str(user.id), c.id)
+        prog = get_progress(db, user.id, c.id)
         cert = (db.query(models.Certificate)
-                .filter_by(learner_id=str(user.id), course_id=c.id).first())
+                .filter_by(learner_id=user.id, course_id=c.id).first())
 
         done_count  = len(prog.completed_chapters or []) if prog else 0
         total_ch    = len(c.chapters)
@@ -1533,6 +1648,18 @@ class CreateCourseRequest(BaseModel):
     durationLabel: str | None = None
     passMark: int = 80
     maxAttempts: int | None = None
+    targetRanks: list[str] = []
+    targetUsers: list[int] = []
+
+
+class UpdateCourseRequest(BaseModel):
+    title: str
+    subtitle: str | None = None
+    durationLabel: str | None = None
+    passMark: int
+    maxAttempts: int | None = None
+    targetRanks: list[str] = []
+    targetUsers: list[int] = []
 
 
 class CreateQuizChapterRequest(BaseModel):
@@ -1579,10 +1706,70 @@ def admin_create_course(req: CreateCourseRequest, admin: models.User = Depends(r
         id=cid, slug=cid, title=title, subtitle=req.subtitle,
         icon=req.icon, gradient=req.gradient, duration_label=req.durationLabel,
         status="not-started", pass_mark=req.passMark, max_attempts=req.maxAttempts,
+        target_ranks=req.targetRanks, target_users=req.targetUsers,
         order=(max(existing_orders) + 1) if existing_orders else 0,
     )
     db.add(course)
     db.commit()
+
+    # Auto-enroll matching users immediately
+    target_ranks = req.targetRanks or []
+    target_users = req.targetUsers or []
+    if target_ranks or target_users:
+        target_ranks_upper = [r.upper() for r in target_ranks]
+        users_to_enroll = db.query(models.User).filter(
+            models.User.role == 'learner',
+            (func.upper(models.User.rank).in_(target_ranks_upper)) | (models.User.id.in_(target_users))
+        ).all()
+        for u in users_to_enroll:
+            enroll = models.Enrollment(learner_id=u.id, course_id=cid, assigned_by=admin.id)
+            db.add(enroll)
+        db.commit()
+
+    db.refresh(course)
+    return admin_course_summary(course)
+
+
+@app.put("/api/admin/courses/{course_id}")
+def admin_update_course(course_id: str, req: UpdateCourseRequest, admin: models.User = Depends(require_admin),
+                        db: Session = Depends(get_db)):
+    course = db.get(models.Course, course_id)
+    if not course:
+        raise HTTPException(404, "Course not found")
+        
+    title = req.title.strip()
+    if not title:
+        raise HTTPException(400, "Title is required")
+        
+    course.title = title
+    course.subtitle = req.subtitle
+    course.duration_label = req.durationLabel
+    course.pass_mark = req.passMark
+    course.max_attempts = req.maxAttempts
+    course.target_ranks = req.targetRanks
+    course.target_users = req.targetUsers
+    
+    db.commit()
+    
+    # Auto-enroll matching users immediately who are not already enrolled
+    target_ranks = req.targetRanks or []
+    target_users = req.targetUsers or []
+    if target_ranks or target_users:
+        target_ranks_upper = [r.upper() for r in target_ranks]
+        users_to_enroll = db.query(models.User).filter(
+            models.User.role == 'learner',
+            (func.upper(models.User.rank).in_(target_ranks_upper)) | (models.User.id.in_(target_users))
+        ).all()
+        
+        existing_enrollments = db.query(models.Enrollment).filter(models.Enrollment.course_id == course_id).all()
+        existing_user_ids = {e.learner_id for e in existing_enrollments}
+        
+        for u in users_to_enroll:
+            if u.id not in existing_user_ids:
+                enroll = models.Enrollment(learner_id=u.id, course_id=course_id, assigned_by=admin.id)
+                db.add(enroll)
+        db.commit()
+        
     db.refresh(course)
     return admin_course_summary(course)
 
@@ -1595,8 +1782,10 @@ def admin_get_course_builder(course_id: str, admin: models.User = Depends(requir
         raise HTTPException(404, "Course not found")
     return {
         "id": course.id, "slug": course.slug, "title": course.title,
-        "subtitle": course.subtitle, "passMark": course.pass_mark,
-        "maxAttempts": course.max_attempts,
+        "subtitle": course.subtitle, "durationLabel": course.duration_label,
+        "passMark": course.pass_mark, "maxAttempts": course.max_attempts,
+        "targetRanks": course.target_ranks or [],
+        "targetUsers": course.target_users or [],
         "chapters": [admin_chapter_detail(ch) for ch in
                      sorted(course.chapters, key=lambda c: c.order)],
         "assessment": {
@@ -1618,7 +1807,13 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
         course = db.query(models.Course).filter(models.Course.id == course_id).first()
         if not course: return
 
-        with tempfile.TemporaryDirectory() as tmp:
+        import string
+        import random
+        # Use a local temp dir to avoid Windows tempfile locking issues with soffice
+        tmp = os.path.join(UPLOAD_DIR, "tmp_" + "".join(random.choices(string.ascii_lowercase + string.digits, k=10)))
+        os.makedirs(tmp, exist_ok=True)
+        
+        try:
             soffice_paths = [
                 "soffice",
                 r"C:\Program Files\LibreOffice\program\soffice.exe",
@@ -1628,26 +1823,25 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
             
             success = False
             last_err = None
+            env_tmp = os.path.join(tmp, "soffice_env").replace(os.sep, "/")
+            
             for sp in soffice_paths:
                 try:
                     subprocess.run(
-                        [sp, "--headless", "--convert-to", "pdf", "--outdir", tmp, pptx_path],
-                        check=True, capture_output=True, timeout=3600,
+                        [sp, f"-env:UserInstallation=file:///{env_tmp}", "--headless", "--nologo", "--nofirststartwizard", "--convert-to", "pdf", "--outdir", tmp, pptx_path],
+                        check=True, capture_output=True, timeout=120,
                     )
                     success = True
                     break
                 except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
                     last_err = e
 
-            if not success:
-                print(f"Background PPTX conversion failed: {last_err}")
-                return
-
             pdf_filename = os.path.splitext(os.path.basename(pptx_path))[0] + ".pdf"
             pdf_path = os.path.join(tmp, pdf_filename)
-            if not os.path.exists(pdf_path):
-                print(f"PDF not produced by LibreOffice. Looked for {pdf_path}")
-                return
+            has_pdf = success and os.path.exists(pdf_path)
+            
+            if not has_pdf:
+                print(f"Background PPTX conversion to PDF failed or skipped: {last_err}")
 
             import fitz
             from pptx import Presentation
@@ -1692,10 +1886,12 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                         texts = _get_texts(slide.shapes)
                         if texts:
                             texts.sort(key=lambda x: x[0])
-                            text = texts[0][1].split('\n')[0].strip()
+                            text = texts[0][1].split("\n")[0].strip()
                             
                     slide_titles.append(text if text else "")
-            except Exception:
+            except Exception as e:
+                print(f"Failed to extract text with python-pptx: {e}")
+                prs = None
                 slide_titles = []
                 slide_full_texts = []
             
@@ -1725,6 +1921,12 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                                             vid_path = os.path.join(course_dir, vid_filename)
                                             with open(vid_path, "wb") as vf:
                                                 vf.write(media_data)
+                                            try:
+                                                from qtfaststart import processor
+                                                processor.process(vid_path, vid_path + ".tmp")
+                                                os.replace(vid_path + ".tmp", vid_path)
+                                            except Exception:
+                                                pass
                                             vid_url = f"/api/uploads/{course_id}/{vid_filename}"
                                             if slide_idx not in slide_videos:
                                                 slide_videos[slide_idx] = set()
@@ -1734,15 +1936,26 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
             except Exception as e:
                 print(f"Error parsing PPTX zip for videos: {e}")
 
-            doc = fitz.open(pdf_path)
+            doc = fitz.open(pdf_path) if has_pdf else None
+            num_slides = len(doc) if doc else (len(prs.slides) if prs else 0)
+            
+            if num_slides == 0:
+                print("No slides found in PPTX or PDF")
+                return
+
             start_n = max((ch.n or 0 for ch in course.chapters), default=0)
             next_order = _next_chapter_order(course)
             
-            for i, page in enumerate(doc):
+            for i in range(num_slides):
                 n = start_n + i + 1
-                pix = page.get_pixmap(dpi=150)
-                filename = f"slide{n}.png"
-                pix.save(os.path.join(course_dir, filename))
+                
+                img_url = None
+                if doc:
+                    page = doc[i]
+                    pix = page.get_pixmap(dpi=150)
+                    filename = f"slide{n}.png"
+                    pix.save(os.path.join(course_dir, filename))
+                    img_url = f"/api/uploads/{course_id}/{filename}"
                 
                 slide_title = slide_titles[i] if i < len(slide_titles) and slide_titles[i] else f"Slide {n}"
                 vids = list(slide_videos.get(i, set()))
@@ -1754,7 +1967,7 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                 quiz_questions = []
                 if is_quiz:
                     import re
-                    lines = full_text.split('\n')
+                    lines = full_text.split("\n")
                     prompt_lines = []
                     options = []
                     ans_idx = 0
@@ -1762,12 +1975,12 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                         line_s = line.strip()
                         if not line_s: continue
                         
-                        ans_match = re.search(r'answer:\s*([A-E])', line_s, re.IGNORECASE)
+                        ans_match = re.search(r"answer:\s*([A-E])", line_s, re.IGNORECASE)
                         if ans_match:
-                            ans_idx = ord(ans_match.group(1).upper()) - ord('A')
+                            ans_idx = ord(ans_match.group(1).upper()) - ord("A")
                             continue
 
-                        if re.match(r'^[A-E]\.', line_s):
+                        if re.match(r"^[A-E]\.", line_s):
                             options.append(line_s)
                         else:
                             if not options and line_s.lower() != "quiz":
@@ -1785,19 +1998,34 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                     id=f"{course_id}-slide-{n}", course_id=course_id, n=n,
                     title=slide_title,
                     sections=[], videos=vids, order=next_order + i, kind=ch_kind,
-                    image=f"/api/uploads/{course_id}/{filename}",
+                    image=img_url,
                     quiz_questions=quiz_questions
                 )
                 db.add(ch)
-            doc.close()
-        db.commit()
-        print(f"Background PPTX processing finished for {course_id}")
+            
+            if doc:
+                doc.close()
+            db.commit()
+            print(f"Background PPTX processing finished for {course_id}")
+
+        finally:
+            import shutil
+            try:
+                shutil.rmtree(tmp)
+            except OSError:
+                pass
+            
     except Exception as e:
         print(f"Background PPTX processing failed entirely: {e}")
+        import traceback
+        traceback.print_exc()
     finally:
         db.close()
         if os.path.exists(pptx_path):
-            os.remove(pptx_path)
+            try:
+                os.remove(pptx_path)
+            except OSError:
+                pass
 
 @app.post("/api/admin/courses/{course_id}/upload-pptx")
 async def upload_course_pptx(course_id: str, background_tasks: BackgroundTasks,
@@ -1837,6 +2065,16 @@ async def admin_upload_video(course_id: str, file: UploadFile = File(...),
     filename = f"video{existing + 1}{ext}"
     with open(os.path.join(course_dir, filename), "wb") as f:
         shutil.copyfileobj(file.file, f)
+    
+    if ext.lower() == ".mp4":
+        try:
+            from qtfaststart import processor
+            video_path = os.path.join(course_dir, filename)
+            processor.process(video_path, video_path + ".tmp")
+            os.replace(video_path + ".tmp", video_path)
+        except Exception as e:
+            print("qtfaststart failed:", e)
+            
     url = f"/api/uploads/{course_id}/{filename}"
 
     if chapterId:

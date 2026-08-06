@@ -51,6 +51,8 @@ class Course(Base):
     pass_mark = Column(Integer, default=80)
     max_attempts = Column(Integer)   # null = unlimited (admin-configurable)
     cert = Column(JSON)          # {titleUpper, topics[]} for the certificate
+    target_ranks = Column(JSON)  # ["Captain", "Chief Engineer"] etc.
+    target_users = Column(JSON)  # [1, 5, 12] specific user IDs (or crew IDs)
     order = Column(Integer, default=0)
 
     chapters = relationship("Chapter", back_populates="course",
@@ -113,8 +115,9 @@ class ChapterQuestion(Base):
 class Progress(Base):
     """One row per learner+course, tracking completed chapters and result."""
     __tablename__ = "progress"
+    __table_args__ = (UniqueConstraint("learner_id", "course_id", name="uq_progress_learner_course"),)
     id = Column(Integer, primary_key=True, autoincrement=True)
-    learner_id = Column(String, index=True, nullable=False)
+    learner_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
     course_id = Column(String, ForeignKey("courses.id"), nullable=False)
     completed_chapters = Column(JSON, default=list)
     score = Column(Integer)
@@ -125,10 +128,17 @@ class Progress(Base):
 class Certificate(Base):
     __tablename__ = "certificates"
     id = Column(String, primary_key=True)   # e.g. OM-CARGO-2026-0417
-    learner_id = Column(String, index=True, nullable=False)
+    learner_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
     course_id = Column(String, ForeignKey("courses.id"), nullable=False)
     score = Column(Integer)
     issued_at = Column(DateTime, server_default=func.now())
+
+
+class CertificateSequence(Base):
+    """Atomic sequence generator for certificate IDs."""
+    __tablename__ = "certificate_sequences"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    created_at = Column(DateTime, server_default=func.now())
 
 
 class Enrollment(Base):
@@ -199,3 +209,11 @@ class AssessmentApproval(Base):
     approval_token = Column(String, unique=True, index=True)  # signed JWT for one-click action
     decided_at = Column(DateTime)
     created_at = Column(DateTime, server_default=func.now())
+
+
+class RateLimit(Base):
+    """Database-backed rate limiter for login attempts."""
+    __tablename__ = "rate_limits"
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    identifier = Column(String, index=True, nullable=False)
+    timestamp = Column(DateTime, server_default=func.now(), nullable=False)

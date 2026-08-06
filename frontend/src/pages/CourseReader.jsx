@@ -322,7 +322,7 @@ export default function CourseReader() {
                 disabled={ch.kind === 'quiz' ? (!quizPassed && !ch.done) : (!reached && !ch.done)}
                 onClick={() => {
                   if (!ch.done) {
-                    markChapterComplete(slug, ch.id).then(() => navigate(`/course/${slug}/assessment`))
+                    markChapterComplete(course.id, ch.id).then(() => navigate(`/course/${slug}/assessment`))
                   } else {
                     navigate(`/course/${slug}/assessment`)
                   }

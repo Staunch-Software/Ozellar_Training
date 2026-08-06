@@ -1,4 +1,4 @@
-import { Outlet, NavLink, Link, useNavigate } from 'react-router-dom'
+import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
 import { Shield, LayoutDashboard, Users, Grid3x3, BarChart3, LogOut, BookOpen } from 'lucide-react'
 import { ThemeToggle } from '../../App.jsx'
 import { useAuth } from '../../auth.jsx'
@@ -6,9 +6,11 @@ import { useAuth } from '../../auth.jsx'
 export default function AdminLayout() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const signOut = () => { logout(); navigate('/') }
 
   const tab = ({ isActive }) => (isActive ? 'admin-tab on' : 'admin-tab')
+  const isLockedPage = ['/admin/users', '/admin/assignments', '/admin/report'].includes(location.pathname)
 
   return (
     <div className="admin">
@@ -31,7 +33,7 @@ export default function AdminLayout() {
           <div className="av" title={`${user?.name || ''} · Admin`}>{user?.initials || 'A'}</div>
         </div>
       </nav>
-      <div className="page">
+      <div className={`page ${isLockedPage ? 'page-locked' : ''}`}>
         <Outlet />
       </div>
     </div>

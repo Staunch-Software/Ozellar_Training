@@ -52,11 +52,12 @@ def parse_ddmmyyyy(s: str):
         return None
 
 
-def create_token(user: "models.User") -> str:
+def create_token(user: "models.User", token_type: str = "session") -> str:
     payload = {
         "sub": str(user.id),
         "role": user.role,
         "name": user.full_name,
+        "type": token_type,
         "exp": datetime.now(timezone.utc) + timedelta(hours=TOKEN_TTL_HOURS),
     }
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
@@ -74,6 +75,10 @@ def get_current_user(
         raise HTTPException(401, "Session expired — please sign in again")
     except jwt.PyJWTError:
         raise HTTPException(401, "Invalid authentication token")
+        
+    if payload.get("type", "session") != "session":
+        raise HTTPException(401, "Invalid token type")
+        
     user = db.get(models.User, int(payload["sub"]))
     if not user or not user.is_active:
         raise HTTPException(401, "User not found or inactive")
@@ -99,21 +104,28 @@ def user_public(u: "models.User") -> dict:
     }
 
 
-# --- very small in-memory login rate limiter (per identifier) ---
-_attempts: dict[str, list] = {}
+# --- Database-backed login rate limiter (per identifier) ---
 _MAX_ATTEMPTS = 6
 _WINDOW_SECONDS = 300
 
-
-def check_rate_limit(identifier: str, max_attempts: int = _MAX_ATTEMPTS,
+def check_rate_limit(db: Session, identifier: str, max_attempts: int = _MAX_ATTEMPTS,
                      window_seconds: int = _WINDOW_SECONDS):
-    now = time.time()
-    hits = [t for t in _attempts.get(identifier, []) if now - t < window_seconds]
-    if len(hits) >= max_attempts:
+    cutoff = datetime.now(timezone.utc) - timedelta(seconds=window_seconds)
+    
+    # Purge stale keys probabilistically or just ignore them. 
+    # For performance, we just count recent ones here.
+    hits = db.query(models.RateLimit).filter(
+        models.RateLimit.identifier == identifier,
+        models.RateLimit.timestamp >= cutoff
+    ).count()
+    
+    if hits >= max_attempts:
         raise HTTPException(429, "Too many requests. Try again shortly.")
-    hits.append(now)
-    _attempts[identifier] = hits
+        
+    db.add(models.RateLimit(identifier=identifier))
+    db.commit()
 
 
-def clear_rate_limit(identifier: str):
-    _attempts.pop(identifier, None)
+def clear_rate_limit(db: Session, identifier: str):
+    db.query(models.RateLimit).filter(models.RateLimit.identifier == identifier).delete()
+    db.commit()

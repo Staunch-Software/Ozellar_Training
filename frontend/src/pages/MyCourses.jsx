@@ -12,6 +12,7 @@ export default function MyCourses() {
   const [dlReport, setDlReport] = useState(false)
   const [dlError, setDlError] = useState(null)
   const [reportFilter, setReportFilter] = useState('all')
+  const [searchQuery, setSearchQuery] = useState('')
   const { user: learner } = useAuth()
   const navigate = useNavigate()
 
@@ -22,6 +23,8 @@ export default function MyCourses() {
   // issued on pass) — not merely when all chapters were scrolled
   const completed = courses.filter((c) => c.passed).length
   const inProgress = courses.filter((c) => !c.passed && c.progressPct > 0).length
+  // certIssued: passed AND not pending admin approval — the actual certificate count
+  const certIssued = courses.filter((c) => c.passed && !c.certPending).length
 
   const downloadReport = async () => {
     setDlReport(true); setDlError(null)
@@ -32,7 +35,7 @@ export default function MyCourses() {
 
   return (
     <>
-      <TopNav />
+      <TopNav searchQuery={searchQuery} onSearch={setSearchQuery} />
       <div className="page myc-root">
         
         {/* ---- Reverted Hello Header with Filter ---- */}
@@ -45,7 +48,7 @@ export default function MyCourses() {
             <div className="stats">
               <div className="s"><b>{inProgress}</b><span>In progress</span></div>
               <div className="s"><b>{completed}</b><span>Completed</span></div>
-              <div className="s"><b>{completed}</b><span>Certificates</span></div>
+              <div className="s"><b>{certIssued}</b><span>Certificates</span></div>
             </div>
             
             <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -111,6 +114,10 @@ export default function MyCourses() {
             if (reportFilter === 'in-progress') return !c.passed && c.progressPct > 0;
             if (reportFilter === 'not-started') return !c.passed && !c.progressPct;
             return true;
+          }).filter(c => {
+            if (!searchQuery) return true;
+            const q = searchQuery.toLowerCase();
+            return (c.title || '').toLowerCase().includes(q) || (c.subtitle || '').toLowerCase().includes(q);
           }).map((c) => (
             <CourseCard key={c.id} c={c} onOpen={() => navigate(`/course/${c.slug}`)} />
           ))}

@@ -34,9 +34,10 @@ export function ThemeToggle({ className = 'iconbtn' }) {
 }
 
 /* ---- top nav for signed-in pages ---- */
-export function TopNav() {
+export function TopNav({ searchQuery, onSearch }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const [searchOpen, setSearchOpen] = useState(false)
   const signOut = () => { logout(); navigate('/') }
   return (
     <nav className="appnav">
@@ -49,7 +50,26 @@ export function TopNav() {
         <NavLink to="/help" className={({ isActive }) => (isActive ? 'on' : '')}>Help</NavLink>
       </div>
       <div className="nav-right">
-        <button className="iconbtn" aria-label="Search"><Search size={18} /></button>
+        {onSearch ? (
+          searchOpen || searchQuery ? (
+            <div style={{ display: 'flex', alignItems: 'center', background: 'var(--surface-2)', padding: '4px 12px', borderRadius: '20px', gap: '8px' }}>
+               <Search size={14} color="var(--text-mut)" />
+               <input
+                 autoFocus
+                 type="text"
+                 placeholder="Search..."
+                 value={searchQuery || ''}
+                 onChange={e => onSearch(e.target.value)}
+                 onBlur={() => !searchQuery && setSearchOpen(false)}
+                 style={{ border: 'none', background: 'transparent', outline: 'none', color: 'var(--text)', width: '120px', fontSize: '13.5px' }}
+               />
+            </div>
+          ) : (
+            <button className="iconbtn" aria-label="Search" onClick={() => setSearchOpen(true)}>
+              <Search size={18} />
+            </button>
+          )
+        ) : null}
         <NotificationBell />
         <ThemeToggle />
         <button className="iconbtn" aria-label="Sign out" title={`Sign out — ${user?.name || ''}`} onClick={signOut}>

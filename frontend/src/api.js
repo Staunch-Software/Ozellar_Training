@@ -163,6 +163,7 @@ export async function crewDownloadMyReportXlsx(status = 'all') {
 // admin course builder
 export const adminListCourses = () => req('/admin/courses')
 export const adminCreateCourse = (body) => req('/admin/courses', { method: 'POST', body: JSON.stringify(body) })
+export const adminUpdateCourse = (courseId, body) => req(`/admin/courses/${courseId}`, { method: 'PUT', body: JSON.stringify(body) })
 export const adminGetCourseBuilder = (courseId) => req(`/admin/courses/${courseId}`)
 export const adminCreateQuizChapter = (courseId, body) =>
   req(`/admin/courses/${courseId}/quiz-chapters`, { method: 'POST', body: JSON.stringify(body) })

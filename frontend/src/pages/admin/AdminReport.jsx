@@ -5,6 +5,7 @@ import {
   TrendingUp, Download, RefreshCw, ChevronDown, ChevronLeft, ChevronRight
 } from 'lucide-react'
 import { adminReport, adminDownloadReportCsv, adminDownloadReportXlsx } from '../../api.js'
+import AdminHeader from '../../components/AdminHeader.jsx'
 
 /* ------------------------------------------------------------------ */
 /*  Status config                                                       */
@@ -31,10 +32,11 @@ export default function AdminReport() {
   const [selectedCourse, setSelectedCourse]= useState('all')
   const [selectedStatus, setSelectedStatus]= useState('all')
   const [dlXlsx,         setDlXlsx]        = useState(false)
+  const [dlCsv,          setDlCsv]         = useState(false)
   const [error,          setError]         = useState(null)
   const [loading,        setLoading]       = useState(true)
   const [page,           setPage]          = useState(1)
-  const ROWS_PER_PAGE = 10
+  const ROWS_PER_PAGE = 50
 
   /* load */
   const load = () => {
@@ -115,6 +117,23 @@ export default function AdminReport() {
     return filteredRows.slice(start, start + ROWS_PER_PAGE)
   }, [filteredRows, page])
 
+  const getPageNumbers = () => {
+    const maxVisible = 5;
+    const pages = [];
+    if (totalPages <= maxVisible) {
+      for (let i = 1; i <= totalPages; i++) pages.push(i);
+    } else {
+      pages.push(1);
+      if (page > 3) pages.push('...');
+      const start = Math.max(2, page - 1);
+      const end = Math.min(totalPages - 1, page + 1);
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (page < totalPages - 2) pages.push('...');
+      pages.push(totalPages);
+    }
+    return pages;
+  };
+
   /* ---------- downloads ---------- */
   const downloadXlsx = async () => {
     setDlXlsx(true); setError(null)
@@ -126,6 +145,13 @@ export default function AdminReport() {
       })
     } catch (e) { setError(e.message) }
     finally { setDlXlsx(false) }
+  }
+
+  const downloadCsv = async () => {
+    setDlCsv(true); setError(null)
+    try { await adminDownloadReportCsv() }
+    catch (e) { setError(e.message) }
+    finally { setDlCsv(false) }
   }
 
   /* ---------- loading / error state ---------- */
@@ -142,85 +168,91 @@ export default function AdminReport() {
   }
 
   return (
-    <div className="rpt-root">
+    <div className="rpt-root" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
 
       {/* ═══════════════════════ PAGE HEADER (standard admin style) ═══════════════════════ */}
-      <div className="admin-head" style={{ marginBottom: 20 }}>
-        <div>
-          <div className="eyebrow">Fleet Training · Compliance</div>
-          <h1 style={{ fontSize: 26, margin: '6px 0 0' }}>Completion Report</h1>
-          <p style={{ fontSize: 13, color: 'var(--text-faint)', margin: '4px 0 0' }}>
-            {data.rows.length} crew members · {data.courses.length} courses
-          </p>
-        </div>
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-          <button className="btn primary" onClick={downloadXlsx} disabled={dlXlsx}>
-            <FileSpreadsheet size={14} />
-            {dlXlsx ? 'Preparing…' : hasFilters ? 'Download Filtered Excel' : 'Download Excel'}
-          </button>
-          <button className="btn" onClick={load} title="Refresh report" style={{ padding: '9px 11px' }}>
-            <RefreshCw size={14} />
-          </button>
-        </div>
+      <div style={{ marginBottom: 12 }}>
+        <AdminHeader 
+          icon={FileText} 
+          title="Completion Report" 
+          eyebrow="Fleet Training · Compliance"
+          subtitle={`${data.rows.length} crew members · ${data.courses.length} courses`}
+        >
+          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+            
+            {/* ═══════════════════════ FILTERS (Moved to Header) ═══════════════════════ */}
+            <div className="rpt-filter-row" style={{ gap: 8 }}>
+              {/* crew search */}
+              <div className="rpt-search-wrap" style={{ minWidth: 200 }}>
+                <Search size={14} className="rpt-field-icon" />
+                <input
+                  className="rpt-field"
+                  placeholder="Search crew..."
+                  value={crewSearch}
+                  onChange={e => setCrewSearch(e.target.value)}
+                  style={{ padding: '6px 8px 6px 32px' }}
+                />
+                {crewSearch && (
+                  <button className="rpt-x-btn" onClick={() => setCrewSearch('')}>
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* course filter */}
+              <div className="rpt-select-wrap">
+                <SlidersHorizontal size={13} className="rpt-field-icon" />
+                <select className="rpt-field rpt-select" value={selectedCourse}
+                  onChange={e => setSelectedCourse(e.target.value)}
+                  style={{ padding: '6px 24px 6px 30px' }}>
+                  <option value="all">All Courses</option>
+                  {data.courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                </select>
+                <ChevronDown size={13} className="rpt-select-caret" />
+              </div>
+
+              {/* status filter */}
+              <div className="rpt-select-wrap">
+                <Award size={13} className="rpt-field-icon" />
+                <select className="rpt-field rpt-select" value={selectedStatus}
+                  onChange={e => setSelectedStatus(e.target.value)}
+                  style={{ padding: '6px 24px 6px 30px' }}>
+                  <option value="all">All Statuses</option>
+                  <option value="passed">✓ Passed</option>
+                  <option value="in-progress">↻ In Progress</option>
+                  <option value="assigned">○ Not Started</option>
+                </select>
+                <ChevronDown size={13} className="rpt-select-caret" />
+              </div>
+
+              {hasFilters && (
+                <button className="btn sm rpt-clear-all" onClick={clearAll} style={{ padding: '6px 10px' }}>
+                  <X size={12} /> Clear
+                </button>
+              )}
+            </div>
+
+            {/* ═══════════════════════ BUTTONS ═══════════════════════ */}
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center', borderLeft: '1px solid var(--border)', paddingLeft: 16 }}>
+              <button className="btn primary sm" onClick={downloadXlsx} disabled={dlXlsx}>
+                <FileSpreadsheet size={14} />
+                {dlXlsx ? 'Preparing…' : hasFilters ? 'Excel (Filtered)' : 'Excel'}
+              </button>
+              <button className="btn sm" onClick={load} title="Refresh report" style={{ padding: '6px 10px' }}>
+                <RefreshCw size={14} />
+              </button>
+            </div>
+          </div>
+        </AdminHeader>
       </div>
 
       {error && (
         <div className="report-error"><AlertCircle size={14} /> {error}</div>
       )}
 
-      {/* ═══════════════════════ FILTER BAR ═══════════════════════════ */}
-      <div className="rpt-filter-card">
-        <div className="rpt-filter-row">
-
-          {/* crew search */}
-          <div className="rpt-search-wrap">
-            <Search size={14} className="rpt-field-icon" />
-            <input
-              className="rpt-field"
-              placeholder="Search crew name, ID or rank…"
-              value={crewSearch}
-              onChange={e => setCrewSearch(e.target.value)}
-            />
-            {crewSearch && (
-              <button className="rpt-x-btn" onClick={() => setCrewSearch('')}>
-                <X size={12} />
-              </button>
-            )}
-          </div>
-
-          {/* course filter */}
-          <div className="rpt-select-wrap">
-            <SlidersHorizontal size={13} className="rpt-field-icon" />
-            <select className="rpt-field rpt-select" value={selectedCourse}
-              onChange={e => setSelectedCourse(e.target.value)}>
-              <option value="all">All Courses</option>
-              {data.courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-            </select>
-            <ChevronDown size={13} className="rpt-select-caret" />
-          </div>
-
-          {/* status filter */}
-          <div className="rpt-select-wrap">
-            <Award size={13} className="rpt-field-icon" />
-            <select className="rpt-field rpt-select" value={selectedStatus}
-              onChange={e => setSelectedStatus(e.target.value)}>
-              <option value="all">All Statuses</option>
-              <option value="passed">✓ Passed</option>
-              <option value="in-progress">↻ In Progress</option>
-              <option value="assigned">○ Not Started</option>
-            </select>
-            <ChevronDown size={13} className="rpt-select-caret" />
-          </div>
-
-          {hasFilters && (
-            <button className="btn sm rpt-clear-all" onClick={clearAll}>
-              <X size={12} /> Clear
-            </button>
-          )}
-        </div>
-
-        {/* active filter chips */}
-        {hasFilters && (
+      {/* ═══════════════════════ ACTIVE CHIPS ═══════════════════════════ */}
+      {hasFilters && (
+        <div style={{ marginBottom: 12 }}>
           <div className="rpt-chips">
             {crewSearch && (
               <span className="rpt-chip">
@@ -244,8 +276,8 @@ export default function AdminReport() {
               {filteredRows.length} of {data.rows.length} crew
             </span>
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* ═══════════════════════ KPI STRIP ════════════════════════════ */}
       <div className="rpt-kpi-strip">
@@ -257,7 +289,7 @@ export default function AdminReport() {
       </div>
 
       {/* ═══════════════════════ TABLE ════════════════════════════════ */}
-      <div className="rpt-table-card">
+      <div className="rpt-table-card" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 500 }}>
         {filteredRows.length === 0 ? (
           <div className="rpt-empty">
             <Search size={40} className="rpt-empty-icon" />
@@ -270,10 +302,11 @@ export default function AdminReport() {
             )}
           </div>
         ) : (
-          <div className="rpt-table-scroll">
+          <div className="rpt-table-scroll" style={{ flex: 1, overflowY: 'auto' }}>
             <table className="rpt-table">
               <thead>
                 <tr>
+                  <th className="rpt-col-sino">SI No.</th>
                   <th className="rpt-col-crew">Crew Member</th>
                   <th className="rpt-col-id">Crew ID</th>
                   <th className="rpt-col-rank">Rank</th>
@@ -283,8 +316,11 @@ export default function AdminReport() {
                 </tr>
               </thead>
               <tbody>
-                {paginatedRows.map(row => (
+                {paginatedRows.map((row, idx) => (
                   <tr key={row.learnerId} className={`rpt-row${row.isActive ? '' : ' rpt-row--inactive'}`}>
+                    <td className="rpt-col-sino" style={{ textAlign: 'center', color: 'var(--text-mut)', fontWeight: 500 }}>
+                      {((page - 1) * ROWS_PER_PAGE) + idx + 1}
+                    </td>
 
                     {/* crew name + avatar */}
                     <td className="rpt-col-crew">
@@ -340,8 +376,13 @@ export default function AdminReport() {
                 <ChevronLeft size={16} />
               </button>
               <div className="rpt-page-nums">
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map(p => (
-                  <button key={p} className={`rpt-page-num ${p === page ? 'active' : ''}`} onClick={() => setPage(p)}>
+                {getPageNumbers().map((p, idx) => (
+                  <button 
+                    key={idx} 
+                    className={`rpt-page-num ${p === page ? 'active' : ''} ${p === '...' ? 'dots' : ''}`} 
+                    onClick={() => p !== '...' && setPage(p)}
+                    disabled={p === '...'}
+                  >
                     {p}
                   </button>
                 ))}

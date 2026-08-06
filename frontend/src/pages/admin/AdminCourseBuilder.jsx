@@ -1,12 +1,13 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, ArrowUp, ArrowDown, Trash2, Upload, Video, Image as ImageIcon,
-  HelpCircle, Plus, X, AlertCircle, ChevronDown, ChevronUp, Save, Check, Edit2,
+  HelpCircle, Plus, X, AlertCircle, ChevronDown, ChevronUp, Save, Check, Edit2, GripVertical, Settings, Search
 } from 'lucide-react'
 import {
   adminGetCourseBuilder, adminUploadPptx, adminUploadVideo, adminCreateQuizChapter,
   adminSaveQuizQuestions, adminReorderChapters, adminDeleteChapter, adminSaveAssessment,
+  adminUpdateCourse, adminListUsers
 } from '../../api.js'
 
 const EMPTY_Q = () => ({ q: '', options: ['', '', '', ''], answer: 0, explain: '' })
@@ -15,17 +16,37 @@ export default function AdminCourseBuilder() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [course, setCourse] = useState(null)
+  const [localChapters, setLocalChapters] = useState([])
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const dragItem = useRef(null)
+  const dragOverItem = useRef(null)
+  const [dragOverIdx, setDragOverIdx] = useState(null)
+  const [draggableIdx, setDraggableIdx] = useState(null)
+
   const [pptxProcessing, setPptxProcessing] = useState(
     () => sessionStorage.getItem(`pptx-processing-${id}`) === '1'
   )
   const [openQuiz, setOpenQuiz] = useState(null)   // chapter id whose quiz editor is open
   const [showVideoForm, setShowVideoForm] = useState(false)
+  const [showAddOptions, setShowAddOptions] = useState(false)
   const [confirmDeleteId, setConfirmDeleteId] = useState(null)
   const pptxInput = useRef(null)
   const [successMsg, setSuccessMsg] = useState('')
+  const [previewImage, setPreviewImage] = useState(null)
   const pollRef = useRef(null)
+  const [showSettingsModal, setShowSettingsModal] = useState(false)
+  const [usersList, setUsersList] = useState([])
+
+  const openSettings = async () => {
+    setShowSettingsModal(true)
+    if (usersList.length === 0) {
+      try {
+        const u = await adminListUsers()
+        setUsersList(u)
+      } catch (err) {}
+    }
+  }
 
   const startPolling = (prevChapterCount) => {
     sessionStorage.setItem(`pptx-processing-${id}`, String(prevChapterCount))
@@ -47,7 +68,12 @@ export default function AdminCourseBuilder() {
     }, 3000)
   }
 
-  const load = () => adminGetCourseBuilder(id).then(setCourse)
+  const load = () => adminGetCourseBuilder(id).then((c) => {
+    setCourse(c)
+    setLocalChapters(c.chapters)
+    return c
+  })
+  
   useEffect(() => {
     const storedCount = sessionStorage.getItem(`pptx-processing-${id}`)
     load()
@@ -67,7 +93,7 @@ export default function AdminCourseBuilder() {
 
   if (!course) return <div className="spinner">Loading course…</div>
 
-  const chapters = course.chapters
+  const chapters = localChapters
 
   const uploadPptx = (file) => withBusy(async () => {
     const currentCount = course.chapters.length
@@ -104,67 +130,201 @@ export default function AdminCourseBuilder() {
     setOpenQuiz(created.id)
   })
 
+  const handleDragStart = (e, index) => {
+    dragItem.current = index
+    e.dataTransfer.effectAllowed = 'move'
+    e.target.style.opacity = '0.4'
+  }
+
+  const handleDragEnter = (e, index) => {
+    e.preventDefault()
+    if (dragItem.current !== null && dragItem.current !== index) {
+      dragOverItem.current = index
+      setDragOverIdx(index)
+    }
+  }
+
+  const handleDragEnd = (e) => {
+    e.target.style.opacity = '1'
+    setDragOverIdx(null)
+    setDraggableIdx(null)
+    
+    if (dragItem.current !== null && dragOverItem.current !== null && dragItem.current !== dragOverItem.current) {
+      const from = dragItem.current
+      const to = dragOverItem.current
+      
+      setLocalChapters(prev => {
+        const next = [...prev]
+        const dragged = next.splice(from, 1)[0]
+        next.splice(to, 0, dragged)
+        
+        const newOrder = next.map(c => c.id)
+        withBusy(async () => {
+          await adminReorderChapters(id, newOrder)
+          await load()
+        })
+        return next
+      })
+    }
+    
+    dragItem.current = null
+    dragOverItem.current = null
+  }
+
   return (
     <>
       <button className="btn" style={{ marginBottom: 14 }} onClick={() => navigate('/admin/courses')}>
         <ArrowLeft size={15} /> All courses
       </button>
 
-      <div className="eyebrow">Fleet training · Course builder</div>
-      <h1 style={{ fontSize: 26, margin: '6px 0 4px' }}>{course.title}</h1>
-      {course.subtitle && <p className="mut" style={{ marginBottom: 18 }}>{course.subtitle}</p>}
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
+        <div>
+          <div className="eyebrow">Fleet training · Course builder</div>
+          <h1 style={{ fontSize: 26, margin: '6px 0 4px' }}>{course.title}</h1>
+          {course.subtitle && <p className="mut" style={{ margin: 0 }}>{course.subtitle}</p>}
+        </div>
+        <button className="btn" onClick={openSettings}>
+          <Settings size={16} /> Course Settings
+        </button>
+      </div>
 
       {error && <div className="form-error" style={{ marginBottom: 14 }}><AlertCircle size={15} /> {error}</div>}
       {successMsg && <div style={{ color: 'var(--success)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: 6, fontSize: 14, fontWeight: 500 }}><Check size={16} /> {successMsg}</div>}
 
-      <div className="admin-card" style={{ marginBottom: 20, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <button className="btn primary" disabled={busy || pptxProcessing} onClick={() => !pptxProcessing && pptxInput.current?.click()}>
-          {pptxProcessing
-            ? <><span style={{ display: 'inline-block', width: 14, height: 14, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite', verticalAlign: 'middle', marginRight: 6 }} />Processing slides…</>
-            : <><Upload size={15} /> Upload PPT</>}
-        </button>
-        <input ref={pptxInput} type="file" accept=".pptx" style={{ display: 'none' }}
-          onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) uploadPptx(f) }} />
-        <button className="btn" disabled={busy} onClick={() => setShowVideoForm((s) => !s)}>
-          <Video size={15} /> Upload video
-        </button>
-        <button className="btn" disabled={busy} onClick={() => insertQuiz(null)}>
-          <HelpCircle size={15} /> Add quiz at end
-        </button>
+      <div className="admin-card" style={{ padding: 0, marginBottom: chapters.length > 0 ? 20 : 0, border: chapters.length === 0 ? 'none' : undefined, background: chapters.length === 0 ? 'transparent' : undefined }}>
+        {chapters.map((ch, i) => {
+          let dragStyle = { transition: 'all 0.2s' }
+          if (dragOverIdx === i) {
+            if (dragItem.current > i) dragStyle.borderTop = '3px solid #3b82f6'
+            else dragStyle.borderBottom = '3px solid #3b82f6'
+            dragStyle.background = '#f8fafc'
+          }
+          
+          return (
+            <div 
+              key={ch.id}
+              draggable={draggableIdx === i}
+              onDragStart={(e) => handleDragStart(e, i)}
+              onDragEnter={(e) => handleDragEnter(e, i)}
+              onDragEnd={handleDragEnd}
+              onDragOver={(e) => e.preventDefault()}
+              style={dragStyle}
+              onDragStartCapture={(e) => e.target.style.cursor = 'grabbing'}
+            >
+              <ModuleRow chapter={ch} index={i} total={chapters.length}
+                busy={busy} onMove={move} onDelete={remove} onInsertQuiz={insertQuiz}
+                quizOpen={openQuiz === ch.id} onToggleQuiz={() => setOpenQuiz(openQuiz === ch.id ? null : ch.id)}
+                confirmingDelete={confirmDeleteId === ch.id}
+                onRequestDelete={() => setConfirmDeleteId(confirmDeleteId === ch.id ? null : ch.id)}
+                onSaveQuiz={(questions) => withBusy(async () => {
+                  await adminSaveQuizQuestions(id, ch.id, questions)
+                  await load()
+                })}
+                setDraggable={(isHovering) => setDraggableIdx(isHovering ? i : null)}
+                onPreviewImage={() => setPreviewImage(ch.image)}
+              />
+            </div>
+          )
+        })}
       </div>
+
+      {!showAddOptions && !showVideoForm && chapters.length > 0 && (
+        <button type="button" onClick={() => setShowAddOptions(true)} className="add-module-btn" style={{ width: '100%', padding: '14px', background: '#ffffff', border: '2px dashed #94a3b8', borderRadius: 10, color: '#475569', fontSize: 15, fontWeight: 600, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, transition: 'all 0.2s ease', marginBottom: 30 }}>
+          <Plus size={18} /> Add New Module
+        </button>
+      )}
+
+      {(showAddOptions || chapters.length === 0) && !showVideoForm && (
+        <div className="admin-card" style={{ marginBottom: 30, background: '#f8fafc', border: chapters.length === 0 ? '2px dashed #cbd5e1' : '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 20 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontWeight: 700, color: '#1e293b', fontSize: 16 }}>
+                {chapters.length === 0 ? 'Add Your First Module' : 'Select Module Type'}
+              </div>
+              <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>Choose what kind of lesson you want to add next.</div>
+            </div>
+            {chapters.length > 0 && (
+              <button className="iconbtn" onClick={() => setShowAddOptions(false)}><X size={18} /></button>
+            )}
+          </div>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+            {/* PPT Card */}
+            <button type="button" className="module-type-card" disabled={busy || pptxProcessing} onClick={() => !pptxProcessing && pptxInput.current?.click()}>
+              <div className="module-icon-wrapper" style={{ background: '#eff6ff', color: '#3b82f6' }}>
+                {pptxProcessing ? <span style={{ display: 'inline-block', width: 24, height: 24, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} /> : <Upload size={24} />}
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 15, marginBottom: 4 }}>
+                  {pptxProcessing ? 'Processing slides...' : 'PowerPoint'}
+                </div>
+                <div style={{ fontSize: 13, color: '#64748b' }}>Extract slides into individual lessons</div>
+              </div>
+            </button>
+            <input ref={pptxInput} type="file" accept=".pptx" style={{ display: 'none' }}
+              onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) uploadPptx(f) }} />
+
+            {/* Video Card */}
+            <button type="button" className="module-type-card" disabled={busy} onClick={() => setShowVideoForm(true)}>
+              <div className="module-icon-wrapper" style={{ background: '#fef2f2', color: '#ef4444' }}>
+                <Video size={24} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 15, marginBottom: 4 }}>Video Lesson</div>
+                <div style={{ fontSize: 13, color: '#64748b' }}>Upload an MP4 video file</div>
+              </div>
+            </button>
+
+            {/* Quiz Card */}
+            <button type="button" className="module-type-card" disabled={busy} onClick={() => insertQuiz(null)}>
+              <div className="module-icon-wrapper" style={{ background: '#f0fdf4', color: '#22c55e' }}>
+                <HelpCircle size={24} />
+              </div>
+              <div>
+                <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 15, marginBottom: 4 }}>Checkpoint Quiz</div>
+                <div style={{ fontSize: 13, color: '#64748b' }}>Add a short quiz to test knowledge</div>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
 
       {showVideoForm && (
         <VideoUploadForm chapters={chapters.filter((c) => c.kind === 'lesson')}
-          onUpload={uploadVideo} onCancel={() => setShowVideoForm(false)} />
+          onUpload={uploadVideo} onCancel={() => { setShowVideoForm(false); setShowAddOptions(true) }} />
       )}
-
-      <div className="admin-card" style={{ padding: 0 }}>
-        {chapters.length === 0 && (
-          <div className="mut" style={{ padding: 18 }}>No modules yet — upload a PPT or a video to get started.</div>
-        )}
-        {chapters.map((ch, i) => (
-          <ModuleRow key={ch.id} chapter={ch} index={i} total={chapters.length}
-            busy={busy} onMove={move} onDelete={remove} onInsertQuiz={insertQuiz}
-            quizOpen={openQuiz === ch.id} onToggleQuiz={() => setOpenQuiz(openQuiz === ch.id ? null : ch.id)}
-            confirmingDelete={confirmDeleteId === ch.id}
-            onRequestDelete={() => setConfirmDeleteId(confirmDeleteId === ch.id ? null : ch.id)}
-            onSaveQuiz={(questions) => withBusy(async () => {
-              await adminSaveQuizQuestions(id, ch.id, questions)
-              await load()
-            })} />
-        ))}
-      </div>
 
       <AssessmentEditor course={course} onSave={(body) => withBusy(async () => {
         await adminSaveAssessment(id, body)
         await load()
       })} />
+
+      {previewImage && (
+        <div 
+          onClick={() => setPreviewImage(null)}
+          style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.85)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'zoom-out', padding: 40 }}
+        >
+          <img src={previewImage} alt="Slide preview" style={{ maxWidth: '100%', maxHeight: '100%', borderRadius: 8, boxShadow: '0 20px 40px rgba(0,0,0,0.4)', objectFit: 'contain' }} />
+        </div>
+      )}
+
+      {showSettingsModal && (
+        <CourseSettingsModal 
+          course={course} 
+          users={usersList} 
+          onClose={() => setShowSettingsModal(false)} 
+          onSave={async (data) => {
+            await adminUpdateCourse(id, data)
+            await load()
+          }} 
+        />
+      )}
     </>
   )
 }
 
 function ModuleRow({ chapter: ch, index, total, busy, onMove, onDelete, onInsertQuiz, quizOpen, onToggleQuiz,
-                     confirmingDelete, onRequestDelete, onSaveQuiz }) {
+                     confirmingDelete, onRequestDelete, onSaveQuiz, setDraggable, onPreviewImage }) {
   const isQuiz = ch.kind === 'quiz'
   const hasImage = !!ch.image
   const hasVideo = ch.videos && ch.videos.length > 0
@@ -172,8 +332,16 @@ function ModuleRow({ chapter: ch, index, total, busy, onMove, onDelete, onInsert
   return (
     <div style={{ borderBottom: '1px solid var(--border)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
+        <div 
+          style={{ color: '#cbd5e1', display: 'flex', alignItems: 'center', cursor: 'grab' }}
+          onMouseEnter={() => setDraggable(true)}
+          onMouseLeave={() => setDraggable(false)}
+        >
+          <GripVertical size={20} />
+        </div>
+        
         {hasImage ? (
-          <img src={ch.image} alt="" style={{ width: 56, height: 36, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
+          <img src={ch.image} alt="" onClick={onPreviewImage} style={{ width: 56, height: 36, objectFit: 'cover', borderRadius: 6, flexShrink: 0, cursor: 'zoom-in', border: '1px solid var(--border)' }} />
         ) : (
           <div style={{
             width: 56, height: 36, borderRadius: 6, flexShrink: 0, display: 'flex',
@@ -262,6 +430,58 @@ function ModuleQuizEditor({ initial, onSave, onCancelQuiz }) {
   )
 }
 
+function PremiumSelect({ value, onChange, options }) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef(null)
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [])
+
+  const selectedOpt = options.find(o => o.value === value)
+
+  return (
+    <div ref={containerRef} style={{ position: 'relative', width: '100%' }}>
+      <div 
+        onClick={() => setOpen(!open)}
+        style={{ 
+          border: '1px solid #e2e8f0', borderRadius: 6, padding: '8px 12px', 
+          background: '#f8fafc', fontSize: 13, cursor: 'pointer',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center' 
+        }}>
+        <span style={{ color: selectedOpt ? '#1e293b' : '#94a3b8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+          {selectedOpt ? selectedOpt.label : 'Select an option...'}
+        </span>
+        <ChevronDown size={14} style={{ color: '#64748b' }} />
+      </div>
+      {open && (
+        <div style={{
+          position: 'absolute', top: '100%', left: 0, right: 0, marginTop: 4,
+          background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 8,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 50,
+          maxHeight: 220, overflowY: 'auto'
+        }}>
+          {options.map(opt => (
+            <div 
+              key={opt.value}
+              onClick={() => { onChange(opt.value); setOpen(false) }}
+              className={`premium-select-option ${opt.value === value ? 'selected' : ''}`}
+            >
+              {opt.label}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 function VideoUploadForm({ chapters, onUpload, onCancel }) {
   const [file, setFile] = useState(null)
   const [mode, setMode] = useState('new')          // 'new' | 'attach'
@@ -275,34 +495,60 @@ function VideoUploadForm({ chapters, onUpload, onCancel }) {
   }
 
   return (
-    <form className="admin-card" onSubmit={submit} style={{ marginBottom: 20 }}>
-      <div className="segmented" role="tablist" style={{ maxWidth: 320, marginBottom: 14 }}>
-        <button type="button" className={mode === 'new' ? 'on' : ''} onClick={() => setMode('new')}>New module</button>
-        <button type="button" className={mode === 'attach' ? 'on' : ''} onClick={() => setMode('attach')}
-          disabled={chapters.length === 0}>Attach to module</button>
+    <form className="admin-card" onSubmit={submit} style={{ marginBottom: 20, background: '#ffffff', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.05)', padding: '16px 20px' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <button type="button" className="iconbtn" onClick={onCancel} style={{ background: '#f1f5f9', width: 28, height: 28, borderRadius: '50%' }}>
+          <ArrowLeft size={14} />
+        </button>
+        <div>
+          <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 15 }}>Upload Video Lesson</div>
+        </div>
       </div>
-      <div className="form-grid">
-        <label className="admin-field">
-          <span>Video file<i className="req">*</i></span>
-          <input type="file" accept="video/*" onChange={(e) => setFile(e.target.files[0] || null)} />
-        </label>
+      
+      <div style={{ display: 'flex', gap: 8 }}>
+        <button type="button" className={`premium-chip ${mode === 'new' ? 'selected' : ''}`} onClick={() => setMode('new')} style={{ padding: '4px 10px', fontSize: 12 }}>
+          Create new module
+        </button>
+        <button type="button" className={`premium-chip ${mode === 'attach' ? 'selected' : ''}`} onClick={() => setMode('attach')} disabled={chapters.length === 0} style={{ padding: '4px 10px', fontSize: 12 }}>
+          Attach to existing module
+        </button>
+      </div>
+
+      <div className="form-grid" style={{ gridTemplateColumns: '1fr', gap: 12 }}>
+        <div className="admin-field">
+          <span style={{ fontWeight: 600, color: '#1e293b', marginBottom: 4, display: 'block', fontSize: 13 }}>Video file <i className="req">*</i></span>
+          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '16px 12px', border: '1px dashed', borderRadius: 8, cursor: 'pointer', background: file ? '#eff6ff' : '#f8fafc', borderColor: file ? '#3b82f6' : '#cbd5e1', transition: 'all 0.2s' }}>
+            <Video size={20} style={{ color: file ? '#3b82f6' : '#94a3b8' }} />
+            <div>
+              <div style={{ fontWeight: 600, color: file ? '#1e293b' : '#475569', fontSize: 13 }}>
+                {file ? file.name : 'Click to select video'}
+              </div>
+            </div>
+            <input type="file" accept="video/*" onChange={(e) => setFile(e.target.files[0] || null)} style={{ display: 'none' }} />
+          </label>
+        </div>
+
         {mode === 'new' ? (
           <label className="admin-field">
-            <span>Title</span>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Safety briefing" />
+            <span style={{ fontWeight: 600, color: '#1e293b', marginBottom: 4, display: 'block', fontSize: 13 }}>Lesson Title</span>
+            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Safety briefing" style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: '8px 12px', background: '#f8fafc', fontSize: 13, width: '100%' }} />
           </label>
         ) : (
           <label className="admin-field">
-            <span>Attach to</span>
-            <select value={chapterId} onChange={(e) => setChapterId(e.target.value)}>
-              {chapters.map((c) => <option key={c.id} value={c.id}>{c.n}. {c.title}</option>)}
-            </select>
+            <span style={{ fontWeight: 600, color: '#1e293b', marginBottom: 4, display: 'block', fontSize: 13 }}>Attach to</span>
+            <PremiumSelect 
+              value={chapterId} 
+              onChange={setChapterId} 
+              options={chapters.map(c => ({ value: c.id, label: `${c.n}. ${c.title}` }))}
+            />
           </label>
         )}
       </div>
-      <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
-        <button className="btn primary" disabled={!file}>Upload</button>
-        <button type="button" className="btn" onClick={onCancel}><X size={14} /> Cancel</button>
+
+      <div style={{ marginTop: 4, display: 'flex', justifyContent: 'flex-end' }}>
+        <button className="btn primary" disabled={!file} style={{ background: '#3b82f6', padding: '8px 20px', fontSize: 13, fontWeight: 600, borderRadius: 6 }}>
+          Upload Video
+        </button>
       </div>
     </form>
   )
@@ -426,22 +672,31 @@ function QuestionViewRow({ q, index }) {
 
 function AssessmentEditor({ course, onSave }) {
   const hasQuestions = course.assessment.questions && course.assessment.questions.length > 0
-  const [mode, setMode] = useState(hasQuestions ? 'view' : 'edit')
-  const [success, setSuccess] = useState(false)
-  
+  const [settingsMode, setSettingsMode] = useState('view')
   const [passMark, setPassMark] = useState(course.assessment.passMark ?? 80)
-  const [maxAttempts, setMaxAttempts] = useState(course.assessment.maxAttempts ?? '')
+  const [maxAttempts, setMaxAttempts] = useState(course.assessment.maxAttempts === null ? '' : course.assessment.maxAttempts)
 
-  const handleSave = async (questions) => {
-    await onSave({
+  const [qMode, setQMode] = useState(hasQuestions ? 'view' : 'edit')
+
+  const handleSaveSettings = () => {
+    onSave({
       passMark: Number(passMark) || 80,
       maxAttempts: maxAttempts === '' ? null : Number(maxAttempts),
-      questions,
+      questions: course.assessment.questions
     })
-    setSuccess(true)
-    setMode('view')
-    setTimeout(() => setSuccess(false), 3000)
+    setSettingsMode('view')
   }
+
+  const handleSaveQuestions = (questions) => {
+    onSave({
+      passMark: Number(course.assessment.passMark) || 80,
+      maxAttempts: course.assessment.maxAttempts,
+      questions
+    })
+    setQMode('view')
+  }
+
+  const success = new URLSearchParams(window.location.search).get('saved') === 'assessment'
 
   return (
     <div style={{ marginTop: 28 }}>
@@ -450,16 +705,47 @@ function AssessmentEditor({ course, onSave }) {
         {success && <span style={{ color: 'var(--success)', display: 'flex', alignItems: 'center', gap: 4, textTransform: 'none', fontWeight: 500 }}><Check size={14} /> Successfully saved!</span>}
       </div>
       
-      {mode === 'view' ? (
+      <div className="admin-card" style={{ marginBottom: 14 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {settingsMode === 'view' ? (
+            <>
+              <div style={{ display: 'flex', gap: 24, fontSize: 14 }}>
+                <div><span className="mut">Pass mark:</span> <strong>{passMark}%</strong></div>
+                <div><span className="mut">Max attempts:</span> <strong>{maxAttempts === '' || maxAttempts === null ? 'Unlimited' : maxAttempts}</strong></div>
+              </div>
+              <button className="btn sm" onClick={() => setSettingsMode('edit')}><Edit2 size={14} /> Edit Settings</button>
+            </>
+          ) : (
+            <>
+              <div style={{ display: 'flex', gap: 16 }}>
+                <label className="admin-field" style={{ margin: 0 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>Pass mark (%)</span>
+                  <input type="number" min={1} max={100} style={{ padding: '6px 10px' }} value={passMark} onChange={e => setPassMark(e.target.value)} />
+                </label>
+                <label className="admin-field" style={{ margin: 0 }}>
+                  <span style={{ fontSize: 12, fontWeight: 600 }}>Max attempts</span>
+                  <input type="number" min={1} style={{ padding: '6px 10px' }} value={maxAttempts} onChange={e => setMaxAttempts(e.target.value)} placeholder="Unlimited" />
+                </label>
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button className="btn sm" onClick={() => {
+                  setPassMark(course.assessment.passMark ?? 80)
+                  setMaxAttempts(course.assessment.maxAttempts === null ? '' : course.assessment.maxAttempts)
+                  setSettingsMode('view')
+                }}>Cancel</button>
+                <button className="btn sm primary" onClick={handleSaveSettings}><Save size={14} /> Save</button>
+              </div>
+            </>
+          )}
+        </div>
+      </div>
+
+      {qMode === 'view' ? (
         <div className="admin-card" style={{ marginBottom: 14 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-            <div style={{ display: 'flex', gap: 24, fontSize: 14 }}>
-              <div><span className="mut">Pass mark:</span> <strong>{passMark}%</strong></div>
-              <div><span className="mut">Max attempts:</span> <strong>{maxAttempts === '' || maxAttempts === null ? 'Unlimited' : maxAttempts}</strong></div>
-            </div>
-            <button className="btn sm" onClick={() => setMode('edit')}><Edit2 size={14} /> Edit Assessment</button>
+            <div style={{ fontSize: 14, fontWeight: 600 }}>Questions ({course.assessment.questions.length})</div>
+            <button className="btn sm" onClick={() => setQMode('edit')}><Edit2 size={14} /> Edit Questions</button>
           </div>
-          
           <div>
             {course.assessment.questions.map((q, i) => (
               <QuestionViewRow key={i} q={q} index={i} />
@@ -467,23 +753,198 @@ function AssessmentEditor({ course, onSave }) {
           </div>
         </div>
       ) : (
-        <>
-          <div className="admin-card" style={{ marginBottom: 14 }}>
-            <div className="form-grid">
-              <label className="admin-field">
-                <span>Pass mark (%)</span>
-                <input type="number" min={1} max={100} value={passMark} onChange={(e) => setPassMark(e.target.value)} />
-              </label>
-              <label className="admin-field">
-                <span>Max attempts (blank = unlimited)</span>
-                <input type="number" min={1} value={maxAttempts} onChange={(e) => setMaxAttempts(e.target.value)} placeholder="Unlimited" />
-              </label>
-            </div>
-          </div>
-          <QuestionEditor initial={course.assessment.questions} saveLabel="Save final assessment"
-            onSave={handleSave} onCancel={hasQuestions ? () => setMode('view') : null} />
-        </>
+        <QuestionEditor initial={course.assessment.questions} saveLabel="Save questions"
+          onSave={handleSaveQuestions} onCancel={hasQuestions ? () => setQMode('view') : null} />
       )}
     </div>
+  )
+}
+
+function CourseSettingsModal({ course, users, onClose, onSave }) {
+  const [form, setForm] = useState({
+    title: course.title,
+    subtitle: course.subtitle || '',
+    durationLabel: course.durationLabel || '',
+    passMark: course.passMark ?? 80,
+    maxAttempts: course.maxAttempts || null,
+  })
+  const [targetRanks, setTargetRanks] = useState(course.targetRanks || [])
+  const [targetUsers, setTargetUsers] = useState(course.targetUsers || [])
+  const [searchRank, setSearchRank] = useState('')
+  const [searchCrew, setSearchCrew] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState('')
+
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
+
+  const availableRanks = useMemo(() => {
+    const rawRanks = users.map(u => u.rank ? u.rank.toUpperCase() : null).filter(Boolean)
+    let ranks = [...new Set(rawRanks)].sort()
+    if (searchRank.trim()) ranks = ranks.filter(r => r.toLowerCase().includes(searchRank.toLowerCase()))
+    return ranks
+  }, [users, searchRank])
+  
+  const availableUsers = useMemo(() => {
+    let au = users.filter(u => {
+      if (u.role !== 'learner') return false
+      const r = u.rank ? u.rank.toUpperCase() : null
+      return !targetRanks.includes(r)
+    }).sort((a,b) => (a.name || '').localeCompare(b.name || ''))
+    if (searchCrew.trim()) {
+      const q = searchCrew.toLowerCase()
+      au = au.filter(u => (u.name || '').toLowerCase().includes(q) || (u.rank || '').toLowerCase().includes(q))
+    }
+    return au
+  }, [users, targetRanks, searchCrew])
+
+  const availableUsersGrouped = useMemo(() => {
+    const groups = {}
+    availableUsers.forEach(u => {
+      const r = u.rank ? u.rank.toUpperCase() : 'NO RANK'
+      if(!groups[r]) groups[r] = []
+      groups[r].push(u)
+    })
+    return groups
+  }, [availableUsers])
+
+  const toggleRank = (r) => setTargetRanks(prev => prev.includes(r) ? prev.filter(x => x !== r) : [...prev, r])
+  const toggleUser = (id) => setTargetUsers(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id])
+
+  const allRanksSelected = availableRanks.length > 0 && availableRanks.every(r => targetRanks.includes(r))
+  const toggleAllRanks = () => {
+    if (allRanksSelected) {
+      setTargetRanks(prev => prev.filter(r => !availableRanks.includes(r)))
+    } else {
+      setTargetRanks(prev => [...new Set([...prev, ...availableRanks])])
+    }
+  }
+
+  const submit = async (e) => {
+    e.preventDefault()
+    setError('')
+    setBusy(true)
+    try {
+      await onSave({ ...form, targetRanks, targetUsers })
+      onClose()
+    } catch (err) {
+      setError(err.message || 'Could not save course settings')
+      setBusy(false)
+    }
+  }
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, zIndex: 1000, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <form className="admin-card" onSubmit={submit} style={{ width: '100%', maxWidth: 800, maxHeight: '90vh', overflowY: 'auto', background: '#fff', padding: '24px' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid #e2e8f0' }}>
+          <div>
+            <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: '#0f172a' }}>Course Settings</h2>
+            <p className="mut" style={{ margin: '4px 0 0', fontSize: 13 }}>Update course title and manage enrolled crew members.</p>
+          </div>
+          <button type="button" className="iconbtn" onClick={onClose}><X size={18} /></button>
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', alignItems: 'flex-end', marginBottom: 24 }}>
+          <div style={{ flex: '1 1 200px' }}>
+            <Field label="Title" required>
+              <input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="e.g. Firefighting" />
+            </Field>
+          </div>
+          <div style={{ flex: '1 1 200px' }}>
+            <Field label="Subtitle">
+              <input value={form.subtitle} onChange={(e) => set('subtitle', e.target.value)} placeholder="Short desc" />
+            </Field>
+          </div>
+          <div style={{ flex: '1 1 120px' }}>
+            <Field label="Duration">
+              <input value={form.durationLabel} onChange={(e) => set('durationLabel', e.target.value)} placeholder="2 hours" />
+            </Field>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '24px', background: '#f8fafc', padding: 20, borderRadius: 12, border: '1px solid #e2e8f0' }}>
+          <div style={{ flex: '1 1 300px' }}>
+            <Field label="Target Ranks (Auto-enroll)">
+              <div className="target-selection-container" style={{ background: '#fff', border: '1px solid #e2e8f0' }}>
+                <div className="search-bar" style={{ margin: 0, marginBottom: 16 }}>
+                  <Search size={14} color="#64748b" />
+                  <input type="text" placeholder="Search ranks..." value={searchRank} onChange={e => setSearchRank(e.target.value)} />
+                </div>
+                
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                  <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    Available Ranks
+                  </span>
+                  {availableRanks.length > 0 && (
+                    <button type="button" onClick={toggleAllRanks} style={{ background: 'transparent', border: 'none', color: '#3b82f6', fontWeight: 600, fontSize: 13, cursor: 'pointer', padding: 0 }}>
+                      {allRanksSelected ? 'Deselect All' : 'Select All'}
+                    </button>
+                  )}
+                </div>
+
+                {availableRanks.length === 0 ? <div className="mut" style={{ fontSize: 13 }}>No ranks found</div> : null}
+                <div className="chips-grid">
+                  {availableRanks.map(r => (
+                    <button type="button" key={r} className={`premium-chip ${targetRanks.includes(r) ? 'selected' : ''}`} onClick={() => toggleRank(r)}>
+                      {r}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </Field>
+          </div>
+          <div style={{ flex: '1 1 300px' }}>
+            <Field label="Target Specific Crew (Other crew members)">
+              <div className="target-selection-container" style={{ background: '#fff', border: '1px solid #e2e8f0' }}>
+                <div className="search-bar">
+                  <Search size={14} color="#64748b" />
+                  <input type="text" placeholder="Search crew by name or rank..." value={searchCrew} onChange={e => setSearchCrew(e.target.value)} />
+                </div>
+                {availableUsers.length === 0 ? <div className="mut" style={{ fontSize: 13, marginTop: 10 }}>No other crew available</div> : null}
+                {Object.keys(availableUsersGrouped).sort((a, b) => {
+                  if (a === 'NO RANK') return -1;
+                  if (b === 'NO RANK') return 1;
+                  return a.localeCompare(b);
+                }).map(rankName => (
+                  <div key={rankName} style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {rankName}
+                    </div>
+                    <div className="crew-cards-grid">
+                      {availableUsersGrouped[rankName].map(u => (
+                        <button type="button" key={u.id} className={`premium-crew-card ${targetUsers.includes(u.id) ? 'selected' : ''}`} onClick={() => toggleUser(u.id)}>
+                          <div className="crew-avatar">{u.name.substring(0, 2).toUpperCase()}</div>
+                          <div className="crew-info">
+                            <div className="crew-name">{u.name}</div>
+                            <div className="crew-rank">{u.rank || 'No rank'}</div>
+                          </div>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </Field>
+          </div>
+        </div>
+
+        {error && <div className="form-error" style={{ marginTop: 14 }}><AlertCircle size={15} /> {error}</div>}
+
+        <div style={{ marginTop: 24, paddingTop: 16, borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
+          <button type="button" className="btn" onClick={onClose} disabled={busy}>Cancel</button>
+          <button type="submit" className="btn primary" disabled={busy}>{busy ? 'Saving…' : 'Save Settings'}</button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+function Field({ label, required, children }) {
+  return (
+    <label className="admin-field">
+      <span style={{ fontWeight: 600, color: '#1e293b', marginBottom: 6, display: 'block', fontSize: 13 }}>
+        {label}{required && <i className="req" style={{ color: '#ef4444', marginLeft: 4 }}>*</i>}
+      </span>
+      {children}
+    </label>
   )
 }

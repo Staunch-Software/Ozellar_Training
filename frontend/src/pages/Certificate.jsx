@@ -31,7 +31,7 @@ export default function Certificate() {
 
   if (!course || !ready) return (<><TopNav /><div className="spinner">Loading…</div></>)
 
-  if (!course.passed || !pdfUrl) {
+  if (!course.passed) {
     return (
       <>
         <TopNav />
@@ -40,6 +40,18 @@ export default function Certificate() {
           <p>Pass the final assessment for this course to earn your certificate.</p>
           <button className="btn primary" style={{ marginTop: 16 }}
             onClick={() => navigate(`/course/${slug}/assessment`)}>Go to assessment</button>
+        </div></div>
+      </>
+    )
+  }
+
+  if (!pdfUrl) {
+    return (
+      <>
+        <TopNav />
+        <div className="page"><div className="empty">
+          <h1 style={{ fontSize: 22, marginBottom: 8 }}>Pending Approval</h1>
+          <p>You have passed the assessment! Your certificate will be available here once an administrator approves it.</p>
         </div></div>
       </>
     )

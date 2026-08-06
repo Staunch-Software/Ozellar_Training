@@ -25,6 +25,9 @@ export default function Assessment() {
   const questions = course.assessment.questions
   const q = questions[qi]
   const passMark = course.assessment.passMark
+  const maxAttempts = course.assessment.maxAttempts
+  const attemptsUsed = course.assessment.attemptsUsed
+  const isLastAttempt = maxAttempts && attemptsUsed === maxAttempts - 1
   const selected = answers[qi]
   const answeredCount = questions.filter((_, i) => answers[i] != null).length
   const allAnswered = answeredCount === questions.length
@@ -66,6 +69,11 @@ export default function Assessment() {
             <span>Question {qi + 1} of {questions.length}</span>
             <span>Pass mark {passMark}%</span>
           </div>
+          {isLastAttempt && (
+            <div style={{ color: 'var(--danger)', fontSize: 13, fontWeight: 500, marginTop: 4 }}>
+              ⚠️ This is your last attempt!
+            </div>
+          )}
           <div className="prog" style={{ margin: '8px 0 4px' }}>
             <i style={{ width: `${(answeredCount / questions.length) * 100}%` }} />
           </div>
