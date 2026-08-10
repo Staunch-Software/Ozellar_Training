@@ -2035,8 +2035,8 @@ async def upload_course_pptx(course_id: str, background_tasks: BackgroundTasks,
     course = db.query(models.Course).filter(models.Course.id == course_id).first()
     if not course:
         raise HTTPException(404, "Course not found")
-    if not (file.filename or "").lower().endswith(".pptx"):
-        raise HTTPException(400, "File must be a .pptx")
+    if not (file.filename or "").lower().endswith((".pptx", ".pptm")):
+        raise HTTPException(400, "File must be a .pptx or .pptm")
 
     course_dir = os.path.join(UPLOAD_DIR, course_id)
     os.makedirs(course_dir, exist_ok=True)

@@ -261,7 +261,7 @@ export default function AdminCourseBuilder() {
                 <div style={{ fontSize: 13, color: '#64748b' }}>Extract slides into individual lessons</div>
               </div>
             </button>
-            <input ref={pptxInput} type="file" accept=".pptx" style={{ display: 'none' }}
+            <input ref={pptxInput} type="file" accept=".pptx,.pptm" style={{ display: 'none' }}
               onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) uploadPptx(f) }} />
 
             {/* Video Card */}
