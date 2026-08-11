@@ -97,6 +97,9 @@ export const adminUnassign = (id, courseId) =>
   req(`/admin/users/${id}/enrollments/${courseId}`, { method: 'DELETE' })
 export const adminReport = () => req('/admin/report')
 export const adminDashboardStats = () => req('/admin/dashboard-stats')
+export const adminApproveCertificate = (userId, courseId) =>
+  req(`/admin/users/${userId}/courses/${courseId}/approve`, { method: 'POST' })
+export const adminGetNotifications = () => req('/admin/notifications')
 
 
 // CSV needs the auth header, so fetch as a blob and trigger a download

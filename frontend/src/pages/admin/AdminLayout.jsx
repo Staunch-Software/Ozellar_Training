@@ -2,6 +2,7 @@ import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-do
 import { Shield, LayoutDashboard, Users, Grid3x3, BarChart3, LogOut, BookOpen } from 'lucide-react'
 import { ThemeToggle } from '../../App.jsx'
 import { useAuth } from '../../auth.jsx'
+import AdminNotificationBell from '../../AdminNotificationBell.jsx'
 
 export default function AdminLayout() {
   const { user, logout } = useAuth()
@@ -26,6 +27,7 @@ export default function AdminLayout() {
           <NavLink to="/admin/report" className={tab}><BarChart3 size={16} /> Reporting</NavLink>
         </div>
         <div className="nav-right">
+          <AdminNotificationBell />
           <ThemeToggle />
           <button className="iconbtn" aria-label="Sign out" title={`Sign out — ${user?.name || ''}`} onClick={signOut}>
             <LogOut size={18} />

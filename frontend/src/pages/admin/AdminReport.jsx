@@ -1,10 +1,11 @@
 import { useEffect, useState, useMemo } from 'react'
+import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Award, Clock, Circle, FileSpreadsheet, FileText,
   Users, CheckCircle, AlertCircle, Search, X, SlidersHorizontal,
   TrendingUp, Download, RefreshCw, ChevronDown, ChevronLeft, ChevronRight, Eye
 } from 'lucide-react'
-import { adminReport, adminDownloadReportCsv, adminDownloadReportXlsx } from '../../api.js'
+import { adminReport, adminDownloadReportCsv, adminDownloadReportXlsx, adminApproveCertificate } from '../../api.js'
 import { getToken } from '../../api.js'
 import AdminHeader from '../../components/AdminHeader.jsx'
 
@@ -28,16 +29,33 @@ function initials(name = '') {
 /*  Main component                                                      */
 /* ------------------------------------------------------------------ */
 export default function AdminReport() {
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+
+  // Extract individual values — these are stable string primitives React can diff correctly
+  const paramCrew   = searchParams.get('crew')   || ''
+  const paramCourse = searchParams.get('course') || 'all'
+  const paramStatus = searchParams.get('status') || 'all'
+
   const [data,           setData]          = useState(null)
-  const [crewSearch,     setCrewSearch]    = useState('')
-  const [selectedCourse, setSelectedCourse]= useState('all')
-  const [selectedStatus, setSelectedStatus]= useState('all')
+  const [crewSearch,     setCrewSearch]    = useState(paramCrew)
+  const [selectedCourse, setSelectedCourse]= useState(paramCourse)
+  const [selectedStatus, setSelectedStatus]= useState(paramStatus)
   const [dlXlsx,         setDlXlsx]        = useState(false)
   const [dlCsv,          setDlCsv]         = useState(false)
   const [error,          setError]         = useState(null)
   const [loading,        setLoading]       = useState(true)
   const [page,           setPage]          = useState(1)
+  const [approvingCell,  setApprovingCell] = useState(null) // 'learnerId-courseId'
   const ROWS_PER_PAGE = 50
+
+  /* Sync filters whenever URL params change — depends on primitive strings, not the object */
+  useEffect(() => {
+    setCrewSearch(paramCrew)
+    setSelectedCourse(paramCourse)
+    setSelectedStatus(paramStatus)
+    setPage(1)
+  }, [paramCrew, paramCourse, paramStatus])
 
   /* load */
   const load = () => {
@@ -47,6 +65,7 @@ export default function AdminReport() {
       .catch(() => { setError('Failed to load report'); setLoading(false) })
   }
   useEffect(load, [])
+
 
   /* ---------- filtering ---------- */
   const filteredRows = useMemo(() => {
@@ -65,7 +84,14 @@ export default function AdminReport() {
       rows = rows.filter(r => r.cells[selectedCourse])
     }
     if (selectedStatus !== 'all') {
-      if (selectedCourse !== 'all') {
+      if (selectedStatus === 'pending') {
+        // special filter: pending approval
+        if (selectedCourse !== 'all') {
+          rows = rows.filter(r => r.cells[selectedCourse]?.pendingApproval)
+        } else {
+          rows = rows.filter(r => Object.values(r.cells).some(c => c.pendingApproval))
+        }
+      } else if (selectedCourse !== 'all') {
         rows = rows.filter(r => r.cells[selectedCourse]?.status === selectedStatus)
       } else {
         rows = rows.filter(r => Object.values(r.cells).some(c => c.status === selectedStatus))
@@ -106,7 +132,10 @@ export default function AdminReport() {
   }, [filteredRows, selectedCourse])
 
   const hasFilters = crewSearch || selectedCourse !== 'all' || selectedStatus !== 'all'
-  const clearAll   = () => { setCrewSearch(''); setSelectedCourse('all'); setSelectedStatus('all'); setPage(1) }
+  const clearAll   = () => {
+    // Also clear URL params so next notification click triggers the effect
+    navigate('/admin/report', { replace: true })
+  }
 
   /* Reset page to 1 on filter change */
   useEffect(() => { setPage(1) }, [crewSearch, selectedCourse, selectedStatus])
@@ -220,6 +249,7 @@ export default function AdminReport() {
                   style={{ padding: '6px 24px 6px 30px' }}>
                   <option value="all">All Statuses</option>
                   <option value="passed">✓ Completed</option>
+                  <option value="pending">⏳ Pending Approval</option>
                   <option value="in-progress">↻ In Progress</option>
                   <option value="assigned">○ Not Started</option>
                 </select>
@@ -347,49 +377,69 @@ export default function AdminReport() {
                       const tot  = cell.totalChapters       ?? 0
                       return (
                         <td key={c.id} className="rpt-cell rpt-col-course">
-                          <span className={`rpt-badge rpt-badge--${cell.status}`}>
-                            <span className="rpt-badge-dot" style={{ background: cfg.dot }} />
-                            {cfg.label}
-                          </span>
-                          {cell.status === 'passed' && (
-                            <div className="rpt-cell-meta" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              {cell.pendingApproval ? (
-                                <span style={{ color: 'var(--warn)', fontSize: 11, fontStyle: 'italic' }}>
-                                  Pending approval &middot; {cell.passedOn}
+                          <div className="rpt-cell-inner">
+                            <span className={`rpt-badge rpt-badge--${cell.status}`}>
+                              <span className="rpt-badge-dot" style={{ background: cfg.dot }} />
+                              {cfg.label}
+                            </span>
+                            {cell.status === 'passed' && cell.pendingApproval && (
+                              <div className="rpt-pending-block">
+                                <span className="rpt-pending-date">
+                                  Completed {cell.passedOn}
                                 </span>
-                              ) : (
-                                <>
-                                  <span>{cell.score != null ? <>{cell.score}% &middot; </> : null}{cell.passedOn}</span>
-                                  {cell.passedOn && (
-                                    <a
-                                      href={`/api/admin/users/${row.learnerId}/courses/${c.id}/certificate.pdf?token=${getToken()}`}
-                                      target="_blank"
-                                      rel="noreferrer"
-                                      title="View certificate"
-                                      onClick={e => e.stopPropagation()}
-                                      className="rpt-cert-btn"
-                                    >
-                                      <Eye size={11} />
-                                    </a>
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          )}
-                          {/* Chapter completion mini-bar — shown only for in-progress */}
-                          {cell.status === 'in-progress' && (
-                            <div className="rpt-ch-bar-wrap">
-                              <div className="rpt-ch-bar-track">
-                                <div
-                                  className={`rpt-ch-bar-fill rpt-ch-bar-fill--${cell.status}`}
-                                  style={{ width: `${Math.min(100, pct)}%` }}
-                                />
+                                <button
+                                  className="rpt-approve-btn"
+                                  disabled={approvingCell === `${row.learnerId}-${c.id}`}
+                                  onClick={async e => {
+                                    e.stopPropagation()
+                                    const key = `${row.learnerId}-${c.id}`
+                                    setApprovingCell(key)
+                                    try {
+                                      await adminApproveCertificate(row.learnerId, c.id)
+                                      load()
+                                    } catch(err) {
+                                      alert(err.message)
+                                    } finally {
+                                      setApprovingCell(null)
+                                    }
+                                  }}
+                                >
+                                  {approvingCell === `${row.learnerId}-${c.id}` ? 'Approving…' : '✓ Approve'}
+                                </button>
                               </div>
+                            )}
+                            {cell.status === 'passed' && !cell.pendingApproval && cell.passedOn && (
+                              <div className="rpt-cert-row">
+                                <span className="rpt-cert-date">
+                                  {cell.score != null ? <>{cell.score}% · </> : null}{cell.passedOn}
+                                </span>
+                                <a
+                                  href={`/api/admin/users/${row.learnerId}/courses/${c.id}/certificate.pdf?token=${getToken()}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  title="View certificate"
+                                  onClick={e => e.stopPropagation()}
+                                  className="rpt-cert-btn"
+                                >
+                                  <Eye size={11} />
+                                </a>
+                              </div>
+                            )}
+                            {/* Chapter completion mini-bar — shown only for in-progress */}
+                            {cell.status === 'in-progress' && (
+                              <div className="rpt-ch-bar-wrap">
+                                <div className="rpt-ch-bar-track">
+                                  <div
+                                    className={`rpt-ch-bar-fill rpt-ch-bar-fill--${cell.status}`}
+                                    style={{ width: `${Math.min(100, pct)}%` }}
+                                  />
+                                </div>
                               <span className="rpt-ch-bar-label">
-                                {done}/{tot} chapters &middot; {pct}%
+                                {done}/{tot} chapters · {pct}%
                               </span>
                             </div>
                           )}
+                          </div>
                         </td>
                       )
                     })}
