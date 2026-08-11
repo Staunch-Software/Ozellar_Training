@@ -58,6 +58,7 @@ def _upsert_course(db, ci, c):
     # Replace content wholesale so edits/removals in the JSON are reflected.
     db.query(models.Chapter).filter_by(course_id=c["id"]).delete()
     db.query(models.Question).filter_by(course_id=c["id"]).delete()
+    db.flush()   # send DELETEs to the DB before INSERTs to avoid duplicate key errors
     for chi, ch in enumerate(c["chapters"]):
         db.add(models.Chapter(
             id=ch["id"], course_id=c["id"], n=ch.get("n"),
