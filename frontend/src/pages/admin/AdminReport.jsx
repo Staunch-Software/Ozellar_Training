@@ -5,6 +5,7 @@ import {
   TrendingUp, Download, RefreshCw, ChevronDown, ChevronLeft, ChevronRight
 } from 'lucide-react'
 import { adminReport, adminDownloadReportCsv, adminDownloadReportXlsx } from '../../api.js'
+import { getToken } from '../../api.js'
 import AdminHeader from '../../components/AdminHeader.jsx'
 
 /* ------------------------------------------------------------------ */
@@ -351,8 +352,20 @@ export default function AdminReport() {
                             {cfg.label}
                           </span>
                           {cell.status === 'passed' && (
-                            <div className="rpt-cell-meta">
-                              {cell.score != null ? <>{cell.score}% &middot; </> : null}{cell.passedOn}
+                            <div className="rpt-cell-meta" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                              <span>{cell.score != null ? <>{cell.score}% &middot; </> : null}{cell.passedOn}</span>
+                              {cell.passedOn && (
+                                <a
+                                  href={`/api/admin/users/${row.learnerId}/courses/${c.id}/certificate.pdf?token=${getToken()}`}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  title="View certificate"
+                                  onClick={e => e.stopPropagation()}
+                                  className="rpt-cert-btn"
+                                >
+                                  <Download size={11} />
+                                </a>
+                              )}
                             </div>
                           )}
                           {/* Chapter completion mini-bar — shown only for in-progress */}

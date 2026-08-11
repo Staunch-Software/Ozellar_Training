@@ -874,6 +874,48 @@ def get_certificate_pdf(course_id: str, user: models.User = Depends(get_current_
                     headers={"Content-Disposition": f'inline; filename="{cert.id}.pdf"'})
 
 
+@app.get("/api/admin/users/{user_id}/courses/{course_id}/certificate.pdf")
+def admin_get_crew_certificate_pdf(
+    user_id: str, course_id: str,
+    request: Request,
+    token: Optional[str] = None,
+    db: Session = Depends(get_db)
+):
+    """Admin-only: download/view any crew member's issued certificate PDF.
+    Accepts JWT via Authorization header OR ?token= query param (for direct <a href> links).
+    """
+    from .auth import SECRET_KEY, ALGORITHM
+    # Resolve token: prefer header, fall back to query param
+    auth_header = request.headers.get("Authorization", "")
+    raw_token = auth_header.removeprefix("Bearer ").strip() or token
+    if not raw_token:
+        raise HTTPException(401, "Not authenticated")
+    try:
+        payload = jwt.decode(raw_token, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(401, "Session expired")
+    except jwt.PyJWTError:
+        raise HTTPException(401, "Invalid token")
+    if payload.get("type", "session") != "session" or payload.get("role") != "admin":
+        raise HTTPException(403, "Admin access required")
+
+    course = db.query(models.Course).filter_by(id=course_id).first()
+    if not course:
+        raise HTTPException(404, "Course not found")
+    learner = db.get(models.User, user_id)
+    if not learner:
+        raise HTTPException(404, "User not found")
+    cert = (db.query(models.Certificate)
+            .filter_by(learner_id=user_id, course_id=course_id).first())
+    if not cert:
+        raise HTTPException(404, "No certificate issued for this crew member and course")
+    pdf = build_certificate_pdf(cert_pdf_data(cert, learner, course))
+    filename = f"{learner.full_name.replace(' ', '_')}_{course.slug}_{cert.id}.pdf"
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="{filename}"'})
+
+
+
 @app.get("/api/certificates")
 def list_certificates(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     certs = db.query(models.Certificate).filter_by(learner_id=user.id).all()

@@ -1043,6 +1043,8 @@ img{max-width:100%;display:block}
 .rpt-ch-bar-fill--in-progress{background:var(--warn)}
 .rpt-ch-bar-fill--assigned{background:var(--border-strong)}
 .rpt-ch-bar-label{font-size:10.5px;color:var(--text-faint);white-space:nowrap;line-height:1.2}
+.rpt-cert-btn{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:4px;background:var(--surface-3);color:var(--text-mut);border:1px solid var(--border);text-decoration:none;flex-shrink:0;transition:background 0.15s,color 0.15s}
+.rpt-cert-btn:hover{background:var(--accent);color:#fff;border-color:var(--accent)}
 
 
 /* pagination ui */
