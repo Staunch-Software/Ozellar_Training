@@ -198,14 +198,26 @@ export default function CourseReader() {
     await markChapterComplete(course.id, ch.id)
     const c = await getCourse(slug)
     setCourse(c)
-    if (idx < c.chapters.length - 1) {
-      goto(idx + 1)
-    } else if (!c.hasAssessment) {
-      // No final assessment — show celebration screen before going to My Courses
-      setCourseCompleted(true)
-      window.scrollTo(0, 0)
+    
+    const allCompleted = c.chapters.every(chap => chap.done)
+    
+    if (allCompleted) {
+      if (!c.hasAssessment) {
+        // No final assessment — show celebration screen
+        setCourseCompleted(true)
+        window.scrollTo(0, 0)
+      } else {
+        navigate(`/course/${slug}/assessment`)
+      }
     } else {
-      navigate(`/course/${slug}/assessment`)
+      // Still have incomplete chapters
+      if (idx < c.chapters.length - 1) {
+        goto(idx + 1)
+      } else {
+        // Wrap around to the first incomplete chapter
+        const firstIncomplete = c.chapters.findIndex(chap => !chap.done)
+        if (firstIncomplete !== -1) goto(firstIncomplete)
+      }
     }
   }
 
