@@ -23,6 +23,30 @@ export default function Assessment() {
   if (!course) return (<><TopNav /><div className="spinner">Loading assessment…</div></>)
 
   const questions = course.assessment.questions
+
+  // Guard: course was created without a final assessment
+  if (questions.length === 0) {
+    return (
+      <>
+        <TopNav />
+        <div className="page">
+          <div className="assess" style={{ textAlign: 'center' }}>
+            <div className="result-seal" style={{ width: 78, height: 78, margin: '0 auto', background: 'var(--success)' }}>
+              <Award size={36} />
+            </div>
+            <h1 style={{ fontSize: 28, marginTop: 14 }}>Course completed</h1>
+            <p className="mut" style={{ fontSize: 16, marginTop: 8 }}>
+              This course has no final assessment. Completing all lessons marks it as done.
+            </p>
+            <button className="btn primary" style={{ marginTop: 22 }} onClick={() => navigate('/my-courses')}>
+              <ArrowLeft size={15} /> Back to My Courses
+            </button>
+          </div>
+        </div>
+      </>
+    )
+  }
+
   const q = questions[qi]
   const passMark = course.assessment.passMark
   const maxAttempts = course.assessment.maxAttempts

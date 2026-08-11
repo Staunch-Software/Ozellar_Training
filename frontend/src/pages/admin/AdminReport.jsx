@@ -11,7 +11,7 @@ import AdminHeader from '../../components/AdminHeader.jsx'
 /*  Status config                                                       */
 /* ------------------------------------------------------------------ */
 const S = {
-  passed:        { cls: 'ok',    icon: <CheckCircle size={12} />, label: 'Passed',      dot: '#15a34a' },
+  passed:        { cls: 'ok',    icon: <CheckCircle size={12} />, label: 'Completed',   dot: '#15a34a' },
   'in-progress': { cls: 'wip',   icon: <Clock        size={12} />, label: 'In Progress', dot: '#b7791f' },
   assigned:      { cls: 'muted', icon: <Circle       size={12} />, label: 'Not Started', dot: '#8a909b' },
 }
@@ -218,7 +218,7 @@ export default function AdminReport() {
                   onChange={e => setSelectedStatus(e.target.value)}
                   style={{ padding: '6px 24px 6px 30px' }}>
                   <option value="all">All Statuses</option>
-                  <option value="passed">✓ Passed</option>
+                  <option value="passed">✓ Completed</option>
                   <option value="in-progress">↻ In Progress</option>
                   <option value="assigned">○ Not Started</option>
                 </select>
@@ -282,7 +282,7 @@ export default function AdminReport() {
       {/* ═══════════════════════ KPI STRIP ════════════════════════════ */}
       <div className="rpt-kpi-strip">
         <KpiCard icon={<Users size={16} />} value={kpis.crew}       label="Crew Shown"  color="accent" />
-        <KpiCard icon={<CheckCircle size={16} />} value={kpis.passed}    label="Passed"      color="success" />
+        <KpiCard icon={<CheckCircle size={16} />} value={kpis.passed}    label="Completed"      color="success" />
         <KpiCard icon={<Clock size={16} />}  value={kpis.wip}        label="In Progress" color="warn" />
         <KpiCard icon={<Circle size={16} />} value={kpis.notStarted} label="Not Started" color="faint" />
         <KpiCard icon={<TrendingUp size={16} />} value={`${kpis.passRate}%`} label="Pass Rate" color="accent" highlight />
@@ -341,6 +341,9 @@ export default function AdminReport() {
                       const cell = row.cells[c.id]
                       if (!cell) return <td key={c.id} className="rpt-cell-na rpt-col-course">—</td>
                       const cfg = S[cell.status] || S.assigned
+                      const pct  = cell.completionPct      ?? 0
+                      const done = cell.completedChapters  ?? 0
+                      const tot  = cell.totalChapters       ?? 0
                       return (
                         <td key={c.id} className="rpt-cell rpt-col-course">
                           <span className={`rpt-badge rpt-badge--${cell.status}`}>
@@ -349,11 +352,22 @@ export default function AdminReport() {
                           </span>
                           {cell.status === 'passed' && (
                             <div className="rpt-cell-meta">
-                              {cell.score}% &middot; {cell.passedOn}
+                              {cell.score != null ? <>{cell.score}% &middot; </> : null}{cell.passedOn}
                             </div>
                           )}
+                          {/* Chapter completion mini-bar — shown only for in-progress */}
                           {cell.status === 'in-progress' && (
-                            <div className="rpt-cell-meta">In progress</div>
+                            <div className="rpt-ch-bar-wrap">
+                              <div className="rpt-ch-bar-track">
+                                <div
+                                  className={`rpt-ch-bar-fill rpt-ch-bar-fill--${cell.status}`}
+                                  style={{ width: `${Math.min(100, pct)}%` }}
+                                />
+                              </div>
+                              <span className="rpt-ch-bar-label">
+                                {done}/{tot} chapters &middot; {pct}%
+                              </span>
+                            </div>
                           )}
                         </td>
                       )

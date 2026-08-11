@@ -341,6 +341,7 @@ def serialize_course(db, course, progress, detail=False):
         "progressPct": pct,
         "passed": bool(progress.passed) if progress else False,
         "score": progress.score if progress else None,
+        "hasAssessment": len(course.questions) > 0,
     }
     
     # Check if certificate is pending
@@ -449,6 +450,9 @@ def complete_chapter(course_id: str, chapter_id: str,
                      user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     require_enrollment(db, user, course_id)
     lid = user.id
+    course = db.query(models.Course).filter_by(id=course_id).first()
+    if not course:
+        raise HTTPException(404, "Course not found")
     p = get_progress(db, lid, course_id)
     if not p:
         p = models.Progress(learner_id=lid, course_id=course_id, completed_chapters=[])
@@ -457,8 +461,41 @@ def complete_chapter(course_id: str, chapter_id: str,
     if chapter_id not in done:
         done.append(chapter_id)
     p.completed_chapters = done
+
+    # Auto-complete courses that have no final assessment once all chapters are done
+    auto_completed = False
+    if not course.questions:  # no assessment questions
+        all_chapter_ids = {ch.id for ch in course.chapters}
+        if all_chapter_ids and set(done) >= all_chapter_ids and not p.passed:
+            p.passed = True
+            db.flush()  # ensure p.id is available
+
+            # Queue for admin approval (same flow as a passed assessment)
+            from .auth import SECRET_KEY, ALGORITHM
+            from datetime import timedelta
+            ap = models.AssessmentApproval(
+                learner_id=user.id, course_id=course.id,
+                score=None, attempt_id=None,
+            )
+            db.add(ap)
+            db.flush()  # get ap.id
+            token_payload = {
+                "sub": f"approve:{ap.id}",
+                "type": "approval",
+                "exp": datetime.now(timezone.utc) + timedelta(days=7),
+            }
+            ap.approval_token = jwt.encode(token_payload, SECRET_KEY, algorithm=ALGORITHM)
+
+            # Notify the crew member
+            notify(
+                db, user.id, "passed", "Course completed",
+                f"You have completed all lessons in {course.title}. Your certificate is pending admin approval.",
+                f"/my-courses",
+            )
+            auto_completed = True
+
     db.commit()
-    return {"ok": True, "completed": done}
+    return {"ok": True, "completed": done, "autoCompleted": auto_completed}
 
 
 class AssessmentSubmission(BaseModel):
@@ -1068,6 +1105,9 @@ def _report(db):
     c_map = {(c.learner_id, c.course_id): c for c in certs}
     a_map = {(l, c): count for l, c, count in attempts_counts}
     
+    # Pre-compute total chapter count per course (avoids N+1 queries)
+    course_chapter_counts = {c.id: len(c.chapters) for c in courses}
+    
     rows = []
     for lr in learners:
         assigned_courses = [c for c in courses if (lr.id, c.id) in e_map]
@@ -1085,12 +1125,19 @@ def _report(db):
             else:
                 status = "assigned"
             
+            total_chs = course_chapter_counts.get(c.id, 0)
+            done_chs  = len(prog.completed_chapters or []) if prog else 0
+            pct       = round(done_chs / total_chs * 100) if total_chs else 0
+            
             cells[c.id] = {
                 "status": status,
                 "score": prog.score if prog else None,
                 "startedOn": enr.assigned_at.strftime("%Y-%m-%d") if enr and enr.assigned_at else None,
                 "passedOn": cert.issued_at.strftime("%Y-%m-%d") if cert and cert.issued_at else None,
                 "attempts": attempts,
+                "completionPct":     pct,
+                "completedChapters": done_chs,
+                "totalChapters":     total_chs,
             }
         
         rows.append({
@@ -1244,7 +1291,7 @@ def admin_report_csv(admin: models.User = Depends(require_admin), db: Session = 
     courses, rows = _report(db)
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["Crew ID", "Name", "Rank", "Active", "Course", "Status", "Score", "Passed On"])
+    w.writerow(["Crew ID", "Name", "Rank", "Active", "Course", "Status", "Score", "Completed On"])
     for r in rows:
         active = "yes" if r["isActive"] else "no"
         if not r["cells"]:
@@ -1350,7 +1397,7 @@ def admin_report_xlsx(
 
     # ---- column headers (row 3) ----
     headers = ["Crew ID", "Name", "Rank", "Active",
-               "Course", "Status", "Score (%)", "Attempts", "Started On", "Passed On"]
+               "Course", "Status", "Score (%)", "Attempts", "Started On", "Completed On"]
     ws.append(headers)
     for ci, h in enumerate(headers, 1):
         cell = ws.cell(row=3, column=ci)
@@ -1360,7 +1407,7 @@ def admin_report_xlsx(
         cell.border = border
     ws.row_dimensions[3].height = 22
 
-    status_labels = {"passed": "Passed", "in-progress": "In Progress", "assigned": "Not Started"}
+    status_labels = {"passed": "Completed", "in-progress": "In Progress", "assigned": "Not Started"}
     row_idx = 4
     for r in rows:
         active = "Yes" if r["isActive"] else "No"
@@ -1435,7 +1482,7 @@ def crew_my_report_xlsx(status: Optional[str] = None, user: models.User = Depend
 
     One sheet titled "My Training Record" with columns:
     Course | Status | Chapters Completed | Total Chapters | Progress (%) |
-    Score (%) | Grade | Time Taken (days) | Certificate ID | Passed On
+    Score (%) | Grade | Time Taken (days) | Certificate ID | Completed On
 
     Rows are colour-coded: green = passed, amber = in-progress, grey = not started.
     """
@@ -1478,7 +1525,7 @@ def crew_my_report_xlsx(status: Optional[str] = None, user: models.User = Depend
     ws.row_dimensions[2].height = 18
 
     headers = ["Course", "Status", "Attempts", "Chapters Done", "Total Chapters",
-               "Progress (%)", "Score (%)", "Grade", "Started On", "Passed On",
+               "Progress (%)", "Score (%)", "Grade", "Started On", "Completed On",
                "Time Taken (days)", "Certificate ID"]
     ws.append(headers)   # row 3
     for ci, h in enumerate(headers, 1):
@@ -1509,7 +1556,7 @@ def crew_my_report_xlsx(status: Optional[str] = None, user: models.User = Depend
                 calc_status = "Pending Approval"
                 fill = WIP_FILL
             else:
-                calc_status = "Passed"
+                calc_status = "Completed"
                 fill = PASS_FILL
                 total_passed += 1
         elif prog and (done_count > 0 or score is not None):
@@ -1520,7 +1567,7 @@ def crew_my_report_xlsx(status: Optional[str] = None, user: models.User = Depend
             fill = ASGN_FILL
 
         # Apply status filter
-        if status == 'completed' and calc_status != "Passed": continue
+        if status == 'completed' and calc_status != "Completed": continue
         if status == 'in-progress' and calc_status not in ["In Progress", "Pending Approval"]: continue
         if status == 'not-started' and calc_status != "Not Started": continue
 

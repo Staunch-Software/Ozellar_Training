@@ -237,17 +237,21 @@ export default function AdminCourses() {
                   <span className="pill" style={{ background: 'var(--surface-2)' }}>{c.chapterCount} Module{c.chapterCount === 1 ? '' : 's'}</span>
                 </td>
                 <td>
-                  <div style={{ fontSize: 12.5, color: 'var(--text-mut)' }}>
-                    <span style={{ fontWeight: 600, color: 'var(--text)' }}>{c.questionCount}</span> Qs
-                    <span style={{ margin: '0 6px' }}>&middot;</span>
-                    Pass <b>{c.passMark}%</b>
-                    {c.maxAttempts ? (
-                      <>
-                        <span style={{ margin: '0 6px' }}>&middot;</span>
-                        <b>{c.maxAttempts}</b> attempt{c.maxAttempts === 1 ? '' : 's'}
-                      </>
-                    ) : null}
-                  </div>
+                  {c.questionCount === 0 ? (
+                    <span className="mut" style={{ fontSize: 12.5, fontStyle: 'italic' }}>No assessment</span>
+                  ) : (
+                    <div style={{ fontSize: 12.5, color: 'var(--text-mut)' }}>
+                      <span style={{ fontWeight: 600, color: 'var(--text)' }}>{c.questionCount}</span> Qs
+                      <span style={{ margin: '0 6px' }}>&middot;</span>
+                      Pass <b>{c.passMark}%</b>
+                      {c.maxAttempts ? (
+                        <>
+                          <span style={{ margin: '0 6px' }}>&middot;</span>
+                          <b>{c.maxAttempts}</b> attempt{c.maxAttempts === 1 ? '' : 's'}
+                        </>
+                      ) : null}
+                    </div>
+                  )}
                 </td>
                 <td style={{ textAlign: 'right', color: 'var(--text-faint)' }}>
                   <ChevronRight size={18} />

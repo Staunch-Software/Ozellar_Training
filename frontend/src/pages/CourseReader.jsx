@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   CheckCircle2, Circle, Play, Lock, Star, Check, Download, Info, X, Dot,
-  ChevronLeft, ChevronRight, Image as ImageIcon, ArrowDown, HelpCircle,
+  ChevronLeft, ChevronRight, Image as ImageIcon, ArrowDown, HelpCircle, Award,
 } from 'lucide-react'
 import { TopNav } from '../App.jsx'
 import { getCourse, markChapterComplete } from '../api.js'
@@ -154,6 +154,7 @@ export default function CourseReader() {
   const [idx, setIdx] = useState(0)
   const [reached, setReached] = useState(false)   // scrolled to end of this lesson
   const [quizPassed, setQuizPassed] = useState(false) // true once all quiz questions answered correctly
+  const [courseCompleted, setCourseCompleted] = useState(false) // show completion screen for no-assessment courses
 
   useEffect(() => {
     getCourse(slug).then((c) => {
@@ -197,8 +198,48 @@ export default function CourseReader() {
     await markChapterComplete(course.id, ch.id)
     const c = await getCourse(slug)
     setCourse(c)
-    if (idx < c.chapters.length - 1) goto(idx + 1)
-    else navigate(`/course/${slug}/assessment`)
+    if (idx < c.chapters.length - 1) {
+      goto(idx + 1)
+    } else if (!c.hasAssessment) {
+      // No final assessment — show celebration screen before going to My Courses
+      setCourseCompleted(true)
+      window.scrollTo(0, 0)
+    } else {
+      navigate(`/course/${slug}/assessment`)
+    }
+  }
+
+  // Celebration screen for courses with no final assessment
+  if (courseCompleted && course) {
+    return (
+      <>
+        <TopNav />
+        <div className="page" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '80vh' }}>
+          <div className="assess" style={{ textAlign: 'center', maxWidth: 480 }}>
+            <div className="result-seal" style={{
+              width: 90, height: 90, margin: '0 auto',
+              background: 'var(--success)',
+              animation: 'seal-pop 0.4s cubic-bezier(0.175,0.885,0.32,1.275) both'
+            }}>
+              <Award size={42} />
+            </div>
+            <h1 style={{ fontSize: 30, marginTop: 20, fontWeight: 700 }}>Course Completed!</h1>
+            <p className="mut" style={{ fontSize: 16, marginTop: 10, lineHeight: 1.6 }}>
+              Well done! You have successfully completed all lessons in
+              <br /><strong style={{ color: 'var(--text)' }}>{course.title}</strong>.
+            </p>
+            <p className="mut" style={{ fontSize: 13.5, marginTop: 8 }}>
+              Your certificate is pending admin approval. You will be notified once it is ready.
+            </p>
+            <div style={{ marginTop: 28, display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button className="btn primary" onClick={() => navigate('/my-courses')}>
+                <Award size={16} /> Go to My Courses
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
+    )
   }
 
   return (
@@ -222,11 +263,13 @@ export default function CourseReader() {
                 <span className="chn">{c.n}. {c.title}</span>
               </button>
             ))}
-            <button className="ch" style={{ opacity: allDone ? 1 : 0.5, color: allDone ? 'var(--accent)' : undefined }}
-              onClick={() => allDone && navigate(`/course/${slug}/assessment`)}>
-              {allDone ? <Star className="ci" /> : <Lock className="ci" />}
-              <span className="chn">Final assessment</span>
-            </button>
+            {course.hasAssessment && (
+              <button className="ch" style={{ opacity: allDone ? 1 : 0.5, color: allDone ? 'var(--accent)' : undefined }}
+                onClick={() => allDone && navigate(`/course/${slug}/assessment`)}>
+                {allDone ? <Star className="ci" /> : <Lock className="ci" />}
+                <span className="chn">Final assessment</span>
+              </button>
+            )}
           </div>
         </aside>
 
@@ -322,12 +365,27 @@ export default function CourseReader() {
                 disabled={ch.kind === 'quiz' ? (!quizPassed && !ch.done) : (!reached && !ch.done)}
                 onClick={() => {
                   if (!ch.done) {
-                    markChapterComplete(course.id, ch.id).then(() => navigate(`/course/${slug}/assessment`))
+                    markChapterComplete(course.id, ch.id).then(async () => {
+                      const c = await getCourse(slug)
+                      setCourse(c)
+                      if (!course.hasAssessment) {
+                        setCourseCompleted(true)
+                        window.scrollTo(0, 0)
+                      } else {
+                        navigate(`/course/${slug}/assessment`)
+                      }
+                    })
                   } else {
-                    navigate(`/course/${slug}/assessment`)
+                    if (!course.hasAssessment) {
+                      setCourseCompleted(true)
+                      window.scrollTo(0, 0)
+                    } else {
+                      navigate(`/course/${slug}/assessment`)
+                    }
                   }
                 }}>
-                <span className="l">Finish</span><span className="tt">Final assessment</span>
+                <span className="l">Finish</span>
+                <span className="tt">{course.hasAssessment ? 'Final assessment' : 'Complete course'}</span>
               </button>
             )}
           </div>
