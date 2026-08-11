@@ -13,6 +13,7 @@ import re
 import shutil
 import subprocess
 import tempfile
+import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
@@ -617,7 +618,7 @@ def issue_certificate(db, user, course):
     db.flush() # flush to get seq_record.id
     
     seq = seq_record.id
-    cid = f"OM-{course.id.upper()}-{year}-{seq:04d}"
+    cid = f"OZ-{course.id.upper()}-{year}-{seq:04d}"
     cert = models.Certificate(id=cid, learner_id=lid, course_id=course.id,
                               score=get_progress(db, lid, course.id).score)
     db.add(cert)
@@ -1046,6 +1047,31 @@ def mark_all_notifications_read(user: models.User = Depends(get_current_user),
 
 
 # ======================= ADMIN =======================
+
+@app.get("/api/admin/notifications")
+def admin_notifications(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Return pending certificate approvals as notification items for the admin bell."""
+    pending = (db.query(models.AssessmentApproval)
+               .filter_by(status="pending")
+               .order_by(models.AssessmentApproval.created_at.desc())
+               .all())
+    items = []
+    for ap in pending:
+        user = db.get(models.User, ap.learner_id)
+        course = db.query(models.Course).filter_by(id=ap.course_id).first()
+        if not user or not course:
+            continue
+        items.append({
+            "id": ap.id,
+            "learnerId": ap.learner_id,
+            "courseId": ap.course_id,
+            "learnerName": user.full_name,
+            "courseName": course.title,
+            "createdAt": ap.created_at.isoformat() if ap.created_at else None,
+        })
+    return {"unread": len(items), "items": items}
+
+
 class CreateUserRequest(BaseModel):
     role: str                       # 'learner' | 'admin'
     fullName: str
@@ -1148,7 +1174,33 @@ def admin_update_user(user_id: int, req: UpdateUserRequest,
     return admin_user_view(db, user)
 
 
+@app.post("/api/admin/users/{user_id}/courses/{course_id}/approve")
+def admin_inline_approve(user_id: int, course_id: str,
+                         admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Inline approval of a pending certificate from the Admin Report page."""
+    ap = db.query(models.AssessmentApproval).filter_by(
+        learner_id=user_id, course_id=course_id, status="pending"
+    ).first()
+    if not ap:
+        raise HTTPException(404, "No pending approval found for this learner/course")
+    user = db.get(models.User, user_id)
+    course = db.query(models.Course).filter_by(id=course_id).first()
+    cert_info = issue_certificate(db, user, course)
+    ap.status = "approved"
+    ap.decided_at = datetime.now(timezone.utc)
+    notify(db, user.id, "certificate", "Certificate Ready",
+           f"Your certificate for {course.title} has been approved.",
+           f"/course/{course.slug}/certificate")
+    db.commit()
+    cert_obj = db.get(models.Certificate, cert_info["id"])
+    pdf_bytes = build_certificate_pdf(cert_pdf_data(cert_obj, user, course))
+    if user.email:
+        email_service.send_approval_email(user.email, user.full_name, course.title, pdf_bytes, cert_info["id"])
+    return {"ok": True, "certId": cert_info["id"]}
+
+
 @app.post("/api/admin/users/{user_id}/enrollments")
+
 def admin_assign(user_id: int, req: AssignRequest,
                  admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
     user = db.get(models.User, user_id)
@@ -2142,8 +2194,9 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                             explain="Auto-extracted from slide."
                         )]
                 
+                import uuid
                 ch = models.Chapter(
-                    id=f"{course_id}-slide-{n}", course_id=course_id, n=n,
+                    id=f"{course_id}-slide-{n}-{uuid.uuid4().hex[:8]}", course_id=course_id, n=n,
                     title=slide_title,
                     sections=[], videos=vids, order=next_order + i, kind=ch_kind,
                     image=img_url,
@@ -2234,7 +2287,7 @@ async def admin_upload_video(course_id: str, file: UploadFile = File(...),
         return admin_chapter_detail(ch)
 
     ch = models.Chapter(
-        id=f"{course_id}-video-{_next_chapter_n(course)}", course_id=course_id,
+        id=f"{course_id}-video-{_next_chapter_n(course)}-{uuid.uuid4().hex[:8]}", course_id=course_id,
         n=_next_chapter_n(course), title=(title or "Video").strip() or "Video",
         sections=[], videos=[url], order=_next_chapter_order(course), kind="lesson",
     )
@@ -2261,7 +2314,7 @@ def admin_create_quiz_chapter(course_id: str, req: CreateQuizChapterRequest,
         insert_at = len(chapters)
 
     quiz = models.Chapter(
-        id=f"{course_id}-quiz-{_next_chapter_n(course)}", course_id=course_id,
+        id=f"{course_id}-quiz-{_next_chapter_n(course)}-{uuid.uuid4().hex[:8]}", course_id=course_id,
         n=_next_chapter_n(course), title=req.title.strip() or "Quiz",
         sections=[], videos=[], kind="quiz", order=0,
     )
