@@ -133,8 +133,13 @@ export default function AdminReport() {
 
   const hasFilters = crewSearch || selectedCourse !== 'all' || selectedStatus !== 'all'
   const clearAll   = () => {
-    // Also clear URL params so next notification click triggers the effect
-    navigate('/admin/report', { replace: true })
+    setCrewSearch('')
+    setSelectedCourse('all')
+    setSelectedStatus('all')
+    setPage(1)
+    if (searchParams.toString()) {
+      navigate('/admin/report', { replace: true })
+    }
   }
 
   /* Reset page to 1 on filter change */
