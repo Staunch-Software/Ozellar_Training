@@ -571,7 +571,7 @@ function QuestionEditor({ initial, onSave, saveLabel, onCancel }) {
   const addQuestion = () => setQuestions((qs) => [...qs, EMPTY_Q()])
   const removeQuestion = (i) => setQuestions((qs) => qs.filter((_, qi) => qi !== i))
 
-  const valid = questions.length > 0 && questions.every((q) =>
+  const valid = questions.every((q) =>
     q.q.trim() && q.options.filter((o) => o.trim()).length >= 2)
 
   const handleSave = () => {

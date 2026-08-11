@@ -2372,6 +2372,7 @@ def admin_delete_chapter(course_id: str, chapter_id: str,
         raise HTTPException(404, "Chapter not found")
     prefix = f"/api/uploads/{course_id}/"
     files_to_remove = [p for p in [ch.image, *(ch.videos or [])] if p and p.startswith(prefix)]
+    db.query(models.ChapterQuestion).filter_by(chapter_id=chapter_id).delete()
     db.delete(ch)
     db.flush()
     # Re-index remaining chapters so 'n' and 'order' remain contiguous
