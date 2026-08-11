@@ -2215,6 +2215,7 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                 shutil.rmtree(tmp)
             except OSError:
                 pass
+            db.close()
             
     except Exception as e:
         print(f"Background PPTX processing failed entirely: {e}")
