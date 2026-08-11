@@ -2,7 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import {
   Award, Clock, Circle, FileSpreadsheet, FileText,
   Users, CheckCircle, AlertCircle, Search, X, SlidersHorizontal,
-  TrendingUp, Download, RefreshCw, ChevronDown, ChevronLeft, ChevronRight
+  TrendingUp, Download, RefreshCw, ChevronDown, ChevronLeft, ChevronRight, Eye
 } from 'lucide-react'
 import { adminReport, adminDownloadReportCsv, adminDownloadReportXlsx } from '../../api.js'
 import { getToken } from '../../api.js'
@@ -353,18 +353,26 @@ export default function AdminReport() {
                           </span>
                           {cell.status === 'passed' && (
                             <div className="rpt-cell-meta" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <span>{cell.score != null ? <>{cell.score}% &middot; </> : null}{cell.passedOn}</span>
-                              {cell.passedOn && (
-                                <a
-                                  href={`/api/admin/users/${row.learnerId}/courses/${c.id}/certificate.pdf?token=${getToken()}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  title="View certificate"
-                                  onClick={e => e.stopPropagation()}
-                                  className="rpt-cert-btn"
-                                >
-                                  <Download size={11} />
-                                </a>
+                              {cell.pendingApproval ? (
+                                <span style={{ color: 'var(--warn)', fontSize: 11, fontStyle: 'italic' }}>
+                                  Pending approval &middot; {cell.passedOn}
+                                </span>
+                              ) : (
+                                <>
+                                  <span>{cell.score != null ? <>{cell.score}% &middot; </> : null}{cell.passedOn}</span>
+                                  {cell.passedOn && (
+                                    <a
+                                      href={`/api/admin/users/${row.learnerId}/courses/${c.id}/certificate.pdf?token=${getToken()}`}
+                                      target="_blank"
+                                      rel="noreferrer"
+                                      title="View certificate"
+                                      onClick={e => e.stopPropagation()}
+                                      className="rpt-cert-btn"
+                                    >
+                                      <Eye size={11} />
+                                    </a>
+                                  )}
+                                </>
                               )}
                             </div>
                           )}

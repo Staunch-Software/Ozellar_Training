@@ -647,13 +647,28 @@ def get_certificate(course_id: str, user: models.User = Depends(get_current_user
 
 def cert_pdf_data(cert, user, course):
     c = course.cert or {}
+    topics = c.get("topics")
+    if not topics:
+        # Fallback to chapter titles if no specific topics are set
+        unwanted = {
+            "introduction", "summary", "conclusion", "quiz", "assessment", 
+            "final assessment", "why", "why?", "how", "how?", "what", "what?", 
+            "overview", "agenda", "objectives"
+        }
+        topics = [
+            ch.title for ch in course.chapters 
+            if ch.kind != "quiz" 
+            and ch.title.lower().strip() not in unwanted
+            and not ch.title.lower().strip().startswith("slide ")
+        ]
+
     return {
         "id": cert.id,
         "learner": user.full_name,
         "ppNo": user.pp_no,
         "titleUpper": c.get("titleUpper") or course.title.upper(),
-        "topics": c.get("topics") or [],
-        "issued": cert.issued_at.strftime("%Y-%m-%d") if cert.issued_at else "",
+        "topics": topics,
+        "issued": cert.issued_at.strftime("%d %B %Y") if cert.issued_at else "",
         "location": os.getenv("CERT_LOCATION", "Chennai"),
         "photoPath": os.path.join(UPLOAD_DIR, "photos", f"{user.id}.jpg"),
         "verifyUrl": f"{PUBLIC_BASE_URL}/verify/{cert.id}",
@@ -787,6 +802,37 @@ def approve_assessment(token: str, db: Session = Depends(get_db)):
     )
 
 
+@app.get("/api/preview-certificate")
+def preview_assessment_certificate(token: str, db: Session = Depends(get_db)):
+    """Generates a preview PDF of the certificate for an admin reviewing an approval digest email."""
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "approval":
+            raise ValueError("Invalid token type")
+        sub = payload.get("sub", "")
+        if not sub.startswith("approve:"):
+            raise ValueError()
+        ap_id = int(sub.split(":")[1])
+    except Exception:
+        raise HTTPException(400, "Invalid or expired token")
+
+    ap = db.get(models.AssessmentApproval, ap_id)
+    if not ap:
+        raise HTTPException(404, "Approval request not found")
+
+    user = db.get(models.User, ap.learner_id)
+    course = db.query(models.Course).filter_by(id=ap.course_id).first()
+    
+    class MockCert:
+        id = "PREVIEW-ONLY"
+        issued_at = datetime.now(timezone.utc)
+        
+    pdf = build_certificate_pdf(cert_pdf_data(MockCert(), user, course))
+    filename = f"PREVIEW_{user.full_name.replace(' ', '_')}_{course.slug}.pdf"
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": f'inline; filename="{filename}"'})
+
+
 @app.get("/api/reject", response_class=HTMLResponse)
 def reject_assessment(token: str, db: Session = Depends(get_db)):
     try:
@@ -879,6 +925,7 @@ def admin_get_crew_certificate_pdf(
     user_id: str, course_id: str,
     request: Request,
     token: Optional[str] = None,
+    dl: Optional[str] = None,
     db: Session = Depends(get_db)
 ):
     """Admin-only: download/view any crew member's issued certificate PDF.
@@ -911,8 +958,9 @@ def admin_get_crew_certificate_pdf(
         raise HTTPException(404, "No certificate issued for this crew member and course")
     pdf = build_certificate_pdf(cert_pdf_data(cert, learner, course))
     filename = f"{learner.full_name.replace(' ', '_')}_{course.slug}_{cert.id}.pdf"
+    disposition = "attachment" if dl else "inline"
     return Response(content=pdf, media_type="application/pdf",
-                    headers={"Content-Disposition": f'inline; filename="{filename}"'})
+                    headers={"Content-Disposition": f'{disposition}; filename="{filename}"'})
 
 
 
@@ -1140,11 +1188,13 @@ def _report(db):
     enrollments = db.query(models.Enrollment).all()
     progress_all = db.query(models.Progress).all()
     certs = db.query(models.Certificate).all()
+    approvals = db.query(models.AssessmentApproval).filter_by(status="pending").all()
     attempts_counts = db.query(models.Attempt.learner_id, models.Attempt.course_id, func.count(models.Attempt.id)).group_by(models.Attempt.learner_id, models.Attempt.course_id).all()
     
     e_map = {(e.learner_id, e.course_id): e for e in enrollments}
     p_map = {(p.learner_id, p.course_id): p for p in progress_all}
     c_map = {(c.learner_id, c.course_id): c for c in certs}
+    ap_map = {(a.learner_id, a.course_id): a for a in approvals}
     a_map = {(l, c): count for l, c, count in attempts_counts}
     
     # Pre-compute total chapter count per course (avoids N+1 queries)
@@ -1158,6 +1208,7 @@ def _report(db):
             enr = e_map.get((lr.id, c.id))
             prog = p_map.get((lr.id, c.id))
             cert = c_map.get((lr.id, c.id))
+            ap = ap_map.get((lr.id, c.id))
             attempts = a_map.get((lr.id, c.id), 0)
             
             if prog and prog.passed:
@@ -1171,11 +1222,19 @@ def _report(db):
             done_chs  = len(prog.completed_chapters or []) if prog else 0
             pct       = round(done_chs / total_chs * 100) if total_chs else 0
             
+            if cert and cert.issued_at:
+                passed_on = cert.issued_at.strftime("%Y-%m-%d")
+            elif ap and ap.created_at:
+                passed_on = ap.created_at.strftime("%Y-%m-%d")
+            else:
+                passed_on = None
+            
             cells[c.id] = {
                 "status": status,
                 "score": prog.score if prog else None,
                 "startedOn": enr.assigned_at.strftime("%Y-%m-%d") if enr and enr.assigned_at else None,
-                "passedOn": cert.issued_at.strftime("%Y-%m-%d") if cert and cert.issued_at else None,
+                "passedOn": passed_on,
+                "pendingApproval": bool(ap),
                 "attempts": attempts,
                 "completionPct":     pct,
                 "completedChapters": done_chs,

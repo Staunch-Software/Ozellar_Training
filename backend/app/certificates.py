@@ -126,20 +126,27 @@ def build_certificate_pdf(data: dict) -> bytes:
     c.drawCentredString(x + bw2 / 2, _y(y) + 1.5, data.get("location") or "")
 
     # topics
-    c.setFont("Helvetica-Bold", 11)
-    c.drawString(LEFT, _y(130 * mm), "This course covered the following topics:")
-    ty = 139 * mm
-    for t in (data["topics"] or []):
-        c.setFillColor(ORANGE)
+    if data.get("topics"):
         c.setFont("Helvetica-Bold", 11)
-        c.drawString(LEFT + 4 * mm, _y(ty), "•")
-        c.setFillColor(INK)
-        c.setFont("Helvetica", 10)
-        # wrap long topic lines
-        for line in _wrap(c, t, "Helvetica", 10, RIGHT - (LEFT + 9 * mm)):
-            c.drawString(LEFT + 9 * mm, _y(ty), line)
-            ty += 5.2 * mm
-        ty += 1.5 * mm
+        c.drawString(LEFT, _y(130 * mm), "This course covered the following topics:")
+        ty = 139 * mm
+        for t in data["topics"]:
+            if ty > 185 * mm:
+                # Stop printing to avoid colliding with the photo (which starts at 196mm)
+                c.setFillColor(INK)
+                c.setFont("Helvetica", 10)
+                c.drawString(LEFT + 9 * mm, _y(ty), "...")
+                break
+            c.setFillColor(ORANGE)
+            c.setFont("Helvetica-Bold", 11)
+            c.drawString(LEFT + 4 * mm, _y(ty), "•")
+            c.setFillColor(INK)
+            c.setFont("Helvetica", 10)
+            # wrap long topic lines
+            for line in _wrap(c, t, "Helvetica", 10, RIGHT - (LEFT + 9 * mm)):
+                c.drawString(LEFT + 9 * mm, _y(ty), line)
+                ty += 5.2 * mm
+            ty += 1.5 * mm
 
     # photo frame — bottom left (empty placeholder unless a photo is supplied)
     pf_x, pf_top, pf_w, pf_h = LEFT, 196 * mm, 30 * mm, 38 * mm
