@@ -28,7 +28,6 @@ tables_with_fks = {
     'questions': [],
     'chapter_questions': [],
     'progress': [],
-    'certificate_sequences': [],
     'enrollments': [],
     'sync_logs': [],
     'notifications': [],
