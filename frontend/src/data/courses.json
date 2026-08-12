@@ -7,7 +7,7 @@
   },
   "courses": [
     {
-      "id": "cargo-ops",
+      "id": "3d721fba-01c4-41a4-8a0f-cea14807bf86",
       "slug": "cargo-operations",
       "title": "Cargo Operations Manual",
       "subtitle": "Bulk carriers & other cargo",
@@ -17,7 +17,7 @@
       "statusNote": "Assigned",
       "chapters": [
         {
-          "id": "cargo-ops-l1",
+          "id": "4818707a-dba5-4f6e-989a-cc938b2d4471",
           "n": 1,
           "orig": 2,
           "chapterLabel": "Lesson 1",
@@ -45,7 +45,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l2",
+          "id": "eca713bf-687c-4a98-a633-93860bad6684",
           "n": 2,
           "orig": 3,
           "chapterLabel": "Lesson 2",
@@ -68,7 +68,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l3",
+          "id": "d24217c7-7bd0-4546-8825-a026e28befba",
           "n": 3,
           "orig": 5,
           "chapterLabel": "Lesson 3",
@@ -90,7 +90,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l4",
+          "id": "865fa4dd-02ff-43e6-9892-8843b90fdcf6",
           "n": 4,
           "orig": 6,
           "chapterLabel": "Lesson 4",
@@ -120,7 +120,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l5",
+          "id": "8a08d50d-4031-4c44-8212-95c70b5f9ee4",
           "n": 5,
           "orig": 7,
           "chapterLabel": "Lesson 5",
@@ -151,7 +151,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l6",
+          "id": "98a84c26-bb95-49bc-bdf0-86c85b77a3d2",
           "n": 6,
           "orig": 9,
           "chapterLabel": "Lesson 6",
@@ -181,7 +181,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l7",
+          "id": "f2f7283f-ca3b-42d9-8f68-fa9f6ef6ffc5",
           "n": 7,
           "orig": 10,
           "chapterLabel": "Lesson 7",
@@ -211,7 +211,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l8",
+          "id": "bc79b2f2-db7e-4b9d-93f4-95cd5700c2ec",
           "n": 8,
           "orig": 11,
           "chapterLabel": "Lesson 8",
@@ -242,7 +242,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l9",
+          "id": "7a638e74-d268-4faf-b107-2071f843fc7f",
           "n": 9,
           "orig": 12,
           "chapterLabel": "Lesson 9",
@@ -272,7 +272,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l10",
+          "id": "a60f3e09-3b68-481a-90f0-f08eeb411431",
           "n": 10,
           "orig": 13,
           "chapterLabel": "Lesson 10",
@@ -302,7 +302,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l11",
+          "id": "090b8cba-17aa-4a69-9e2d-f0d4794e0870",
           "n": 11,
           "orig": 14,
           "chapterLabel": "Lesson 11",
@@ -333,7 +333,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l12",
+          "id": "3a38c3f3-bc81-47e9-89d3-3603ead3c75d",
           "n": 12,
           "orig": 15,
           "chapterLabel": "Lesson 12",
@@ -366,7 +366,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l13",
+          "id": "ebd53f4d-8ef3-4f35-8d34-cbb13003e662",
           "n": 13,
           "orig": 16,
           "chapterLabel": "Lesson 13",
@@ -395,7 +395,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l14",
+          "id": "e649210e-aec7-4aa8-8d9b-67b8c0bce223",
           "n": 14,
           "orig": 17,
           "chapterLabel": "Lesson 14",
@@ -424,7 +424,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l15",
+          "id": "d2855a5d-1e11-4865-a4c5-ce2c39a738f0",
           "n": 15,
           "orig": 18,
           "chapterLabel": "Lesson 15",
@@ -453,7 +453,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l16",
+          "id": "3d3ad43a-db62-4375-af60-f05c207b03ed",
           "n": 16,
           "orig": 19,
           "chapterLabel": "Lesson 16",
@@ -482,7 +482,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l17",
+          "id": "0514fd6c-39df-4f71-8428-c7b327c4ac13",
           "n": 17,
           "orig": 20,
           "chapterLabel": "Lesson 17",
@@ -511,7 +511,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l18",
+          "id": "8a7dc715-3bf1-44db-a964-1ec76d3779df",
           "n": 18,
           "orig": 21,
           "chapterLabel": "Lesson 18",
@@ -541,7 +541,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l19",
+          "id": "7e4e5a23-ba4c-42ac-9b00-7c1f95354118",
           "n": 19,
           "orig": 22,
           "chapterLabel": "Lesson 19",
@@ -571,7 +571,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l20",
+          "id": "d03bd653-18c0-464a-bf0e-eb3418995d6e",
           "n": 20,
           "orig": 23,
           "chapterLabel": "Lesson 20",
@@ -600,7 +600,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l21",
+          "id": "9ad1016a-e3ed-4267-8937-966d470c43bf",
           "n": 21,
           "orig": 24,
           "chapterLabel": "Lesson 21",
@@ -628,7 +628,7 @@
           "videos": []
         },
         {
-          "id": "cargo-ops-l22",
+          "id": "c06c0e6e-e3ee-4834-84ef-9ff564cc074e",
           "n": 22,
           "orig": 25,
           "chapterLabel": "Lesson 22",
@@ -720,7 +720,7 @@
       }
     },
     {
-      "id": "hsm",
+      "id": "4d3ca2ec-b06a-42ad-91c4-718d04b89316",
       "slug": "health-safety-manual",
       "title": "Health & Safety Manual (HSM)",
       "subtitle": "Shipboard health & safety",
@@ -730,7 +730,7 @@
       "statusNote": "Assigned · due 30 Jul",
       "chapters": [
         {
-          "id": "hsm-l1",
+          "id": "8eb21f8b-e919-48ea-82c0-e4bee9a8ee53",
           "n": 1,
           "orig": 2,
           "chapterLabel": "Lesson 1",
@@ -756,7 +756,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l2",
+          "id": "3d183137-baff-4f27-a597-c49a03664b26",
           "n": 2,
           "orig": 3,
           "chapterLabel": "Lesson 2",
@@ -780,7 +780,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l3",
+          "id": "458f4521-05b7-460d-8a51-83e234e06bb4",
           "n": 3,
           "orig": 4,
           "chapterLabel": "Lesson 3",
@@ -801,7 +801,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l4",
+          "id": "a509aadd-1080-410b-af95-83ad974d34b3",
           "n": 4,
           "orig": 5,
           "chapterLabel": "Lesson 4",
@@ -836,7 +836,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l5",
+          "id": "ed08ecee-2c61-492b-84b6-48c1c5a84457",
           "n": 5,
           "orig": 6,
           "chapterLabel": "Lesson 5",
@@ -858,7 +858,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l6",
+          "id": "a385df56-e77b-43d9-a108-fc750d5ffa16",
           "n": 6,
           "orig": 7,
           "chapterLabel": "Lesson 6",
@@ -904,7 +904,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l7",
+          "id": "82c5319d-9c12-4b1b-a334-67c66a36bf83",
           "n": 7,
           "orig": 8,
           "chapterLabel": "Lesson 7",
@@ -957,7 +957,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l8",
+          "id": "b2df5288-8e90-4320-92b0-432112f3729f",
           "n": 8,
           "orig": 9,
           "chapterLabel": "Lesson 8",
@@ -1000,7 +1000,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l9",
+          "id": "86a9b38c-ab7a-40aa-8cd8-761a2ea5baaa",
           "n": 9,
           "orig": 10,
           "chapterLabel": "Lesson 9",
@@ -1043,7 +1043,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l10",
+          "id": "aa6359d0-db9f-46e1-97cb-2ba7e1755a7a",
           "n": 10,
           "orig": 11,
           "chapterLabel": "Lesson 10",
@@ -1071,7 +1071,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l11",
+          "id": "9d55ea45-e48c-4d7f-a243-51bbde353d26",
           "n": 11,
           "orig": 12,
           "chapterLabel": "Lesson 11",
@@ -1116,7 +1116,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l12",
+          "id": "ba4c8f87-8436-41ac-84bf-0a1e5fab5e6f",
           "n": 12,
           "orig": 13,
           "chapterLabel": "Lesson 12",
@@ -1152,7 +1152,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l13",
+          "id": "6e89385d-3551-42e8-bc33-b46ce0c379df",
           "n": 13,
           "orig": 14,
           "chapterLabel": "Lesson 13",
@@ -1193,7 +1193,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l14",
+          "id": "d5db4c1a-302b-4326-988b-3451815343b1",
           "n": 14,
           "orig": 15,
           "chapterLabel": "Lesson 14",
@@ -1239,7 +1239,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l15",
+          "id": "10b02ccf-22ca-4881-9f24-105704309d9d",
           "n": 15,
           "orig": 16,
           "chapterLabel": "Lesson 15",
@@ -1277,7 +1277,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l16",
+          "id": "a82ce347-7411-414e-b4c1-efa155a2e771",
           "n": 16,
           "orig": 17,
           "chapterLabel": "Lesson 16",
@@ -1307,7 +1307,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l17",
+          "id": "e66e2503-b642-42ab-832a-2b05cca9032c",
           "n": 17,
           "orig": 18,
           "chapterLabel": "Lesson 17",
@@ -1348,7 +1348,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l18",
+          "id": "6e23d3a8-768a-4ce4-8ad7-d1830b3aec0a",
           "n": 18,
           "orig": 19,
           "chapterLabel": "Lesson 18",
@@ -1393,7 +1393,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l19",
+          "id": "18d0aecf-e0e1-4b92-bf1d-94049b560510",
           "n": 19,
           "orig": 20,
           "chapterLabel": "Lesson 19",
@@ -1435,7 +1435,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l20",
+          "id": "3ecfc5b6-0268-48a7-a63b-f1fd6b7f327f",
           "n": 20,
           "orig": 21,
           "chapterLabel": "Lesson 20",
@@ -1474,7 +1474,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l21",
+          "id": "850498ec-324e-47c3-a066-bf4bd9079524",
           "n": 21,
           "orig": 22,
           "chapterLabel": "Lesson 21",
@@ -1516,7 +1516,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l22",
+          "id": "c384a042-1a09-4d2c-9af1-8d4ce3903384",
           "n": 22,
           "orig": 23,
           "chapterLabel": "Lesson 22",
@@ -1557,7 +1557,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l23",
+          "id": "23cd11b6-9beb-49f2-9e0b-8fdc6a2bcd50",
           "n": 23,
           "orig": 24,
           "chapterLabel": "Lesson 23",
@@ -1599,7 +1599,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l24",
+          "id": "e5131ecb-150f-4379-9464-27cc969e82e0",
           "n": 24,
           "orig": 25,
           "chapterLabel": "Lesson 24",
@@ -1680,7 +1680,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l25",
+          "id": "3c475198-6f98-4376-b76b-4c44dec95f51",
           "n": 25,
           "orig": 26,
           "chapterLabel": "Lesson 25",
@@ -1712,7 +1712,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l26",
+          "id": "009f59da-a266-4389-b789-a3a81e65332f",
           "n": 26,
           "orig": 27,
           "chapterLabel": "Lesson 26",
@@ -1757,7 +1757,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l27",
+          "id": "faa7d377-f821-4f80-94ee-d894ce44f6ba",
           "n": 27,
           "orig": 28,
           "chapterLabel": "Lesson 27",
@@ -1777,7 +1777,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l28",
+          "id": "dfbb6ec6-9c54-4b17-a2da-62af17f9e478",
           "n": 28,
           "orig": 29,
           "chapterLabel": "Lesson 28",
@@ -1869,7 +1869,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l29",
+          "id": "49b86a15-ae7e-4d18-95ab-2ab8836fa266",
           "n": 29,
           "orig": 30,
           "chapterLabel": "Lesson 29",
@@ -1938,7 +1938,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l30",
+          "id": "391997ec-11e8-4e67-95a7-86023e8dc1e9",
           "n": 30,
           "orig": 31,
           "chapterLabel": "Lesson 30",
@@ -2021,7 +2021,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l31",
+          "id": "203d7cdd-27ed-4910-8bd8-9f43fae34b48",
           "n": 31,
           "orig": 32,
           "chapterLabel": "Lesson 31",
@@ -2085,7 +2085,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l32",
+          "id": "a63899b8-a1db-498d-ac0e-023baf391660",
           "n": 32,
           "orig": 33,
           "chapterLabel": "Lesson 32",
@@ -2133,7 +2133,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l33",
+          "id": "a11ba51f-9b7b-41ad-8bf7-0a50b5ed650a",
           "n": 33,
           "orig": 34,
           "chapterLabel": "Lesson 33",
@@ -2209,7 +2209,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l34",
+          "id": "bdc98fdf-8ebc-46cc-bfb0-53197402d7b9",
           "n": 34,
           "orig": 35,
           "chapterLabel": "Lesson 34",
@@ -2275,7 +2275,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l35",
+          "id": "ea808c8e-7bb5-4e65-b425-082c569e1370",
           "n": 35,
           "orig": 36,
           "chapterLabel": "Lesson 35",
@@ -2334,7 +2334,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l36",
+          "id": "22816684-f498-4c88-9c9f-42887ff85ca8",
           "n": 36,
           "orig": 37,
           "chapterLabel": "Lesson 36",
@@ -2429,7 +2429,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l37",
+          "id": "082b1afb-adde-4f7b-a266-cc0812cd1582",
           "n": 37,
           "orig": 38,
           "chapterLabel": "Lesson 37",
@@ -2453,7 +2453,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l38",
+          "id": "075dc049-8184-4502-8751-26a57cf722a2",
           "n": 38,
           "orig": 39,
           "chapterLabel": "Lesson 38",
@@ -2507,7 +2507,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l39",
+          "id": "a6c24a5e-8e74-4e0d-b33d-069912df05c9",
           "n": 39,
           "orig": 40,
           "chapterLabel": "Lesson 39",
@@ -2585,7 +2585,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l40",
+          "id": "1b2757ad-44ec-4578-a7db-217e46fd9e37",
           "n": 40,
           "orig": 41,
           "chapterLabel": "Lesson 40",
@@ -2623,7 +2623,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l41",
+          "id": "3f9e986e-1214-4ecf-b4df-bb603eae24e2",
           "n": 41,
           "orig": 42,
           "chapterLabel": "Lesson 41",
@@ -2698,7 +2698,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l42",
+          "id": "af147641-c29c-4d53-aa84-db7d2f2cd659",
           "n": 42,
           "orig": 43,
           "chapterLabel": "Lesson 42",
@@ -2759,7 +2759,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l43",
+          "id": "30f27b42-c8c8-4d8d-a163-f25725fd4b71",
           "n": 43,
           "orig": 44,
           "chapterLabel": "Lesson 43",
@@ -2817,7 +2817,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l44",
+          "id": "48979723-1f87-4d03-a587-a0c51cac581a",
           "n": 44,
           "orig": 45,
           "chapterLabel": "Lesson 44",
@@ -2858,7 +2858,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l45",
+          "id": "fa1edd62-3edd-4f39-81c6-5994562342c4",
           "n": 45,
           "orig": 46,
           "chapterLabel": "Lesson 45",
@@ -2928,7 +2928,7 @@
           "videos": []
         },
         {
-          "id": "hsm-l46",
+          "id": "f9b14ab8-6430-4511-8276-8e09c8646b40",
           "n": 46,
           "orig": 47,
           "chapterLabel": "Lesson 46",
@@ -3046,7 +3046,7 @@
       }
     },
     {
-      "id": "cyber",
+      "id": "32356b85-8ab2-4b87-9f06-30a85eccfcb1",
       "slug": "cyber-security-awareness",
       "title": "Cyber Security Awareness",
       "subtitle": "Maritime cyber security",
@@ -3056,7 +3056,7 @@
       "statusNote": "Assigned",
       "chapters": [
         {
-          "id": "cyber-l1",
+          "id": "0a8d4c80-4654-4233-b22e-9a1e4adcf9dc",
           "n": 1,
           "orig": 3,
           "chapterLabel": "Lesson 1",
@@ -3070,7 +3070,7 @@
           ]
         },
         {
-          "id": "cyber-l2",
+          "id": "ecbfb84b-2949-4335-9376-848bd2f3c012",
           "n": 2,
           "orig": 4,
           "chapterLabel": "Lesson 2",
@@ -3084,7 +3084,7 @@
           ]
         },
         {
-          "id": "cyber-l3",
+          "id": "2a7c9c46-052e-41e3-85d4-cfc5a62026c3",
           "n": 3,
           "orig": 5,
           "chapterLabel": "Lesson 3",
@@ -3124,7 +3124,7 @@
           "videos": []
         },
         {
-          "id": "cyber-l4",
+          "id": "dde95ed9-2de2-4428-8270-4f4a2385a76e",
           "n": 4,
           "orig": 6,
           "chapterLabel": "Lesson 4",
@@ -3171,7 +3171,7 @@
           "videos": []
         },
         {
-          "id": "cyber-l5",
+          "id": "98e40ef8-88c2-4f8a-bf30-3f91ad591312",
           "n": 5,
           "orig": 7,
           "chapterLabel": "Lesson 5",
@@ -3215,7 +3215,7 @@
           "videos": []
         },
         {
-          "id": "cyber-l6",
+          "id": "9cf6b63a-5832-4fdd-ba52-ea5c497d3c31",
           "n": 6,
           "orig": 8,
           "chapterLabel": "Lesson 6",
@@ -3229,7 +3229,7 @@
           ]
         },
         {
-          "id": "cyber-l7",
+          "id": "571c2e8c-2e50-4343-b019-b4d4430bc18b",
           "n": 7,
           "orig": 9,
           "chapterLabel": "Lesson 7",
@@ -3287,7 +3287,7 @@
           "videos": []
         },
         {
-          "id": "cyber-l8",
+          "id": "c9c7306e-363f-4d2d-a7f4-47035805bb75",
           "n": 8,
           "orig": 10,
           "chapterLabel": "Lesson 8",
@@ -3301,7 +3301,7 @@
           ]
         },
         {
-          "id": "cyber-l9",
+          "id": "b282a777-6067-4f8e-afba-22788524bbf0",
           "n": 9,
           "orig": 11,
           "chapterLabel": "Lesson 9",
@@ -3315,7 +3315,7 @@
           ]
         },
         {
-          "id": "cyber-l10",
+          "id": "b31d620a-9f21-446c-be27-61796ec995f1",
           "n": 10,
           "orig": 12,
           "chapterLabel": "Lesson 10",
@@ -3363,7 +3363,7 @@
           "videos": []
         },
         {
-          "id": "cyber-l11",
+          "id": "238ad01c-193b-46d0-9f72-5047383cb23c",
           "n": 11,
           "orig": 13,
           "chapterLabel": "Lesson 11",
@@ -3406,7 +3406,7 @@
           "videos": []
         },
         {
-          "id": "cyber-l12",
+          "id": "dffdc552-99d9-43b3-bab6-62668b78d717",
           "n": 12,
           "orig": 14,
           "chapterLabel": "Lesson 12",
@@ -3430,7 +3430,7 @@
           "videos": []
         },
         {
-          "id": "cyber-l13",
+          "id": "cf65cf54-b8e1-47ed-a795-2d00c04beb29",
           "n": 13,
           "orig": 15,
           "chapterLabel": "Lesson 13",
@@ -3462,7 +3462,7 @@
           "videos": []
         },
         {
-          "id": "cyber-l14",
+          "id": "b35e16b8-c748-463d-8404-e1191ed251de",
           "n": 14,
           "orig": 16,
           "chapterLabel": "Lesson 14",
@@ -3492,7 +3492,7 @@
           "videos": []
         },
         {
-          "id": "cyber-l15",
+          "id": "5bd51f15-57ab-44ee-b96a-b30cc06f1ef6",
           "n": 15,
           "orig": 17,
           "chapterLabel": "Lesson 15",
@@ -3520,7 +3520,7 @@
           "videos": []
         },
         {
-          "id": "cyber-l16",
+          "id": "84411b87-673a-4abe-9b15-47dd89aa48ea",
           "n": 16,
           "orig": 18,
           "chapterLabel": "Lesson 16",
@@ -3543,7 +3543,7 @@
           "videos": []
         },
         {
-          "id": "cyber-l17",
+          "id": "e1e4e609-4058-4827-b54f-bfbdaf1d358f",
           "n": 17,
           "orig": 19,
           "chapterLabel": "Lesson 17",
@@ -3575,7 +3575,7 @@
           "videos": []
         },
         {
-          "id": "cyber-l18",
+          "id": "ec396150-d1af-4651-be21-450312fef986",
           "n": 18,
           "orig": 20,
           "chapterLabel": "Lesson 18",
@@ -3602,7 +3602,7 @@
           "videos": []
         },
         {
-          "id": "cyber-l19",
+          "id": "5f321967-a0b4-4408-acab-5fa5f494fb82",
           "n": 19,
           "orig": 21,
           "chapterLabel": "Lesson 19",

@@ -79,7 +79,7 @@ def get_current_user(
     if payload.get("type", "session") != "session":
         raise HTTPException(401, "Invalid token type")
         
-    user = db.get(models.User, int(payload["sub"]))
+    user = db.get(models.User, str(payload["sub"]))
     if not user or not user.is_active:
         raise HTTPException(401, "User not found or inactive")
     return user

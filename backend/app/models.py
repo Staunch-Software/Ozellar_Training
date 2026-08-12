@@ -1,6 +1,7 @@
 """SQLAlchemy models — the data model from the build plan:
 Course -> Chapter -> Block, Course -> Assessment -> Question,
 Learner -> Progress / Attempt -> Certificate."""
+import uuid
 from sqlalchemy import (
     Column, Integer, String, Text, Boolean, ForeignKey, JSON, DateTime, Date,
     UniqueConstraint, func
@@ -13,7 +14,7 @@ class User(Base):
     """Crew (learners) log in with crew_id + date of birth (DDMMYYYY);
     admins log in with email + password."""
     __tablename__ = "users"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     role = Column(String, nullable=False)              # 'learner' | 'admin'
     crew_id = Column(String, unique=True, index=True)  # learner login id
     email = Column(String, unique=True, index=True)    # admin login id
@@ -39,7 +40,7 @@ class User(Base):
 
 class Course(Base):
     __tablename__ = "courses"
-    id = Column(String, primary_key=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     slug = Column(String, unique=True, index=True, nullable=False)
     title = Column(String, nullable=False)
     subtitle = Column(String)
@@ -63,7 +64,7 @@ class Course(Base):
 
 class Chapter(Base):
     __tablename__ = "chapters"
-    id = Column(String, primary_key=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     course_id = Column(String, ForeignKey("courses.id"), nullable=False)
     n = Column(Integer)              # lesson number
     chapter_label = Column(String)
@@ -84,7 +85,7 @@ class Chapter(Base):
 
 class Question(Base):
     __tablename__ = "questions"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     course_id = Column(String, ForeignKey("courses.id"), nullable=False)
     prompt = Column(Text, nullable=False)
     options = Column(JSON)       # ["a","b","c","d"]
@@ -101,7 +102,7 @@ class ChapterQuestion(Base):
     answer/explain are safe to send to the client and there is no Attempt
     trail; a quiz chapter's 'done' state is just 'viewed', same as a lesson."""
     __tablename__ = "chapter_questions"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     chapter_id = Column(String, ForeignKey("chapters.id"), nullable=False, index=True)
     prompt = Column(Text, nullable=False)
     options = Column(JSON)
@@ -116,8 +117,8 @@ class Progress(Base):
     """One row per learner+course, tracking completed chapters and result."""
     __tablename__ = "progress"
     __table_args__ = (UniqueConstraint("learner_id", "course_id", name="uq_progress_learner_course"),)
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    learner_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    learner_id = Column(String, ForeignKey("users.id"), index=True, nullable=False)
     course_id = Column(String, ForeignKey("courses.id"), nullable=False)
     completed_chapters = Column(JSON, default=list)
     score = Column(Integer)
@@ -128,7 +129,7 @@ class Progress(Base):
 class Certificate(Base):
     __tablename__ = "certificates"
     id = Column(String, primary_key=True)   # e.g. OM-CARGO-2026-0417
-    learner_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    learner_id = Column(String, ForeignKey("users.id"), index=True, nullable=False)
     course_id = Column(String, ForeignKey("courses.id"), nullable=False)
     score = Column(Integer)
     issued_at = Column(DateTime, server_default=func.now())
@@ -147,10 +148,10 @@ class Enrollment(Base):
     are integer FKs to users.id."""
     __tablename__ = "enrollments"
     __table_args__ = (UniqueConstraint("learner_id", "course_id", name="uq_enrollment_learner_course"),)
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    learner_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    learner_id = Column(String, ForeignKey("users.id"), index=True, nullable=False)
     course_id = Column(String, ForeignKey("courses.id"), nullable=False)
-    assigned_by = Column(Integer, ForeignKey("users.id"))   # admin who assigned (nullable)
+    assigned_by = Column(String, ForeignKey("users.id"))   # admin who assigned (nullable)
     assigned_at = Column(DateTime, server_default=func.now())
 
 
@@ -159,8 +160,8 @@ class Attempt(Base):
     Progress holds the latest/best result; Attempt keeps the full history for
     compliance (score, pass/fail, timestamp) and attempt-limit enforcement."""
     __tablename__ = "attempts"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    learner_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    learner_id = Column(String, ForeignKey("users.id"), index=True, nullable=False)
     course_id = Column(String, ForeignKey("courses.id"), nullable=False)
     score = Column(Integer)
     passed = Column(Boolean, default=False)
@@ -172,7 +173,7 @@ class SyncLog(Base):
     """One row per SmartPAL crew-data sync run (see smartpal_sync.py),
     scheduled 7am/7pm IST. Written unconditionally, success or failure."""
     __tablename__ = "sync_logs"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     started_at = Column(DateTime, server_default=func.now())
     finished_at = Column(DateTime)
     status = Column(String, nullable=False)   # 'success' | 'failed' | 'partial'
@@ -186,8 +187,8 @@ class Notification(Base):
     """In-app notification for a user (course assigned, assessment result,
     certificate issued). Surfaced via the top-nav bell."""
     __tablename__ = "notifications"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    user_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = Column(String, ForeignKey("users.id"), index=True, nullable=False)
     kind = Column(String)                 # 'assigned' | 'passed' | 'failed' | 'certificate'
     title = Column(String, nullable=False)
     body = Column(String)
@@ -199,11 +200,11 @@ class Notification(Base):
 class AssessmentApproval(Base):
     """Pending approval queue: one row per passed assessment awaiting admin sign-off."""
     __tablename__ = "assessment_approvals"
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    learner_id = Column(Integer, ForeignKey("users.id"), index=True, nullable=False)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    learner_id = Column(String, ForeignKey("users.id"), index=True, nullable=False)
     course_id = Column(String, ForeignKey("courses.id"), index=True, nullable=False)
     score = Column(Integer)
-    attempt_id = Column(Integer, ForeignKey("attempts.id"))
+    attempt_id = Column(String, ForeignKey("attempts.id"))
     status = Column(String, default="pending")  # 'pending' | 'approved' | 'rejected'
     digest_sent = Column(Boolean, default=False)  # included in a digest email?
     approval_token = Column(String, unique=True, index=True)  # signed JWT for one-click action
@@ -214,6 +215,6 @@ class AssessmentApproval(Base):
 class RateLimit(Base):
     """Database-backed rate limiter for login attempts."""
     __tablename__ = "rate_limits"
-    id = Column(Integer, primary_key=True, autoincrement=True)
+    id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
     identifier = Column(String, index=True, nullable=False)
     timestamp = Column(DateTime, server_default=func.now(), nullable=False)

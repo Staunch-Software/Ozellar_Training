@@ -769,7 +769,7 @@ def approve_assessment(token: str, db: Session = Depends(get_db)):
         sub = payload.get("sub", "")
         if not sub.startswith("approve:"):
             raise ValueError()
-        ap_id = int(sub.split(":")[1])
+        ap_id = sub.split(":")[1]
     except Exception:
         return _styled_html_response("Link Expired", "This approval link is invalid or has expired.", False)
 
@@ -813,7 +813,7 @@ def preview_assessment_certificate(token: str, db: Session = Depends(get_db)):
         sub = payload.get("sub", "")
         if not sub.startswith("approve:"):
             raise ValueError()
-        ap_id = int(sub.split(":")[1])
+        ap_id = sub.split(":")[1]
     except Exception:
         raise HTTPException(400, "Invalid or expired token")
 
@@ -843,7 +843,7 @@ def reject_assessment(token: str, db: Session = Depends(get_db)):
         sub = payload.get("sub", "")
         if not sub.startswith("approve:"):
             raise ValueError()
-        ap_id = int(sub.split(":")[1])
+        ap_id = sub.split(":")[1]
     except Exception:
         return _styled_html_response("Link Expired", "This rejection link is invalid or has expired.", False)
 
@@ -1027,7 +1027,7 @@ def list_notifications(user: models.User = Depends(get_current_user), db: Sessio
 
 
 @app.post("/api/notifications/{notif_id}/read")
-def mark_notification_read(notif_id: int, user: models.User = Depends(get_current_user),
+def mark_notification_read(notif_id: str, user: models.User = Depends(get_current_user),
                            db: Session = Depends(get_db)):
     n = db.get(models.Notification, notif_id)
     if not n or n.user_id != user.id:
@@ -1155,7 +1155,7 @@ def admin_create_user(req: CreateUserRequest, admin: models.User = Depends(requi
 
 
 @app.patch("/api/admin/users/{user_id}")
-def admin_update_user(user_id: int, req: UpdateUserRequest,
+def admin_update_user(user_id: str, req: UpdateUserRequest,
                       admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
     user = db.get(models.User, user_id)
     if not user:
@@ -1175,7 +1175,7 @@ def admin_update_user(user_id: int, req: UpdateUserRequest,
 
 
 @app.post("/api/admin/users/{user_id}/courses/{course_id}/approve")
-def admin_inline_approve(user_id: int, course_id: str,
+def admin_inline_approve(user_id: str, course_id: str,
                          admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
     """Inline approval of a pending certificate from the Admin Report page."""
     ap = db.query(models.AssessmentApproval).filter_by(
@@ -1201,7 +1201,7 @@ def admin_inline_approve(user_id: int, course_id: str,
 
 @app.post("/api/admin/users/{user_id}/enrollments")
 
-def admin_assign(user_id: int, req: AssignRequest,
+def admin_assign(user_id: str, req: AssignRequest,
                  admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
     user = db.get(models.User, user_id)
     if not user or user.role != "learner":
@@ -1222,7 +1222,7 @@ def admin_assign(user_id: int, req: AssignRequest,
 
 
 @app.delete("/api/admin/users/{user_id}/enrollments/{course_id}")
-def admin_unassign(user_id: int, course_id: str,
+def admin_unassign(user_id: str, course_id: str,
                    admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
     # removing an assignment hides the course from the learner but keeps their
     # progress/attempts/certificate rows for audit
@@ -1849,7 +1849,7 @@ class CreateCourseRequest(BaseModel):
     passMark: int = 80
     maxAttempts: int | None = None
     targetRanks: list[str] = []
-    targetUsers: list[int] = []
+    targetUsers: list[str] = []
 
 
 class UpdateCourseRequest(BaseModel):
@@ -1859,7 +1859,7 @@ class UpdateCourseRequest(BaseModel):
     passMark: int
     maxAttempts: int | None = None
     targetRanks: list[str] = []
-    targetUsers: list[int] = []
+    targetUsers: list[str] = []
 
 
 class CreateQuizChapterRequest(BaseModel):
