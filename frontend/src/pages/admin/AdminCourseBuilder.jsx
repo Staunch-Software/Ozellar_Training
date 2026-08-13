@@ -824,7 +824,9 @@ function CourseSettingsModal({ course, users, onClose, onSave }) {
     setError('')
     setBusy(true)
     try {
-      await onSave({ ...form, targetRanks, targetUsers })
+      // Filter out legacy integer IDs (e.g. 294) from the old schema
+      const validTargetUsers = targetUsers.filter(u => typeof u === 'string' && u.length > 20)
+      await onSave({ ...form, targetRanks, targetUsers: validTargetUsers })
       onClose()
     } catch (err) {
       setError(err.message || 'Could not save course settings')

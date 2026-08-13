@@ -1947,7 +1947,10 @@ def admin_update_course(course_id: str, req: UpdateCourseRequest, admin: models.
     course.pass_mark = req.passMark
     course.max_attempts = req.maxAttempts
     course.target_ranks = req.targetRanks
-    course.target_users = req.targetUsers
+    
+    # Filter out legacy integer IDs (e.g., 294) to prevent database DataError
+    valid_users = [str(u) for u in req.targetUsers if isinstance(u, str) and len(str(u)) > 20]
+    course.target_users = valid_users
     
     db.commit()
     
