@@ -386,7 +386,7 @@ def serialize_course(db, course, progress, detail=False):
         if progress:
             latest = db.query(models.Attempt).filter_by(
                 learner_id=progress.learner_id, course_id=course.id
-            ).order_by(models.Attempt.id.desc()).first()
+            ).order_by(models.Attempt.created_at.desc()).first()
             if latest:
                 can_retry = False
                 if not latest.passed:
@@ -618,7 +618,7 @@ def issue_certificate(db, user, course):
     db.flush() # flush to get seq_record.id
     
     seq = seq_record.id
-    cid = f"OZ-{course.id.upper()}-{year}-{seq:04d}"
+    cid = f"OZ-{course.slug.upper()}-{year}-{seq:04d}"
     cert = models.Certificate(id=cid, learner_id=lid, course_id=course.id,
                               score=get_progress(db, lid, course.id).score)
     db.add(cert)
