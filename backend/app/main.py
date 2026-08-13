@@ -1803,13 +1803,13 @@ def _slugify(title: str) -> str:
     return re.sub(r"[^a-z0-9]+", "-", title.strip().lower()).strip("-") or "course"
 
 
-def _unique_course_id(db, base: str) -> str:
-    cid = base
+def _unique_course_slug(db, base: str) -> str:
+    slug = base
     i = 2
-    while db.get(models.Course, cid):
-        cid = f"{base}-{i}"
+    while db.query(models.Course).filter_by(slug=slug).first():
+        slug = f"{base}-{i}"
         i += 1
-    return cid
+    return slug
 
 
 def _next_chapter_order(course) -> int:
@@ -1900,17 +1900,17 @@ def admin_create_course(req: CreateCourseRequest, admin: models.User = Depends(r
     title = req.title.strip()
     if not title:
         raise HTTPException(400, "Title is required")
-    cid = _unique_course_id(db, _slugify(title))
+    c_slug = _unique_course_slug(db, _slugify(title))
     existing_orders = [c.order for c in db.query(models.Course).all()]
     course = models.Course(
-        id=cid, slug=cid, title=title, subtitle=req.subtitle,
+        slug=c_slug, title=title, subtitle=req.subtitle,
         icon=req.icon, gradient=req.gradient, duration_label=req.durationLabel,
         status="not-started", pass_mark=req.passMark, max_attempts=req.maxAttempts,
         target_ranks=req.targetRanks, target_users=req.targetUsers,
         order=(max(existing_orders) + 1) if existing_orders else 0,
     )
     db.add(course)
-    db.commit()
+    db.flush()  # Generate the UUID for course.id
 
     # Auto-enroll matching users immediately
     target_ranks = req.targetRanks or []
@@ -1922,7 +1922,7 @@ def admin_create_course(req: CreateCourseRequest, admin: models.User = Depends(r
             (func.upper(models.User.rank).in_(target_ranks_upper)) | (models.User.id.in_(target_users))
         ).all()
         for u in users_to_enroll:
-            enroll = models.Enrollment(learner_id=u.id, course_id=cid, assigned_by=admin.id)
+            enroll = models.Enrollment(learner_id=u.id, course_id=course.id, assigned_by=admin.id)
             db.add(enroll)
         db.commit()
 
