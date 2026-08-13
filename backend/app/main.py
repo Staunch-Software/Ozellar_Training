@@ -1924,8 +1924,8 @@ def admin_create_course(req: CreateCourseRequest, admin: models.User = Depends(r
         for u in users_to_enroll:
             enroll = models.Enrollment(learner_id=u.id, course_id=course.id, assigned_by=admin.id)
             db.add(enroll)
-        db.commit()
 
+    db.commit()
     db.refresh(course)
     return admin_course_summary(course)
 
