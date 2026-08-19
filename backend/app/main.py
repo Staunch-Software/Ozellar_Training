@@ -26,7 +26,8 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from .database import get_db, SessionLocal
-from . import models, email_service
+from . import models, email_service, storage
+from .video import compress_video
 from .certificates import build_certificate_pdf
 from .auth import (
     create_token, get_current_user, require_admin, user_public,
@@ -160,12 +161,11 @@ import mimetypes
 
 @app.get("/api/uploads/{course_id}/{filename}")
 async def serve_upload(course_id: str, filename: str, request: Request):
-    file_path = os.path.join(UPLOAD_DIR, course_id, filename)
-    if not os.path.exists(file_path) or not os.path.isfile(file_path):
+    file_size = storage.get_size(course_id, filename)
+    if file_size is None:
         raise HTTPException(status_code=404, detail="File not found")
 
-    file_size = os.path.getsize(file_path)
-    mime_type, _ = mimetypes.guess_type(file_path)
+    mime_type, _ = mimetypes.guess_type(filename)
     if not mime_type:
         mime_type = "application/octet-stream"
 
@@ -179,20 +179,8 @@ async def serve_upload(course_id: str, filename: str, request: Request):
             end = min(end, file_size - 1)
             chunk_size = end - start + 1
 
-            def iter_file():
-                with open(file_path, "rb") as f:
-                    f.seek(start)
-                    remaining = chunk_size
-                    while remaining > 0:
-                        read_size = min(65536, remaining)
-                        data = f.read(read_size)
-                        if not data:
-                            break
-                        remaining -= len(data)
-                        yield data
-
             return StreamingResponse(
-                iter_file(),
+                storage.stream_range(course_id, filename, start, end),
                 status_code=206,
                 media_type=mime_type,
                 headers={
@@ -204,16 +192,8 @@ async def serve_upload(course_id: str, filename: str, request: Request):
             )
 
     # No range header - serve entire file
-    def iter_full():
-        with open(file_path, "rb") as f:
-            while True:
-                data = f.read(65536)
-                if not data:
-                    break
-                yield data
-
     return StreamingResponse(
-        iter_full(),
+        storage.stream_full(course_id, filename),
         media_type=mime_type,
         headers={
             "Accept-Ranges": "bytes",
@@ -2124,12 +2104,15 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                                             vid_path = os.path.join(course_dir, vid_filename)
                                             with open(vid_path, "wb") as vf:
                                                 vf.write(media_data)
-                                            try:
-                                                from qtfaststart import processor
-                                                processor.process(vid_path, vid_path + ".tmp")
-                                                os.replace(vid_path + ".tmp", vid_path)
-                                            except Exception:
-                                                pass
+                                            final_vid_path = compress_video(vid_path)
+                                            if final_vid_path == vid_path:
+                                                try:
+                                                    from qtfaststart import processor
+                                                    processor.process(vid_path, vid_path + ".tmp")
+                                                    os.replace(vid_path + ".tmp", vid_path)
+                                                except Exception:
+                                                    pass
+                                            storage.save(course_id, vid_filename, final_vid_path)
                                             vid_url = f"/api/uploads/{course_id}/{vid_filename}"
                                             if slide_idx not in slide_videos:
                                                 slide_videos[slide_idx] = set()
@@ -2157,7 +2140,9 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                     page = doc[i]
                     pix = page.get_pixmap(dpi=150)
                     filename = f"slide{n}.png"
-                    pix.save(os.path.join(course_dir, filename))
+                    img_path = os.path.join(course_dir, filename)
+                    pix.save(img_path)
+                    storage.save(course_id, filename, img_path)
                     img_url = f"/api/uploads/{course_id}/{filename}"
                 
                 slide_title = slide_titles[i] if i < len(slide_titles) and slide_titles[i] else f"Slide {n}"
@@ -2268,18 +2253,26 @@ async def admin_upload_video(course_id: str, file: UploadFile = File(...),
     prefix = f"/api/uploads/{course_id}/video"
     existing = sum(1 for ch in course.chapters for v in (ch.videos or []) if v.startswith(prefix))
     filename = f"video{existing + 1}{ext}"
-    with open(os.path.join(course_dir, filename), "wb") as f:
+
+    raw_path = os.path.join(course_dir, f"_upload_{uuid.uuid4().hex[:8]}{ext}")
+    with open(raw_path, "wb") as f:
         shutil.copyfileobj(file.file, f)
-    
+
     if ext.lower() == ".mp4":
-        try:
-            from qtfaststart import processor
-            video_path = os.path.join(course_dir, filename)
-            processor.process(video_path, video_path + ".tmp")
-            os.replace(video_path + ".tmp", video_path)
-        except Exception as e:
-            print("qtfaststart failed:", e)
-            
+        final_path = compress_video(raw_path)
+        if final_path == raw_path:
+            # ffmpeg unavailable/failed — fall back to just relocating the moov
+            # atom so playback can still start immediately.
+            try:
+                from qtfaststart import processor
+                processor.process(raw_path, raw_path + ".tmp")
+                os.replace(raw_path + ".tmp", raw_path)
+            except Exception as e:
+                print("qtfaststart failed:", e)
+    else:
+        final_path = raw_path
+
+    storage.save(course_id, filename, final_path)
     url = f"/api/uploads/{course_id}/{filename}"
 
     if chapterId:
@@ -2387,10 +2380,7 @@ def admin_delete_chapter(course_id: str, chapter_id: str,
             r.n = i + 1
     db.commit()
     for p in files_to_remove:
-        try:
-            os.remove(os.path.join(UPLOAD_DIR, course_id, os.path.basename(p)))
-        except OSError:
-            pass
+        storage.delete(course_id, os.path.basename(p))
     return {"ok": True}
 
 
