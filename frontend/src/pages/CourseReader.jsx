@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   CheckCircle2, Circle, Play, Lock, Star, Check, Download, Info, X, Dot,
@@ -155,6 +155,8 @@ export default function CourseReader() {
   const [reached, setReached] = useState(false)   // scrolled to end of this lesson
   const [quizPassed, setQuizPassed] = useState(false) // true once all quiz questions answered correctly
   const [courseCompleted, setCourseCompleted] = useState(false) // show completion screen for no-assessment courses
+  const [videosEnded, setVideosEnded] = useState(() => new Set()) // src of videos watched through to the end
+  const videoMaxTimeRef = useRef({}) // src -> furthest currentTime legitimately reached, used to block seeking ahead
 
   useEffect(() => {
     getCourse(slug).then((c) => {
@@ -166,8 +168,16 @@ export default function CourseReader() {
 
   const ch = course?.chapters[idx]
 
-  // Reset quiz gate whenever the active chapter changes
-  useEffect(() => { setQuizPassed(false) }, [idx])
+  // Reset quiz gate and video-watch tracking whenever the active chapter changes
+  useEffect(() => {
+    setQuizPassed(false)
+    setVideosEnded(new Set())
+    videoMaxTimeRef.current = {}
+  }, [idx])
+
+  // videos must be watched through to the end (not just scrolled past) before a lesson unlocks
+  const allVideosWatched = !ch?.videos || ch.videos.length === 0 ||
+    ch.videos.every((v) => ch.done || videosEnded.has(v))
 
   // scroll-to-unlock: enable actions once the reader reaches the end of the
   // lesson (or immediately if the lesson is too short to scroll)
@@ -289,7 +299,39 @@ export default function CourseReader() {
           {/* video(s), if the lesson has any */}
           {ch.videos && ch.videos.map((v, vi) => (
             <div className="media" style={{ marginBottom: 22 }} key={v}>
-              <video controls poster={vi === 0 ? ch.image : undefined} preload="metadata">
+              <video
+                controls
+                controlsList="nodownload"
+                poster={vi === 0 ? ch.image : undefined}
+                preload="metadata"
+                onTimeUpdate={(e) => {
+                  // authoritative guard, checked on every tick regardless of cause (scrubbing,
+                  // keyboard seek, seeking while already playing) — 'onSeeking' alone can lose
+                  // the race against a concurrent play() and let a skip-ahead position stick.
+                  // Deliberately not wall-clock-based: max can only grow via small validated
+                  // increments, so idling on the page can't be cashed in as "watched" progress.
+                  if (ch.done) return
+                  const el = e.currentTarget
+                  const max = videoMaxTimeRef.current[v] || 0
+                  if (el.currentTime > max + 1) { el.currentTime = max; return }
+                  if (el.currentTime > max) videoMaxTimeRef.current[v] = el.currentTime
+                }}
+                onSeeking={(e) => {
+                  // cheap early guard so the skipped-to frame doesn't even flash on screen;
+                  // onTimeUpdate above is the authoritative backstop
+                  if (ch.done) return
+                  const el = e.currentTarget
+                  const max = videoMaxTimeRef.current[v] || 0
+                  if (el.currentTime > max + 1) el.currentTime = max
+                }}
+                onEnded={(e) => {
+                  const el = e.currentTarget
+                  const max = videoMaxTimeRef.current[v] || 0
+                  // guard against 'ended' firing off a seek-to-end rather than real playthrough
+                  if (el.duration && max < el.duration - 1.5) { el.currentTime = max; return }
+                  setVideosEnded((prev) => new Set(prev).add(v))
+                }}
+              >
                 <source src={v} type="video/mp4" />
               </video>
             </div>
@@ -346,15 +388,19 @@ export default function CourseReader() {
               <div className="gate-hint"><HelpCircle size={15} /> Answer all questions correctly to continue</div>
             )
           ) : (
-            !reached && !ch.done && (
-              <div className="gate-hint"><ArrowDown size={15} /> Scroll to the end of this lesson to continue</div>
+            !ch.done && !allVideosWatched ? (
+              <div className="gate-hint"><Play size={15} /> Watch the full video to continue</div>
+            ) : (
+              !reached && !ch.done && (
+                <div className="gate-hint"><ArrowDown size={15} /> Scroll to the end of this lesson to continue</div>
+              )
             )
           )}
 
           {/* actions */}
           <div className="lesson-actions">
             <button className="btn primary"
-              disabled={ch.kind === 'quiz' ? (!quizPassed && !ch.done) : (!reached && !ch.done)}
+              disabled={ch.kind === 'quiz' ? (!quizPassed && !ch.done) : ((!reached || !allVideosWatched) && !ch.done)}
               onClick={complete}>
               <Check size={16} /> {ch.done ? 'Completed — continue' : 'Mark complete & continue'}
             </button>
@@ -367,14 +413,14 @@ export default function CourseReader() {
             </button>
             {idx < course.chapters.length - 1 ? (
               <button className="pgbtn next"
-                disabled={ch.kind === 'quiz' ? (!quizPassed && !ch.done) : (!reached && !ch.done)}
+                disabled={ch.kind === 'quiz' ? (!quizPassed && !ch.done) : ((!reached || !allVideosWatched) && !ch.done)}
                 onClick={complete}>
                 <span className="l">Next <ChevronRight size={11} style={{ verticalAlign: -1 }} /></span>
                 <span className="tt">{course.chapters[idx + 1].title}</span>
               </button>
             ) : (
               <button className="pgbtn next"
-                disabled={ch.kind === 'quiz' ? (!quizPassed && !ch.done) : (!reached && !ch.done)}
+                disabled={ch.kind === 'quiz' ? (!quizPassed && !ch.done) : ((!reached || !allVideosWatched) && !ch.done)}
                 onClick={() => {
                   if (!ch.done) {
                     markChapterComplete(course.id, ch.id).then(async () => {
