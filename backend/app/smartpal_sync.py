@@ -69,12 +69,18 @@ def _int_list(env_name: str) -> list:
 
 
 SDC_LIST = _int_list("SMARTPAL_SDC_LIST")
-RANK_LIST = _int_list("SMARTPAL_RANK_LIST")
 
-if not SDC_LIST or not RANK_LIST:
-    print("[smartpal_sync] warning: SMARTPAL_SDC_LIST or SMARTPAL_RANK_LIST is "
-          "empty — the request will be sent with an empty list, which some "
-          "SmartPAL endpoints reject with a 500")
+# RankList is deliberately NOT configurable and always sent empty (= all
+# ranks). It used to be driven by SMARTPAL_RANK_LIST, which listed only the
+# nine officer/cadet rank ids — that silently excluded 432 of 765 crew
+# (every ETO, rating, fitter, oiler, AB, bosun, cook and trainee), and the
+# omissions only ever surfaced when someone noticed a specific name absent.
+# Same failure mode as the EmpStatus/ServiceStatus filters removed earlier.
+
+if not SDC_LIST:
+    print("[smartpal_sync] warning: SMARTPAL_SDC_LIST is empty — the request "
+          "will be sent with an empty list, which some SmartPAL endpoints "
+          "reject with a 500")
 
 
 def _request_body(offset: int, page_num: int) -> dict:
@@ -84,7 +90,7 @@ def _request_body(offset: int, page_num: int) -> dict:
     return {
         "SDCList": SDC_LIST, "CSCList": [], "OWNList": [], "EXAList": [],
         "WorkGroupList": [], "RankGroupList": [],
-        "RankList": RANK_LIST,
+        "RankList": [],                 # empty = every rank; see note above
         "NationalityList": [], "CountryofOperationId": -1,
         "VesselSubTypeList": [], "VesselList": [], "SubcompanyList": [],
         "ManagementType": "", "VesselCategoryList": [], "VesselTypeList": [],
@@ -307,21 +313,29 @@ def upsert_crew_record(db, rec: dict, now: datetime) -> str:
         smartpal_synced_at=now,
     )
 
+    # Each record gets its own SAVEPOINT. run_sync() only commits once, after
+    # the whole loop, so a bare db.rollback() here would discard every crew
+    # already upserted in this batch — one colliding record (users.crew_id is
+    # unique, and SmartPAL can hand back a duplicate/blank empNo) would wipe
+    # out hundreds of good rows and look exactly like "crew went missing".
+    # Rolling back only the savepoint drops the one bad record and keeps the rest.
     try:
-        user = db.query(models.User).filter_by(emp_id=emp_id).first()
-        if user:
-            for k, v in fields.items():
-                setattr(user, k, v)
-            db.flush()
-            return "updated"
-        else:
-            db.add(models.User(role="learner", emp_id=emp_id, is_active=True,
-                               password_hash=None, **fields))
-            db.flush()
-            return "created"
+        with db.begin_nested():
+            user = db.query(models.User).filter_by(emp_id=emp_id).first()
+            if user:
+                for k, v in fields.items():
+                    setattr(user, k, v)
+                db.flush()
+                outcome = "updated"
+            else:
+                db.add(models.User(role="learner", emp_id=emp_id, is_active=True,
+                                   password_hash=None, **fields))
+                db.flush()
+                outcome = "created"
+        return outcome
     except IntegrityError as e:
-        db.rollback()
-        print(f"[smartpal_sync] skipped empId={emp_id} empNo={rec.get('empNo')}: {e}")
+        print(f"[smartpal_sync] skipped empId={emp_id} empNo={rec.get('empNo')} "
+              f"name={full_name!r}: {e.orig}")
         return "error"
 
 
