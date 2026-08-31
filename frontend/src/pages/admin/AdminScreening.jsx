@@ -35,7 +35,12 @@ const chip = (status) => {
 
 function fmtDt(iso) {
   if (!iso) return '—'
-  try { return new Date(iso).toLocaleString('en-IN', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) }
+  try {
+    return new Date(iso).toLocaleString('en-IN', {
+      day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit',
+      timeZone: 'Asia/Kolkata',
+    }) + ' IST'
+  }
   catch { return iso }
 }
 
@@ -116,8 +121,8 @@ function CardSelect({ value, onChange, options, placeholder, icon, required }) {
 function CreateCandidateCard({ form, setForm, saving, allTests, onCreate, onCancel }) {
   const [showPw, setShowPw] = useState(false)
   return (
-    <div style={{ background:'#fff', borderRadius:16, border:'1px solid var(--border)', overflow:'hidden', boxShadow:'0 12px 32px rgba(0,0,0,.08), 0 4px 12px rgba(99,102,241,.06)', animation:'tw-in .3s ease-out' }}>
-      <div style={{ background:'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)', padding:'20px 24px', borderBottom:'1px solid rgba(99,102,241,.15)', display:'flex', alignItems:'center', gap:14 }}>
+    <div style={{ background:'#fff', borderRadius:16, border:'1px solid var(--border)', boxShadow:'0 12px 32px rgba(0,0,0,.08), 0 4px 12px rgba(99,102,241,.06)', animation:'tw-in .3s ease-out' }}>
+      <div style={{ background:'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)', padding:'20px 24px', borderRadius:'16px 16px 0 0', borderBottom:'1px solid rgba(99,102,241,.15)', display:'flex', alignItems:'center', gap:14 }}>
         <div style={{ width:40, height:40, borderRadius:12, background:'#4f46e5', display:'grid', placeItems:'center', flexShrink:0, boxShadow:'0 4px 12px rgba(79,70,229,.3)' }}>
           <User size={18} color="#fff" />
         </div>
@@ -864,7 +869,7 @@ function ResultsTab({ results, onRefresh, onError }) {
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13.5 }}>
               <thead>
                 <tr style={{ background:'var(--surface-2)', borderBottom:'1px solid var(--border)' }}>
-                  {['Name','Mobile','Test','Start','Submit','Time (min)','✓','✗','○','Score'].map(h => (
+                  {['Name','Mobile','Test','Start','Submit','Time (min)','✓','✗','○','Total Q','Score / Max'].map(h => (
                     <th key={h} style={{ padding:'14px 20px', textAlign:'left', fontWeight:700, color:'var(--text-mut)', fontSize:12, letterSpacing:'.05em', textTransform:'uppercase', whiteSpace:'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -890,7 +895,10 @@ function ResultsTab({ results, onRefresh, onError }) {
                     <td style={{ padding:'14px 20px', color:'var(--success)', fontWeight:800 }}>{r.correct}</td>
                     <td style={{ padding:'14px 20px', color:'var(--danger)', fontWeight:800 }}>{r.wrong}</td>
                     <td style={{ padding:'14px 20px', color:'var(--text-mut)' }}>{r.unanswered}</td>
-                    <td style={{ padding:'14px 20px', fontWeight:900, color:'var(--accent)', fontSize:15 }}>{r.score}</td>
+                    <td style={{ padding:'14px 20px', color:'var(--text-mut)' }}>{r.totalQuestions!=null?r.totalQuestions:'—'}</td>
+                    <td style={{ padding:'14px 20px', fontWeight:900, color:'var(--accent)', fontSize:15, whiteSpace:'nowrap' }}>
+                      {r.score}{r.maxScore!=null ? ` / ${r.maxScore}` : ''}
+                    </td>
                   </tr>
                 ))}
               </tbody>

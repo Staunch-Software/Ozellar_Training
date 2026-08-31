@@ -4,15 +4,15 @@ import { useAuth } from '../../auth.jsx'
 import * as api from '../../api.js'
 import {
   Camera, Clock, Target, ChevronRight, Upload, CheckCircle,
-  AlertTriangle, Layers, Anchor, FileText, Wifi, RotateCcw, Lock,
+  AlertTriangle, Layers, Anchor, FileText, Wifi, RotateCcw, Undo2, Lock,
   ShieldCheck, BookOpen, Award,
 } from 'lucide-react'
 
 const RULES = [
   { icon: Wifi,       text: 'Ensure a stable internet connection before starting the assessment.' },
   { icon: Camera,     text: 'Upload a clear, recent passport-size photograph for identity verification.' },
-  { icon: Layers,     text: 'Sections must be completed in order — you cannot skip or re-order them.' },
-  { icon: Lock,       text: 'Once a section is submitted you cannot return to it. Review answers before proceeding.' },
+  { icon: Lock,       text: 'Complete every required field in Personal Details before moving on — once you leave that section, you cannot come back to it.' },
+  { icon: Undo2,      text: 'After Personal Details, you can move freely between question sections, in any order, any time before you submit.' },
   { icon: Clock,      text: 'The countdown starts immediately upon clicking "Begin Assessment".' },
   { icon: RotateCcw,  text: 'Refreshing the browser will NOT reset your timer — progress is auto-saved.' },
   { icon: FileText,   text: 'Marking: +4 for correct, −1 for incorrect, 0 for unanswered.' },

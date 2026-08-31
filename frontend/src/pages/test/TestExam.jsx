@@ -4,7 +4,7 @@ import { useAuth } from '../../auth.jsx'
 import * as api from '../../api.js'
 import {
   Clock, ChevronRight, ChevronLeft, ChevronDown, AlertTriangle, CheckCircle2,
-  Anchor, BookOpen, Flag, RotateCcw, Send, User, X,
+  Anchor, BookOpen, Flag, RotateCcw, Send, User, X, Lock,
 } from 'lucide-react'
 
 /* ------------------------------------------------------------------
@@ -68,15 +68,16 @@ const LEGEND_ORDER = ['answered', 'notAnswered', 'marked', 'answeredMarked', 'no
 
 const PERSONAL_FIELDS = [
   { key: 'fullName',          label: 'Full Name',                            type: 'text',   readOnly: true },
-  { key: 'mobileNumber',      label: 'Mobile Number',                        type: 'tel' },
+  { key: 'mobileNumber',      label: 'Mobile Number',                        type: 'tel',    numeric: true },
   { key: 'instituteName',     label: 'Pre-Sea Training Institute',           type: 'text' },
   { key: 'yearOfPassing',     label: 'Year of Passing',                      type: 'number' },
-  { key: 'presseaPercentage', label: 'Pre-Sea Training %',                   type: 'number' },
+  // % or CGPA vary by institute (e.g. "78%", "8.2 CGPA"), so this is free text, not a number field.
+  { key: 'presseaPercentage', label: 'Pre-Sea Training % / CGPA',            type: 'text' },
   { key: 'class12Pcm',        label: 'Class 12 PCM %',                       type: 'number' },
   { key: 'class12English',    label: 'Class 12 English %',                   type: 'number' },
   {
     key: 'preferredShipType', label: 'Preferred Ship Type',                  type: 'select',
-    options: ['Bulk Carrier', 'Container Ship', 'Tanker (Oil)', 'Tanker (Chemical)', 'LNG/LPG Carrier', 'Offshore Vessel', 'General Cargo', 'Other'],
+    options: ['Any Type', 'Bulk Carrier', 'Container Ship', 'Tanker (Oil)', 'Tanker (Chemical)', 'LNG/LPG Carrier', 'Offshore Vessel', 'General Cargo', 'Other'],
   },
   { key: 'familyInfo',        label: 'Tell Us About Your Family',            type: 'textarea', span: 3 },
   { key: 'fiveYearGoal',      label: 'Where do you see yourself in 5 years?', type: 'textarea', span: 3 },
@@ -145,7 +146,7 @@ function CardSelect({ label, value, onChange, options = [], required }) {
 }
 
 /* ── Text / number / textarea ── */
-function Field({ label, value, onChange, readOnly, type = 'text' }) {
+function Field({ label, value, onChange, readOnly, type = 'text', numeric = false }) {
   const missing = !readOnly && (!value || String(value).trim() === '')
   const base = {
     width: '100%', padding: '9px 12px', borderRadius: 6,
@@ -154,18 +155,25 @@ function Field({ label, value, onChange, readOnly, type = 'text' }) {
     color: readOnly ? C.inkMut : C.ink,
     fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
   }
+  // Digits only — strip anything else as it's typed/pasted rather than
+  // validating after the fact, so a mobile number field can't end up with
+  // letters or symbols in it.
+  const handleChange = e => onChange?.(numeric ? e.target.value.replace(/\D/g, '') : e.target.value)
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <label style={{ fontSize: 12, fontWeight: 600, color: C.inkMut }}>
         {label} {!readOnly && <span style={{ color: C.danger }}>*</span>}
       </label>
       {type === 'textarea' ? (
-        <textarea value={value || ''} onChange={e => onChange?.(e.target.value)} rows={3}
+        <textarea value={value || ''} onChange={handleChange} rows={3}
           style={{ ...base, resize: 'vertical' }}
           onFocus={e => { e.target.style.borderColor = C.brandMid; e.target.style.boxShadow = `0 0 0 3px ${C.brandSoft}` }}
           onBlur={e => { e.target.style.borderColor = missing ? C.danger : C.line; e.target.style.boxShadow = 'none' }} />
       ) : (
-        <input type={type} value={value || ''} onChange={e => onChange?.(e.target.value)} readOnly={readOnly} style={base}
+        <input type={type} value={value || ''} onChange={handleChange} readOnly={readOnly} style={base}
+          inputMode={numeric ? 'numeric' : undefined}
+          pattern={numeric ? '[0-9]*' : undefined}
+          maxLength={numeric ? 15 : undefined}
           onFocus={e => { if (!readOnly) { e.target.style.borderColor = C.brandMid; e.target.style.boxShadow = `0 0 0 3px ${C.brandSoft}` } }}
           onBlur={e => { if (!readOnly) { e.target.style.borderColor = missing ? C.danger : C.line; e.target.style.boxShadow = 'none' } }} />
       )}
@@ -206,16 +214,25 @@ export default function TestExam() {
   const [testData,   setTestData]   = useState(null)
   const [secIdx,     setSecIdx]     = useState(() => { const v = parseInt(sessionStorage.getItem('ss_exam_section'), 10); return isNaN(v) ? 0 : v })
   const [qIdx,       setQIdx]       = useState(() => { const v = parseInt(sessionStorage.getItem('ss_exam_qidx'), 10); return isNaN(v) ? 0 : v })
+  // Sections the candidate has opened at least once — navigation among the
+  // question sections is completely free (any order, any time before
+  // submit); this only drives the "done" tick in the stepper. Personal
+  // Details is the one exception: it must be completed before you can
+  // leave it, and once left it locks — see personalLocked below.
+  const [secVisited, setSecVisited] = useState(() => {
+    try { return JSON.parse(sessionStorage.getItem('ss_exam_sec_visited') || '{}') } catch { return {} }
+  })
+  const [personalLocked, setPersonalLocked] = useState(() => sessionStorage.getItem('ss_exam_personal_locked') === '1')
   const [personalData, setPersonalData] = useState(() => { try { return JSON.parse(sessionStorage.getItem('ss_exam_personal') || '{}') } catch { return {} } })
   const [answers,    setAnswers]    = useState(() => { try { return JSON.parse(sessionStorage.getItem('ss_exam_answers') || '{}') } catch { return {} } })
   const [visited,    setVisited]    = useState(() => { try { return JSON.parse(sessionStorage.getItem('ss_exam_visited') || '{}') } catch { return {} } })
   const [marked,     setMarked]     = useState(() => { try { return JSON.parse(sessionStorage.getItem('ss_exam_marked') || '{}') } catch { return {} } })
   const [deadline,   setDeadline]   = useState(null)
   const [timeLeft,   setTimeLeft]   = useState(null)
-  const [confirming, setConfirming] = useState(null)   // null | 'section' | 'submit'
+  const [confirming, setConfirming] = useState(false)  // submit-confirmation dialog
   const [submitting, setSubmitting] = useState(false)
   const [error,      setError]      = useState('')
-  const [notice,     setNotice]     = useState('')
+  const [notice,     setNotice]     = useState('')     // blocked-navigation message
   const [photoUrl,   setPhotoUrl]   = useState(null)
 
   const submitRef = useRef(null)
@@ -261,11 +278,14 @@ export default function TestExam() {
 
   /* ── Persist ── */
   useEffect(() => { sessionStorage.setItem('ss_exam_section', secIdx) }, [secIdx])
+  useEffect(() => { setSecVisited(v => (v[secIdx] ? v : { ...v, [secIdx]: true })) }, [secIdx])
+  useEffect(() => { sessionStorage.setItem('ss_exam_sec_visited', JSON.stringify(secVisited)) }, [secVisited])
   useEffect(() => { sessionStorage.setItem('ss_exam_qidx', qIdx) }, [qIdx])
   useEffect(() => { sessionStorage.setItem('ss_exam_personal', JSON.stringify(personalData)) }, [personalData])
   useEffect(() => { sessionStorage.setItem('ss_exam_answers', JSON.stringify(answers)) }, [answers])
   useEffect(() => { sessionStorage.setItem('ss_exam_visited', JSON.stringify(visited)) }, [visited])
   useEffect(() => { sessionStorage.setItem('ss_exam_marked', JSON.stringify(marked)) }, [marked])
+  useEffect(() => { sessionStorage.setItem('ss_exam_personal_locked', personalLocked ? '1' : '0') }, [personalLocked])
 
   const sections   = testData?.sections || []
   const section    = sections[secIdx]
@@ -275,6 +295,15 @@ export default function TestExam() {
   const questions  = section?.questions || []
   const totalQ     = questions.length
   const isLastSection = secIdx === sections.length - 1
+  const personalIdx = sections.findIndex(s => s.type === 'personal_data')
+
+  // Required-field markers show on each input regardless; this also gates
+  // leaving Personal Details and gates Submit everywhere else.
+  const personalMissing = PERSONAL_FIELDS.filter(f => {
+    if (f.readOnly) return false
+    const v = personalData[f.key]
+    return !v || String(v).trim() === ''
+  })
 
   const secAnswers = (secId && answers[secId]) || []
 
@@ -295,7 +324,7 @@ export default function TestExam() {
     })
   }, [secId, qIdx, isPersonal, isCompre, totalQ])
 
-  useEffect(() => { setNotice('') }, [secIdx, qIdx])
+  useEffect(() => { setNotice('') }, [secIdx])
 
   const stateOf = useCallback((qi) => {
     const a = secAnswers[qi]
@@ -316,6 +345,25 @@ export default function TestExam() {
 
   const answeredCount = counts.answered + counts.answeredMarked
   const pct = totalQ > 0 ? Math.round((answeredCount / totalQ) * 100) : 0
+
+  // Test-wide tally for the submit-confirmation dialog — the candidate can
+  // jump between sections freely, so "answered" has to mean across the
+  // whole test by the time they hit Submit, not just the section they
+  // happen to be sitting in.
+  const overall = useMemo(() => {
+    let total = 0, answered = 0, marked_ = 0
+    for (const sec of sections) {
+      if (sec.type === 'personal_data') continue
+      const secQs = sec.questions || []
+      total += secQs.length
+      const secAns = answers[sec.id] || []
+      secQs.forEach((_, i) => {
+        if (secAns[i] !== null && secAns[i] !== undefined) answered++
+        if (marked[sec.id]?.[i]) marked_++
+      })
+    }
+    return { total, answered, unanswered: total - answered, marked: marked_ }
+  }, [sections, answers, marked])
 
   const setAnswer = (qi, ai) => setAnswers(prev => ({
     ...prev,
@@ -341,10 +389,34 @@ export default function TestExam() {
     }
   }
 
+  // Navigation among the question sections is free — any order, any number
+  // of times, right up until submit. Personal Details is the one gated,
+  // one-way exception: you cannot leave it incomplete, and once you leave
+  // it (with it complete) it locks — you cannot come back in.
+  const goToSection = (i) => {
+    if (i < 0 || i >= sections.length || i === secIdx) return
+    if (i === personalIdx && personalLocked) {
+      setNotice('Personal Details is locked once you move on from it.')
+      return
+    }
+    if (secIdx === personalIdx && personalMissing.length > 0) {
+      setNotice(`Complete all required personal details first — ${personalMissing.length} still empty.`)
+      return
+    }
+    if (secIdx === personalIdx) setPersonalLocked(true)
+    setSecIdx(i)
+    setQIdx(0)
+  }
+  const handlePrevSection = () => goToSection(secIdx - 1)
+  const handleNextSection = () => {
+    if (isLastSection) { setConfirming(true); return }
+    goToSection(secIdx + 1)
+  }
+
   /* ── Submit ── */
   const handleSubmit = useCallback(async (auto = false) => {
     if (submitting) return
-    setSubmitting(true); setConfirming(null)
+    setSubmitting(true); setConfirming(false)
     try {
       // The server grades by looking each section up by id
       // (`section_answers[section.id]`), so send a map, not a list. Every MCQ
@@ -356,7 +428,7 @@ export default function TestExam() {
         payload[sec.id] = (sec.questions || []).map((_, i) => answers[sec.id]?.[i] ?? null)
       }
       await api.screeningSubmit({ personal_data: personalData, section_answers: payload })
-      ;['ss_exam_section', 'ss_exam_qidx', 'ss_exam_personal', 'ss_exam_answers', 'ss_exam_visited', 'ss_exam_marked']
+      ;['ss_exam_section', 'ss_exam_sec_visited', 'ss_exam_personal_locked', 'ss_exam_qidx', 'ss_exam_personal', 'ss_exam_answers', 'ss_exam_visited', 'ss_exam_marked']
         .forEach(k => sessionStorage.removeItem(k))
       navigate('/test/result')
     } catch (err) { setError(err.message); setSubmitting(false) }
@@ -364,33 +436,6 @@ export default function TestExam() {
 
   // keep the auto-submit timer pointed at the latest state
   useEffect(() => { submitRef.current = handleSubmit }, [handleSubmit])
-
-  /* ── Gating ── */
-  const personalMissing = isPersonal && PERSONAL_FIELDS.filter(f => {
-    if (f.readOnly) return false
-    const v = personalData[f.key]
-    return !v || String(v).trim() === ''
-  })
-  const firstUnanswered = isPersonal ? -1 : questions.findIndex((_, i) => {
-    const a = secAnswers[i]
-    return a === null || a === undefined
-  })
-  const canProceed = isPersonal ? personalMissing.length === 0 : firstUnanswered === -1
-
-  // Drop the "still empty / still unanswered" warning as soon as it stops
-  // being true, so a stale count can't sit on screen contradicting the form.
-  useEffect(() => { if (canProceed) setNotice('') }, [canProceed])
-
-  const attemptAdvance = () => {
-    if (isPersonal) {
-      if (!canProceed) { setNotice(`Complete all required fields — ${personalMissing.length} still empty.`); return }
-    } else if (!canProceed) {
-      setNotice(`Answer all questions to continue — ${totalQ - answeredCount} remaining.`)
-      gotoQ(firstUnanswered)
-      return
-    }
-    setConfirming(isLastSection ? 'submit' : 'section')
-  }
 
   /* ── Error / loading ── */
   if (error) return (
@@ -473,11 +518,18 @@ export default function TestExam() {
         <div className="scroll" style={{ flex: 1, minWidth: 0, overflowX: 'auto', overflowY: 'hidden', display: 'flex', alignItems: 'center', padding: '0 24px', height: '100%' }}>
           {sections.map((sec, i) => {
             const active = i === secIdx
-            const done = i < secIdx
+            const done = !!secVisited[i] && !active
             const isLast = i === sections.length - 1
+            const lockedOut = i === personalIdx && personalLocked && !active
             return (
               <div key={sec.id} style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0 }}>
+                <button type="button" onClick={() => goToSection(i)}
+                  title={lockedOut ? 'Personal Details is locked once you move on' : `Go to "${sec.title}"`}
+                  style={{
+                    display: 'flex', alignItems: 'center', gap: 8, flexShrink: 0,
+                    background: 'none', border: 'none', padding: 0, font: 'inherit',
+                    cursor: lockedOut ? 'not-allowed' : 'pointer',
+                  }}>
                   <span style={{
                     width: 20, height: 20, borderRadius: '50%', display: 'grid', placeItems: 'center',
                     fontSize: 10, fontWeight: 800, flexShrink: 0,
@@ -485,12 +537,17 @@ export default function TestExam() {
                     color: active || done ? '#fff' : C.inkFaint,
                     border: `1.5px solid ${active ? C.brandMid : done ? C.ok : '#c3cec8'}`,
                   }}>
-                    {done ? <CheckCircle2 size={11} /> : i + 1}
+                    {lockedOut ? <Lock size={10} /> : done ? <CheckCircle2 size={11} /> : i + 1}
                   </span>
-                  <span style={{ fontSize: 13, fontWeight: active ? 700 : 600, color: active ? C.ink : done ? C.ok : C.inkFaint, whiteSpace: 'nowrap' }}>
+                  <span style={{
+                    fontSize: 13, fontWeight: active ? 700 : 600,
+                    color: active ? C.ink : lockedOut ? C.inkFaint : done ? C.ok : C.inkFaint,
+                    whiteSpace: 'nowrap',
+                    textDecoration: lockedOut ? 'none' : `underline solid ${C.lineSoft}`, textUnderlineOffset: 3,
+                  }}>
                     {sec.title}
                   </span>
-                </div>
+                </button>
                 {!isLast && <div style={{ width: 32, height: 2, background: done ? C.ok : C.lineSoft, margin: '0 14px', flexShrink: 0 }} />}
               </div>
             )
@@ -532,7 +589,7 @@ export default function TestExam() {
                         <CardSelect label={f.label} value={personalData[f.key]} options={f.options} required
                           onChange={v => setPersonalData(p => ({ ...p, [f.key]: v }))} />
                       ) : (
-                        <Field label={f.label} type={f.type} value={personalData[f.key]} readOnly={f.readOnly}
+                        <Field label={f.label} type={f.type} value={personalData[f.key]} readOnly={f.readOnly} numeric={f.numeric}
                           onChange={v => setPersonalData(p => ({ ...p, [f.key]: v }))} />
                       )}
                     </div>
@@ -639,7 +696,7 @@ export default function TestExam() {
           {isPersonal ? (
             <div style={{ padding: 18, fontSize: 13, color: C.inkMut, lineHeight: 1.7 }}>
               <div style={{ fontSize: 10.5, fontWeight: 700, color: C.inkFaint, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>Before you begin</div>
-              The question palette appears once you reach the first question section. Complete your personal details to continue.
+              Complete every required field here before moving on — once you leave this section you cannot come back to it.
               {personalMissing.length > 0 && (
                 <div style={{ marginTop: 14, background: C.warnSoft, border: '1px solid #f0dcae', borderRadius: 8, padding: '10px 13px', color: C.warn, fontSize: 12.5, fontWeight: 600 }}>
                   {personalMissing.length} field{personalMissing.length !== 1 ? 's' : ''} still required
@@ -705,107 +762,110 @@ export default function TestExam() {
 
           {/* Submit */}
           <div style={{ padding: 16, borderTop: `1px solid ${C.lineSoft}`, background: C.panelAlt }}>
-            <Btn variant="submit" onClick={() => setConfirming('submit')} disabled={submitting}
+            <Btn variant="submit" disabled={submitting || personalMissing.length > 0}
+              onClick={() => setConfirming(true)}
               style={{ width: '100%', justifyContent: 'center', padding: '12px' }}>
               <Send size={14} /> Submit Assessment
             </Btn>
+            {personalMissing.length > 0 && (
+              <div style={{ marginTop: 8, fontSize: 11.5, color: C.inkFaint, textAlign: 'center' }}>
+                Complete Personal Details to enable submission
+              </div>
+            )}
           </div>
         </aside>
       </div>
 
-      {/* ══ Action bar ══ */}
+      {/* ══ Action bar — section navigation is completely free: any section,
+          any order, any time before submit. Previous/Next Section jump
+          straight there; the intra-section Previous/Save & Next pair (MCQ
+          sections only) just pages through that section's own questions. ══ */}
       <footer style={{ flexShrink: 0, background: '#fff', borderTop: `1px solid ${C.line}`, padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 10 }}>
         {isPersonal ? (
-          <>
-            <div style={{ fontSize: 12.5, color: C.inkMut }}>
-              {canProceed
-                ? 'All required details captured.'
-                : `${personalMissing.length} required field${personalMissing.length !== 1 ? 's' : ''} remaining.`}
-            </div>
-            <div style={{ marginLeft: 'auto' }}>
-              <Btn variant="primary" onClick={attemptAdvance}>
-                {isLastSection ? <><Send size={14} /> Submit Assessment</> : <>Save &amp; Continue <ChevronRight size={15} /></>}
-              </Btn>
-            </div>
-          </>
+          <div style={{ fontSize: 12.5, color: C.inkMut }}>
+            {personalMissing.length === 0
+              ? 'All required details captured.'
+              : `${personalMissing.length} required field${personalMissing.length !== 1 ? 's' : ''} still empty.`}
+          </div>
         ) : (
-          <>
-            {!isCompre && (
-              <>
-                <Btn variant={marked[secId]?.[qIdx] ? 'review' : 'default'} onClick={() => { toggleMark(qIdx); if (qIdx < totalQ - 1) gotoQ(qIdx + 1) }}>
-                  <Flag size={13} /> Mark for Review &amp; Next
-                </Btn>
-                <Btn onClick={() => clearAnswer(qIdx)} disabled={secAnswers[qIdx] === null || secAnswers[qIdx] === undefined}>
-                  <RotateCcw size={13} /> Clear Response
-                </Btn>
-              </>
-            )}
+          !isCompre && (
+            <>
+              <Btn variant={marked[secId]?.[qIdx] ? 'review' : 'default'} onClick={() => { toggleMark(qIdx); if (qIdx < totalQ - 1) gotoQ(qIdx + 1) }}>
+                <Flag size={13} /> Mark for Review &amp; Next
+              </Btn>
+              <Btn onClick={() => clearAnswer(qIdx)} disabled={secAnswers[qIdx] === null || secAnswers[qIdx] === undefined}>
+                <RotateCcw size={13} /> Clear Response
+              </Btn>
+            </>
+          )
+        )}
 
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-              {!isCompre && (
-                <Btn onClick={() => gotoQ(Math.max(0, qIdx - 1))} disabled={qIdx === 0}>
-                  <ChevronLeft size={15} /> Previous
-                </Btn>
-              )}
-              {!isCompre && qIdx < totalQ - 1 ? (
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <Btn onClick={handlePrevSection} disabled={secIdx === 0 || (secIdx - 1 === personalIdx && personalLocked)}>
+            <ChevronLeft size={15} /> Previous Section
+          </Btn>
+
+          {!isPersonal && !isCompre && (
+            <>
+              <Btn onClick={() => gotoQ(Math.max(0, qIdx - 1))} disabled={qIdx === 0}>
+                <ChevronLeft size={15} /> Previous
+              </Btn>
+              {qIdx < totalQ - 1 && (
                 <Btn variant="primary" onClick={() => gotoQ(qIdx + 1)}>
                   Save &amp; Next <ChevronRight size={15} />
                 </Btn>
-              ) : (
-                <Btn variant={isLastSection ? 'submit' : 'primary'} onClick={attemptAdvance}>
-                  {isLastSection
-                    ? <><Send size={14} /> Submit Assessment</>
-                    : <>Next Section <ChevronRight size={15} /></>}
-                </Btn>
               )}
-            </div>
-          </>
-        )}
+            </>
+          )}
+
+          <Btn variant={isLastSection ? 'submit' : 'primary'} onClick={handleNextSection}
+            disabled={isLastSection && personalMissing.length > 0}>
+            {isLastSection
+              ? <><Send size={14} /> Submit Assessment</>
+              : <>Next Section <ChevronRight size={15} /></>}
+          </Btn>
+        </div>
       </footer>
 
-      {/* ══ Confirmation ══ */}
+      {/* ══ Submit confirmation ══ */}
       {confirming && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(16,24,40,.5)', display: 'grid', placeItems: 'center', zIndex: 999, padding: 20 }}>
           <div style={{ background: '#fff', borderRadius: 12, width: '100%', maxWidth: 460, boxShadow: '0 24px 64px rgba(16,24,40,.24)', overflow: 'hidden' }}>
             <div style={{ padding: '20px 24px', borderBottom: `1px solid ${C.lineSoft}`, display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 8, background: confirming === 'submit' ? C.okSoft : C.brandSoft, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-                {confirming === 'submit' ? <Send size={17} color={C.ok} /> : <ChevronRight size={19} color={C.brandMid} />}
+              <div style={{ width: 38, height: 38, borderRadius: 8, background: C.okSoft, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+                <Send size={17} color={C.ok} />
               </div>
-              <div style={{ fontSize: 16, fontWeight: 700 }}>
-                {confirming === 'submit' ? 'Submit assessment?' : `Move to ${sections[secIdx + 1]?.title || 'the next section'}?`}
-              </div>
+              <div style={{ fontSize: 16, fontWeight: 700 }}>Submit assessment?</div>
             </div>
 
             <div style={{ padding: '20px 24px' }}>
               <p style={{ margin: '0 0 16px', color: C.inkMut, fontSize: 13.5, lineHeight: 1.7 }}>
-                {confirming === 'submit'
-                  ? 'Your answers will be graded and finalised. You will not be able to return to the assessment.'
-                  : 'Once you leave this section you cannot return to it. Review your answers before continuing.'}
+                Your answers will be graded and finalised. You will not be able to return to the assessment.
               </p>
-              {!isPersonal && (
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 4 }}>
-                  {[
-                    { label: 'Answered',   value: answeredCount,          color: C.ok,     bg: C.okSoft },
-                    { label: 'Unanswered', value: totalQ - answeredCount, color: C.danger, bg: C.dangerSoft },
-                    { label: 'Marked',     value: counts.marked + counts.answeredMarked, color: C.review, bg: C.reviewSoft },
-                  ].map(s => (
-                    <div key={s.label} style={{ background: s.bg, borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
-                      <div style={{ fontSize: 19, fontWeight: 800, color: s.color, lineHeight: 1.1 }}>{s.value}</div>
-                      <div style={{ fontSize: 10.5, fontWeight: 600, color: s.color, opacity: .85, marginTop: 2 }}>{s.label}</div>
-                    </div>
-                  ))}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 4 }}>
+                {[
+                  { label: 'Answered',   value: overall.answered,   color: C.ok,     bg: C.okSoft },
+                  { label: 'Unanswered', value: overall.unanswered, color: C.danger, bg: C.dangerSoft },
+                  { label: 'Marked',     value: overall.marked,     color: C.review, bg: C.reviewSoft },
+                ].map(s => (
+                  <div key={s.label} style={{ background: s.bg, borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 19, fontWeight: 800, color: s.color, lineHeight: 1.1 }}>{s.value}</div>
+                    <div style={{ fontSize: 10.5, fontWeight: 600, color: s.color, opacity: .85, marginTop: 2 }}>{s.label}</div>
+                  </div>
+                ))}
+              </div>
+              {personalMissing.length > 0 && (
+                <div style={{ marginTop: 12, display: 'flex', alignItems: 'center', gap: 8, background: C.warnSoft, border: '1px solid #f0dcae', borderRadius: 8, padding: '9px 12px', color: C.warn, fontSize: 12.5, fontWeight: 600 }}>
+                  <AlertTriangle size={14} style={{ flexShrink: 0 }} />
+                  {personalMissing.length} personal detail field{personalMissing.length !== 1 ? 's' : ''} still empty
                 </div>
               )}
             </div>
 
             <div style={{ padding: '14px 24px', background: C.panelAlt, borderTop: `1px solid ${C.lineSoft}`, display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
-              <Btn onClick={() => setConfirming(null)} disabled={submitting}>Cancel</Btn>
-              <Btn variant={confirming === 'submit' ? 'submit' : 'primary'} disabled={submitting}
-                onClick={() => {
-                  if (confirming === 'submit') handleSubmit(false)
-                  else { setSecIdx(i => i + 1); setQIdx(0); setConfirming(null) }
-                }}>
-                {submitting ? 'Submitting…' : confirming === 'submit' ? 'Yes, submit' : 'Yes, continue'}
+              <Btn onClick={() => setConfirming(false)} disabled={submitting}>Cancel</Btn>
+              <Btn variant="submit" disabled={submitting} onClick={() => handleSubmit(false)}>
+                {submitting ? 'Submitting…' : 'Yes, submit'}
               </Btn>
             </div>
           </div>

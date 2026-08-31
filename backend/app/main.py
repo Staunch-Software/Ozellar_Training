@@ -3052,6 +3052,7 @@ def admin_screening_results(
             "unanswered": att.unanswered_count or 0,
             "score": att.score or 0,
             "maxScore": max_score,
+            "totalQuestions": total_q,
             "personalData": att.personal_data,
         })
     return rows
