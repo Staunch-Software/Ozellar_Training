@@ -207,3 +207,90 @@ export const adminUploadVideo = (courseId, file, { chapterId, title } = {}) => {
   if (title) fd.append('title', title)
   return uploadReq(`/admin/courses/${courseId}/upload-video`, fd)
 }
+
+
+// ============================================================
+// SCREENING TEST — TEST-TAKER APIs
+// ============================================================
+
+export const screeningLogin = (body) =>
+  req('/screening/login', { method: 'POST', body: JSON.stringify(body) })
+
+export const screeningGetTest = () => req('/screening/test')
+
+export const screeningStart = () => req('/screening/start', { method: 'POST' })
+
+export const screeningSubmit = (body) =>
+  req('/screening/submit', { method: 'POST', body: JSON.stringify(body) })
+
+export const screeningGetResult = () => req('/screening/result')
+
+export const screeningUploadPhoto = (file) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  return uploadReq('/screening/photo', fd)
+}
+
+/* The photo route is bearer-authenticated, so it can't be used as a plain
+   <img src>. Fetch it once and hand back an object URL (null if none on
+   record); callers are responsible for revoking it on unmount. */
+export async function screeningPhotoObjectUrl() {
+  const res = await fetch(`${API}/screening/photo`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  })
+  if (!res.ok) return null
+  return URL.createObjectURL(await res.blob())
+}
+
+
+// ============================================================
+// ADMIN — SCREENING MANAGEMENT
+// ============================================================
+
+export const adminListScreeningTests = () => req('/admin/screening/tests')
+export const adminCreateScreeningTest = (body) =>
+  req('/admin/screening/tests', { method: 'POST', body: JSON.stringify(body) })
+export const adminGetScreeningTest = (id) => req(`/admin/screening/tests/${id}`)
+export const adminUpdateScreeningTest = (id, body) =>
+  req(`/admin/screening/tests/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+export const adminToggleScreeningTest = (id) =>
+  req(`/admin/screening/tests/${id}/toggle`, { method: 'PATCH' })
+export const adminDeleteScreeningTest = (id) =>
+  req(`/admin/screening/tests/${id}`, { method: 'DELETE' })
+
+export const adminAddScreeningSection = (testId, body) =>
+  req(`/admin/screening/tests/${testId}/sections`, { method: 'POST', body: JSON.stringify(body) })
+export const adminUpdateScreeningSection = (testId, sectionId, body) =>
+  req(`/admin/screening/tests/${testId}/sections/${sectionId}`, { method: 'PATCH', body: JSON.stringify(body) })
+export const adminDeleteScreeningSection = (testId, sectionId) =>
+  req(`/admin/screening/tests/${testId}/sections/${sectionId}`, { method: 'DELETE' })
+export const adminSaveScreeningQuestions = (testId, sectionId, questions) =>
+  req(`/admin/screening/tests/${testId}/sections/${sectionId}/questions`,
+    { method: 'PUT', body: JSON.stringify({ questions }) })
+
+export const adminListScreeningCandidates = (testId) =>
+  req(`/admin/screening/candidates${testId ? `?test_id=${testId}` : ''}`)
+export const adminCreateScreeningCandidate = (body) =>
+  req('/admin/screening/candidates', { method: 'POST', body: JSON.stringify(body) })
+export const adminUpdateScreeningCandidate = (id, body) =>
+  req(`/admin/screening/candidates/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
+export const adminDeleteScreeningCandidate = (id) =>
+  req(`/admin/screening/candidates/${id}`, { method: 'DELETE' })
+
+export const adminGetScreeningResults = (testId) =>
+  req(`/admin/screening/results${testId ? `?test_id=${testId}` : ''}`)
+
+export async function adminDownloadScreeningResultsXlsx(testId) {
+  const url = `/api/admin/screening/results.xlsx${testId ? `?test_id=${testId}` : ''}`
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${getToken()}` } })
+  if (!res.ok) throw new Error('Could not download results')
+  const blob = await res.blob()
+  const objUrl = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = objUrl
+  a.download = 'screening-results.xlsx'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(objUrl)
+}

@@ -1,0 +1,7 @@
+dev.db
+sync_test*.txt
+test_out_dir/
+__pycache__/
+.env
+.pytest_cache/
+venv/

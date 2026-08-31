@@ -1,20 +1,24 @@
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { GraduationCap, User, Calendar, Mail, Lock, Anchor, AlertCircle } from 'lucide-react'
+import { GraduationCap, User, Calendar, Mail, Lock, Anchor, AlertCircle, ClipboardList, KeyRound } from 'lucide-react'
 import { ThemeToggle } from '../App.jsx'
 import { useAuth, homeFor } from '../auth.jsx'
 import { searchCrewNames } from '../api.js'
 
 export default function Login() {
   const navigate = useNavigate()
-  const { user, login } = useAuth()
+  const { user, login, screeningLogin } = useAuth()
   const [mode, setMode] = useState('crew')
   const [name, setName] = useState('')
   const [crewId, setCrewId] = useState('')
-  const [needCrewId, setNeedCrewId] = useState(false)  // revealed only on a name+DOB collision
+  const [needCrewId, setNeedCrewId] = useState(false)
   const [dob, setDob] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  // test mode
+  const [testName, setTestName] = useState('')
+  const [testPassword, setTestPassword] = useState('')
+
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -23,22 +27,16 @@ export default function Login() {
   const [activeIndex, setActiveIndex] = useState(-1)
   const nameWrapRef = useRef(null)
   const searchTimer = useRef(null)
-  const skipNextSearch = useRef(false)   // true right after picking a suggestion
+  const skipNextSearch = useRef(false)
 
   useEffect(() => { if (user) navigate(homeFor(user), { replace: true }) }, [user])
 
-  // debounced name search — min 2 chars, only while the crew name field is focused
+  // debounced name search for crew mode
   useEffect(() => {
     clearTimeout(searchTimer.current)
-    if (skipNextSearch.current) {
-      skipNextSearch.current = false
-      return
-    }
+    if (skipNextSearch.current) { skipNextSearch.current = false; return }
     const q = name.trim()
-    if (mode !== 'crew' || q.length < 1) {
-      setSuggestions([])
-      return
-    }
+    if (mode !== 'crew' || q.length < 1) { setSuggestions([]); return }
     searchTimer.current = setTimeout(() => {
       searchCrewNames(q).then((results) => {
         setSuggestions(results)
@@ -49,7 +47,6 @@ export default function Login() {
     return () => clearTimeout(searchTimer.current)
   }, [name, mode])
 
-  // close the dropdown when clicking outside the name field
   useEffect(() => {
     const onDoc = (e) => {
       if (nameWrapRef.current && !nameWrapRef.current.contains(e.target)) setShowSuggestions(false)
@@ -67,37 +64,31 @@ export default function Login() {
 
   const onNameKeyDown = (e) => {
     if (!showSuggestions || suggestions.length === 0) return
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setActiveIndex((i) => (i + 1) % suggestions.length)
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1))
-    } else if (e.key === 'Enter' && activeIndex >= 0) {
-      e.preventDefault()
-      pickSuggestion(suggestions[activeIndex])
-    } else if (e.key === 'Escape') {
-      setShowSuggestions(false)
-    }
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex((i) => (i + 1) % suggestions.length) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActiveIndex((i) => (i <= 0 ? suggestions.length - 1 : i - 1)) }
+    else if (e.key === 'Enter' && activeIndex >= 0) { e.preventDefault(); pickSuggestion(suggestions[activeIndex]) }
+    else if (e.key === 'Escape') { setShowSuggestions(false) }
   }
 
-  const switchMode = (m) => {
-    setMode(m); setError(''); setNeedCrewId(false); setCrewId('')
-  }
+  const switchMode = (m) => { setMode(m); setError(''); setNeedCrewId(false); setCrewId('') }
 
   const submit = async (e) => {
     e.preventDefault()
     setError('')
     setBusy(true)
     try {
-      const body = mode === 'crew'
-        ? { mode: 'crew', name: name.trim(), dob: dob.trim(),
-            ...(needCrewId ? { crewId: crewId.trim() } : {}) }
-        : { mode: 'admin', email: email.trim(), password }
-      const u = await login(body)
-      navigate(homeFor(u), { replace: true })
+      if (mode === 'test') {
+        const u = await screeningLogin({ name: testName.trim(), password: testPassword })
+        navigate(homeFor(u), { replace: true })
+      } else {
+        const body = mode === 'crew'
+          ? { mode: 'crew', name: name.trim(), dob: dob.trim(),
+              ...(needCrewId ? { crewId: crewId.trim() } : {}) }
+          : { mode: 'admin', email: email.trim(), password }
+        const u = await login(body)
+        navigate(homeFor(u), { replace: true })
+      }
     } catch (err) {
-      // 409 = two crew share this name + DOB; ask for Crew ID to disambiguate
       if (err.status === 409) setNeedCrewId(true)
       setError(err.message || 'Sign in failed')
     } finally {
@@ -124,12 +115,17 @@ export default function Login() {
             <span className="logo"><GraduationCap size={21} /></span> Ozellar Marine
           </div>
 
-          {/* crew / admin toggle */}
+          {/* crew / admin / test toggle */}
           <div className="segmented" role="tablist">
             <button type="button" role="tab" className={mode === 'crew' ? 'on' : ''}
               onClick={() => switchMode('crew')}>Crew</button>
             <button type="button" role="tab" className={mode === 'admin' ? 'on' : ''}
               onClick={() => switchMode('admin')}>Admin</button>
+            <button type="button" role="tab" className={mode === 'test' ? 'on' : ''}
+              onClick={() => switchMode('test')}
+              style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <ClipboardList size={13} />Test
+            </button>
           </div>
 
           {mode === 'crew' ? (
@@ -182,7 +178,7 @@ export default function Login() {
                 </div>
               )}
             </>
-          ) : (
+          ) : mode === 'admin' ? (
             <>
               <div className="field">
                 <label htmlFor="email">Email</label>
@@ -199,6 +195,31 @@ export default function Login() {
                   <input id="pw" type="password" placeholder="••••••••••" autoComplete="current-password"
                     value={password} onChange={(e) => setPassword(e.target.value)} />
                 </div>
+              </div>
+            </>
+          ) : (
+            /* Test mode */
+            <>
+              <div className="field">
+                <label htmlFor="test-name">Full name</label>
+                <div className="inputwrap">
+                  <User />
+                  <input id="test-name" type="text" placeholder="As given by your administrator"
+                    autoComplete="off"
+                    value={testName} onChange={(e) => setTestName(e.target.value)} />
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor="test-pw">Test password</label>
+                <div className="inputwrap">
+                  <KeyRound />
+                  <input id="test-pw" type="password" placeholder="••••••••••"
+                    autoComplete="off"
+                    value={testPassword} onChange={(e) => setTestPassword(e.target.value)} />
+                </div>
+              </div>
+              <div className="hint" style={{ marginTop: '-4px', marginBottom: '8px' }}>
+                Your login credentials are provided by the test administrator.
               </div>
             </>
           )}

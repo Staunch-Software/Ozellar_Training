@@ -18,7 +18,11 @@ import AdminAssignments from './pages/admin/AdminAssignments.jsx'
 import AdminReport from './pages/admin/AdminReport.jsx'
 import AdminCourses from './pages/admin/AdminCourses.jsx'
 import AdminCourseBuilder from './pages/admin/AdminCourseBuilder.jsx'
-import { AuthProvider, useAuth, ProtectedRoute, AdminRoute } from './auth.jsx'
+import AdminScreening from './pages/admin/AdminScreening.jsx'
+import TestWelcome from './pages/test/TestWelcome.jsx'
+import TestExam from './pages/test/TestExam.jsx'
+import TestResult from './pages/test/TestResult.jsx'
+import { AuthProvider, useAuth, ProtectedRoute, AdminRoute, TestRoute } from './auth.jsx'
 
 /* ---- theme ---- */
 const ThemeCtx = createContext()
@@ -99,6 +103,7 @@ function ThemeProvider({ children }) {
 
 export default function App() {
   const P = (el) => <ProtectedRoute>{el}</ProtectedRoute>
+  const T = (el) => <TestRoute>{el}</TestRoute>
   return (
     <ThemeProvider>
       <Routes>
@@ -112,6 +117,11 @@ export default function App() {
         <Route path="/course/:slug/assessment" element={P(<Assessment />)} />
         <Route path="/course/:slug/certificate" element={P(<Certificate />)} />
 
+        {/* Screening test taker routes */}
+        <Route path="/test/welcome" element={T(<TestWelcome />)} />
+        <Route path="/test/exam" element={T(<TestExam />)} />
+        <Route path="/test/result" element={T(<TestResult />)} />
+
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
@@ -119,6 +129,7 @@ export default function App() {
           <Route path="courses/:id" element={<AdminCourseBuilder />} />
           <Route path="assignments" element={<AdminAssignments />} />
           <Route path="report" element={<AdminReport />} />
+          <Route path="screening" element={<AdminScreening />} />
         </Route>
       </Routes>
     </ThemeProvider>

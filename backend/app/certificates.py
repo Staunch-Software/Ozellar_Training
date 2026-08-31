@@ -13,6 +13,7 @@ downloads.
 import io
 import os
 
+import qrcode
 from reportlab.lib.colors import HexColor
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import mm
@@ -54,6 +55,21 @@ def _blank(c, x, top, label, value, blank_w, label_size=11, value_size=11,
     c.setFont("Helvetica", value_size)
     c.drawCentredString((x + bx1) / 2, y + 1.5, value or "")
     return bx1
+
+
+def _qr_reader(url: str):
+    """Build a QR code encoding `url` and return it as an ImageReader, or
+    None if it can't be generated (e.g. no verify URL yet)."""
+    if not url:
+        return None
+    try:
+        img = qrcode.make(url, border=1)
+        buf = io.BytesIO()
+        img.save(buf, format="PNG")
+        buf.seek(0)
+        return ImageReader(buf)
+    except Exception:
+        return None
 
 
 def build_certificate_pdf(data: dict) -> bytes:
@@ -184,11 +200,22 @@ def build_certificate_pdf(data: dict) -> bytes:
     c.setFillColor(INK)
     c.drawCentredString(sign_cx, _y(231 * mm), "Course In-Charge Signature")
 
+    # QR code — bottom right, scan to verify authenticity
+    qr = _qr_reader(data.get("verifyUrl"))
+    if qr:
+        qr_size = 15 * mm
+        qr_top = 237 * mm
+        c.drawImage(qr, RIGHT - qr_size, _y(qr_top + qr_size), qr_size, qr_size)
+        c.setFont("Helvetica", 6)
+        c.setFillColor(GREY)
+        c.drawCentredString(RIGHT - qr_size / 2, _y(qr_top + qr_size + 3 * mm),
+                            "Scan to verify")
+
     # date of issue (left) + rev no (right)
     _blank(c, LEFT, 246 * mm, "Date of Issue:", data["issued"], 34 * mm, value_size=10)
     c.setFont("Helvetica", 8)
     c.setFillColor(GREY)
-    c.drawRightString(RIGHT, _y(258 * mm), "Rev No 001/2026/10-03-2026")
+    c.drawRightString(RIGHT, _y(260 * mm), "Rev No 001/2026/10-03-2026")
 
     # verification line (footer, inside border)
     c.setFont("Helvetica", 7.5)

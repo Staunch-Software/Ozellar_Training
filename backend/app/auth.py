@@ -129,3 +129,56 @@ def check_rate_limit(db: Session, identifier: str, max_attempts: int = _MAX_ATTE
 def clear_rate_limit(db: Session, identifier: str):
     db.query(models.RateLimit).filter(models.RateLimit.identifier == identifier).delete()
     db.commit()
+
+
+# ===================== SCREENING TEST AUTH =====================
+
+def create_screening_token(candidate: "models.ScreeningCandidate") -> str:
+    """Create a 24-hour JWT for a test-taker candidate."""
+    payload = {
+        "sub": str(candidate.id),
+        "role": "test_taker",
+        "name": candidate.full_name,
+        "test_id": str(candidate.test_id),
+        "type": "test_session",
+        "exp": datetime.now(timezone.utc) + timedelta(hours=24),
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
+
+
+def get_current_candidate(
+    creds: HTTPAuthorizationCredentials = Depends(bearer),
+    db: Session = Depends(get_db),
+) -> "models.ScreeningCandidate":
+    """FastAPI dependency: validates a test_session JWT and returns the candidate."""
+    if creds is None:
+        raise HTTPException(401, "Not authenticated")
+    try:
+        payload = jwt.decode(creds.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(401, "Session expired — please sign in again")
+    except jwt.PyJWTError:
+        raise HTTPException(401, "Invalid authentication token")
+    if payload.get("type") != "test_session":
+        raise HTTPException(401, "Invalid token type")
+    candidate = db.get(models.ScreeningCandidate, str(payload["sub"]))
+    if not candidate or not candidate.is_active:
+        raise HTTPException(401, "Candidate not found or inactive")
+    return candidate
+
+
+def candidate_public(c: "models.ScreeningCandidate") -> dict:
+    """Safe public representation of a screening candidate for the frontend."""
+    parts = (c.full_name or "").split()
+    initials = "".join(p[0] for p in parts[:2]).upper() or "?"
+    photo_path = os.path.join(UPLOAD_DIR, "screening_photos", f"{c.id}.jpg")
+    return {
+        "id": c.id,
+        "role": "test_taker",
+        "name": c.full_name,
+        "initials": initials,
+        "testId": str(c.test_id),
+        "mobileNumber": c.mobile_number,
+        "status": c.status,
+        "hasPhoto": os.path.exists(photo_path),
+    }

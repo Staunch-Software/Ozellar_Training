@@ -45,6 +45,9 @@ export default function Verify() {
               <div><dt>Score</dt><dd>{result.score}%</dd></div>
               <div><dt>Date of issue</dt><dd>{result.issued || '—'}</dd></div>
             </dl>
+            <a className="btn" href={`/api/verify/${result.id}/pdf`} target="_blank" rel="noopener noreferrer">
+              View / download certificate PDF
+            </a>
           </div>
         )}
 
