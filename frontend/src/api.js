@@ -220,6 +220,8 @@ export const screeningGetTest = () => req('/screening/test')
 
 export const screeningStart = () => req('/screening/start', { method: 'POST' })
 
+export const screeningTabSwitch = () => req('/screening/tab-switch', { method: 'POST' })
+
 export const screeningSubmit = (body) =>
   req('/screening/submit', { method: 'POST', body: JSON.stringify(body) })
 

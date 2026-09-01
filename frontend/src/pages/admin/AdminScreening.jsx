@@ -134,7 +134,7 @@ function CreateCandidateCard({ form, setForm, saving, allTests, onCreate, onCanc
       <form onSubmit={onCreate} style={{ padding:'28px 24px', display:'flex', flexDirection:'column', gap:20 }}>
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
           <Input label="Full Name *" type="text" placeholder="e.g. Rahul Sharma" required value={form.fullName} onChange={e => setForm(f=>({...f,fullName:e.target.value}))} style={{ padding:'12px 14px', borderRadius:10 }}/>
-          <Input label="Mobile Number" type="tel" placeholder="+91 XXXXXXXXXX" value={form.mobileNumber} onChange={e => setForm(f=>({...f,mobileNumber:e.target.value}))} style={{ padding:'12px 14px', borderRadius:10 }}/>
+          <Input label="Mobile Number" type="tel" inputMode="numeric" pattern="[0-9]{10}" maxLength={10} placeholder="XXXXXXXXXX" value={form.mobileNumber} onChange={e => setForm(f=>({...f,mobileNumber:e.target.value.replace(/\D/g,'').slice(0,10)}))} style={{ padding:'12px 14px', borderRadius:10 }}/>
         </div>
 
         <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
@@ -804,7 +804,7 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13.5 }}>
               <thead>
                 <tr style={{ background:'var(--surface-2)', borderBottom:'1px solid var(--border)' }}>
-                  {['Name','Mobile','Test','Status','Started','Submitted','Score',''].map(h => (
+                  {['Name','Mobile','Test','Status','Started','Submitted','Score','Tab Sw.',''].map(h => (
                     <th key={h} style={{ padding:'14px 20px', textAlign:'left', fontWeight:700, color:'var(--text-mut)', fontSize:12, letterSpacing:'.05em', textTransform:'uppercase', whiteSpace:'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -828,6 +828,7 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
                     <td style={{ padding:'14px 20px', color:'var(--text-mut)', fontSize:12.5, whiteSpace:'nowrap' }}>{fmtDt(c.startedAt)}</td>
                     <td style={{ padding:'14px 20px', color:'var(--text-mut)', fontSize:12.5, whiteSpace:'nowrap' }}>{fmtDt(c.submittedAt)}</td>
                     <td style={{ padding:'14px 20px', fontWeight:800, color: c.score!=null ? 'var(--accent)' : 'var(--text-faint)', fontSize:14 }}>{c.score!=null?c.score:'—'}</td>
+                    <td style={{ padding:'14px 20px' }}>{tabSwitchBadge(c.tabSwitchCount)}</td>
                     <td style={{ padding:'14px 20px', textAlign:'right' }}>
                       <button className="iconbtn" onClick={() => del(c.id)} title="Delete Candidate"><Trash2 size={15} color="var(--danger)"/></button>
                     </td>
@@ -839,6 +840,24 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
         )}
       </Card>
     </div>
+  )
+}
+
+// Tab-switch count badge — plain and quiet under 3, red/urgent at 3+ so an
+// admin scanning the table can spot likely cheating attempts at a glance.
+function tabSwitchBadge(count) {
+  if (!count) return <span style={{ color:'var(--text-faint)' }}>—</span>
+  const flagged = count >= 3
+  return (
+    <span style={{
+      display:'inline-flex', alignItems:'center', gap:5, padding:'3px 9px', borderRadius:999,
+      fontSize:12.5, fontWeight:800,
+      color: flagged ? '#fff' : 'var(--warn, #9c5b12)',
+      background: flagged ? 'var(--danger, #b23b2e)' : 'var(--warn-weak, #fbeedb)',
+    }}>
+      {flagged && <AlertTriangle size={12}/>}
+      {count}
+    </span>
   )
 }
 
@@ -915,7 +934,7 @@ function ResultsTab({ results, onRefresh, onError }) {
             <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13.5 }}>
               <thead>
                 <tr style={{ background:'var(--surface-2)', borderBottom:'1px solid var(--border)' }}>
-                  {['Name','Mobile','Test','Start','Submit','Time (min)','✓','✗','○','Total Q','Score / Max'].map(h => (
+                  {['Name','Mobile','Test','Start','Submit','Time (min)','✓','✗','○','Total Q','Score / Max','Tab Sw.'].map(h => (
                     <th key={h} style={{ padding:'14px 20px', textAlign:'left', fontWeight:700, color:'var(--text-mut)', fontSize:12, letterSpacing:'.05em', textTransform:'uppercase', whiteSpace:'nowrap' }}>{h}</th>
                   ))}
                 </tr>
@@ -945,6 +964,7 @@ function ResultsTab({ results, onRefresh, onError }) {
                     <td style={{ padding:'14px 20px', fontWeight:900, color:'var(--accent)', fontSize:15, whiteSpace:'nowrap' }}>
                       {r.score}{r.maxScore!=null ? ` / ${r.maxScore}` : ''}
                     </td>
+                    <td style={{ padding:'14px 20px' }}>{tabSwitchBadge(r.tabSwitchCount)}</td>
                   </tr>
                 ))}
               </tbody>

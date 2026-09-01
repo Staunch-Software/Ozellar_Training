@@ -237,6 +237,8 @@ export default function TestExam() {
   const [error,      setError]      = useState('')
   const [notice,     setNotice]     = useState('')     // blocked-navigation message
   const [photoUrl,   setPhotoUrl]   = useState(null)
+  const [tabSwitchCount, setTabSwitchCount] = useState(0)
+  const [tabWarning, setTabWarning] = useState('')      // separate from `notice` so it survives section changes
 
   const submitRef = useRef(null)
 
@@ -256,6 +258,7 @@ export default function TestExam() {
       setDeadline(Date.now() + left * 1000)
       setTimeLeft(left)
       setPersonalData(p => ({ ...p, fullName: user?.name || p.fullName || '' }))
+      setTabSwitchCount(data.attempt?.tabSwitchCount || 0)
     }).catch(err => setError('Could not load the assessment: ' + err.message))
   }, [])
 
@@ -299,6 +302,32 @@ export default function TestExam() {
   const totalQ     = questions.length
   const isLastSection = secIdx === sections.length - 1
   const personalIdx = sections.findIndex(s => s.type === 'personal_data')
+
+  /* ── Tab/window-switch detection. The browser can't block a candidate from
+     leaving the tab or asking someone/something else off-screen, but it can
+     notice and record it — the count is persisted server-side (survives a
+     refresh) and shown to admins for manual review.
+
+     Only counts once Personal Details is done: that section is just a form,
+     not a question section, so leaving the tab there isn't cheating — this
+     starts tracking only once the candidate is into the actual test. ── */
+  const isPersonalRef = useRef(isPersonal)
+  useEffect(() => { isPersonalRef.current = isPersonal })
+
+  useEffect(() => {
+    if (!testData) return
+    const onVisibility = () => {
+      if (isPersonalRef.current) return
+      if (document.visibilityState !== 'visible') {
+        api.screeningTabSwitch()
+          .then(r => setTabSwitchCount(r.tabSwitchCount))
+          .catch(() => {})
+        setTabWarning('You switched away from the assessment tab. This has been recorded and is visible to the administrator.')
+      }
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [testData])
 
   // Required-field markers show on each input regardless; this also gates
   // leaving Personal Details and gates Submit everywhere else.
@@ -569,12 +598,24 @@ export default function TestExam() {
         </div>
       </div>
 
-      {/* ══ Body ══ */}
+      {/* ══ Body — the right rail runs the full height down to the bottom of
+          the window, so the action bar below only spans the question column
+          and Submit sits alone at the foot of the rail, well clear of the
+          Next / Save & Next buttons. ══ */}
       <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
 
-        {/* ── Question column ── */}
+        {/* ── Question column + its action bar ── */}
+        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div className="scroll" style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 24px', minWidth: 0 }}>
           <div style={{ maxWidth: 880, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+            {tabWarning && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: C.dangerSoft, border: '1px solid #edc4bb', borderRadius: 8, padding: '11px 15px', color: C.danger, fontSize: 13.5, fontWeight: 600 }}>
+                <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                {tabWarning}
+                <button onClick={() => setTabWarning('')} style={{ marginLeft: 'auto', background: 'none', border: 'none', cursor: 'pointer', color: 'inherit', display: 'grid', placeItems: 'center' }}><X size={14} /></button>
+              </div>
+            )}
 
             {notice && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: C.warnSoft, border: `1px solid #f0dcae`, borderRadius: 8, padding: '11px 15px', color: C.warn, fontSize: 13.5, fontWeight: 600 }}>
@@ -678,16 +719,18 @@ export default function TestExam() {
                       })}
                     </div>
 
-                    {isCompre && (
-                      <div style={{ display: 'flex', gap: 9, marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.lineSoft}` }}>
-                        <Btn variant={isM ? 'review' : 'default'} onClick={() => toggleMark(qi)}>
-                          <Flag size={13} /> {isM ? 'Unmark' : 'Mark for Review'}
-                        </Btn>
-                        <Btn onClick={() => clearAnswer(qi)} disabled={sel === null || sel === undefined}>
-                          <RotateCcw size={13} /> Clear Response
-                        </Btn>
-                      </div>
-                    )}
+                    {/* Mark/Clear live under the question itself rather than in the
+                        footer — they act on this specific question, so they read
+                        more clearly here, and it keeps the footer to just the
+                        section/question navigation buttons. */}
+                    <div style={{ display: 'flex', gap: 9, marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.lineSoft}` }}>
+                      <Btn variant={isM ? 'review' : 'default'} onClick={() => toggleMark(qi)}>
+                        <Flag size={13} /> {isM ? 'Unmark' : 'Mark for Review'}
+                      </Btn>
+                      <Btn onClick={() => clearAnswer(qi)} disabled={sel === null || sel === undefined}>
+                        <RotateCcw size={13} /> Clear Response
+                      </Btn>
+                    </div>
                   </div>
                 </div>
               )
@@ -695,7 +738,89 @@ export default function TestExam() {
           </div>
         </div>
 
-        {/* ── Right rail ── */}
+        {/* ══ Action bar — spans only the question column now that the rail
+            runs full height, so it never sits alongside Submit. Section
+            navigation is completely free: any section, any order, any time
+            before submit. Previous/Next Section sit on the left since they're
+            the primary way to move around the test; the intra-section
+            Previous/Save & Next pair (MCQ sections only) pages through that
+            section's own questions and stays on the right. Wraps to a second
+            row rather than overflowing when the column gets narrow. ══ */}
+        <footer style={{ flexShrink: 0, background: '#fff', borderTop: `1px solid ${C.line}`, padding: '12px 24px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+          {isPersonal ? (
+            <>
+              <div style={{ fontSize: 12.5, color: C.inkMut }}>
+                {personalMissing.length === 0
+                  ? 'All required details captured.'
+                  : `${personalMissing.length} required field${personalMissing.length !== 1 ? 's' : ''} still empty.`}
+              </div>
+              <div style={{ marginLeft: 'auto' }}>
+                <Btn variant="primary" onClick={handleNextSection} disabled={isLastSection}>
+                  Next Section <ChevronRight size={15} />
+                </Btn>
+              </div>
+            </>
+          ) : isCompre ? (
+            /* Comprehension sections show every question on one page — there's
+               no per-question "next" to page through, so unlike the MCQ branch
+               below, this is a single, unambiguous forward action (mirrors the
+               Personal Details footer): Next Section. Submitting itself only
+               ever happens from the button at the foot of the rail. */
+            <>
+              <Btn onClick={handlePrevSection} disabled={secIdx === 0 || (secIdx - 1 === personalIdx && personalLocked)}>
+                <ChevronLeft size={15} /> Previous Section
+              </Btn>
+              <div style={{ marginLeft: 'auto' }}>
+                <Btn variant="primary" onClick={handleNextSection} disabled={isLastSection}>
+                  Next Section <ChevronRight size={15} />
+                </Btn>
+              </div>
+            </>
+          ) : (
+            <>
+              <Btn onClick={handlePrevSection} disabled={secIdx === 0 || (secIdx - 1 === personalIdx && personalLocked)}>
+                <ChevronLeft size={15} /> Previous Section
+              </Btn>
+              {/* Secondary styling — Save & Next is the primary way through a
+                  section; jumping sections outright is a less common action and
+                  shouldn't compete with it. Disabled outright once there's no next
+                  section to jump to — submitting happens from the rail. */}
+              <Btn onClick={handleNextSection} disabled={isLastSection}>
+                Next Section <ChevronRight size={15} />
+              </Btn>
+
+              {/* Previous/Save & Next: pages through this section's own questions.
+                  Mark for Review and Clear Response live under the question
+                  itself now (see the question card above), so this bar is just
+                  navigation. On the last question this becomes "Save & Next
+                  Section" (jumps straight there); on the last question of the
+                  last section there's nowhere left to advance to, so it's just
+                  disabled — submitting only ever happens from the rail. */}
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <Btn onClick={() => gotoQ(Math.max(0, qIdx - 1))} disabled={qIdx === 0}>
+                  <ChevronLeft size={15} /> Previous
+                </Btn>
+                {qIdx < totalQ - 1 ? (
+                  <Btn variant="primary" onClick={() => { unmark(qIdx); gotoQ(qIdx + 1) }}>
+                    Save &amp; Next <ChevronRight size={15} />
+                  </Btn>
+                ) : isLastSection ? (
+                  <Btn variant="primary" disabled>
+                    Save &amp; Next <ChevronRight size={15} />
+                  </Btn>
+                ) : (
+                  <Btn variant="primary" onClick={() => { unmark(qIdx); handleNextSection() }}>
+                    Save &amp; Next Section <ChevronRight size={15} />
+                  </Btn>
+                )}
+              </div>
+            </>
+          )}
+        </footer>
+        </div>
+
+        {/* ── Right rail — full window height, so Submit sits below the
+            action bar rather than beside it ── */}
         <aside style={{ width: 296, flexShrink: 0, background: '#fff', borderLeft: `1px solid ${C.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
 
           {/* Candidate */}
@@ -712,6 +837,21 @@ export default function TestExam() {
               <div style={{ fontSize: 11.5, color: C.inkFaint, marginTop: 1 }}>Section {secIdx + 1} of {sections.length}</div>
             </div>
           </div>
+
+          {/* Tab-switch counter — turns red at 3+ so the candidate feels the
+              same pressure an admin reviewing it later will see. */}
+          {tabSwitchCount > 0 && (
+            <div style={{
+              margin: '10px 18px 0', padding: '8px 12px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8,
+              background: tabSwitchCount >= 3 ? C.dangerSoft : C.warnSoft,
+              border: `1px solid ${tabSwitchCount >= 3 ? '#edc4bb' : '#f0dcae'}`,
+            }}>
+              <AlertTriangle size={13} color={tabSwitchCount >= 3 ? C.danger : C.warn} style={{ flexShrink: 0 }} />
+              <span style={{ fontSize: 11.5, fontWeight: 700, color: tabSwitchCount >= 3 ? C.danger : C.warn }}>
+                Tab switches: {tabSwitchCount}
+              </span>
+            </div>
+          )}
 
           {isPersonal ? (
             <div style={{ padding: 18, fontSize: 13, color: C.inkMut, lineHeight: 1.7 }}>
@@ -780,8 +920,11 @@ export default function TestExam() {
             </>
           )}
 
-          {/* Submit */}
-          <div style={{ padding: 16, borderTop: `1px solid ${C.lineSoft}`, background: C.panelAlt }}>
+          {/* Submit — the one and only submit control, pinned to the foot of
+              the rail. The rail runs the full window height, so this sits
+              below the action bar rather than beside it and can't be hit by
+              someone reaching for Next / Save & Next. */}
+          <div style={{ marginTop: 'auto', padding: 16, borderTop: `1px solid ${C.lineSoft}`, background: C.panelAlt }}>
             <Btn variant="submit" disabled={submitting || personalMissing.length > 0}
               onClick={() => setConfirming(true)}
               style={{ width: '100%', justifyContent: 'center', padding: '12px' }}>
@@ -795,81 +938,6 @@ export default function TestExam() {
           </div>
         </aside>
       </div>
-
-      {/* ══ Action bar — section navigation is completely free: any section,
-          any order, any time before submit. Previous/Next Section sit on the
-          left since they're the primary way to move around the test; the
-          intra-section Previous/Save & Next pair (MCQ sections only) pages
-          through that section's own questions and stays on the right. ══ */}
-      <footer style={{ flexShrink: 0, background: '#fff', borderTop: `1px solid ${C.line}`, padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 10 }}>
-        {isPersonal ? (
-          <>
-            <div style={{ fontSize: 12.5, color: C.inkMut }}>
-              {personalMissing.length === 0
-                ? 'All required details captured.'
-                : `${personalMissing.length} required field${personalMissing.length !== 1 ? 's' : ''} still empty.`}
-            </div>
-            <div style={{ marginLeft: 'auto' }}>
-              <Btn variant={isLastSection ? 'submit' : 'primary'} onClick={handleNextSection}
-                disabled={isLastSection && personalMissing.length > 0}>
-                {isLastSection
-                  ? <><Send size={14} /> Submit Assessment</>
-                  : <>Next Section <ChevronRight size={15} /></>}
-              </Btn>
-            </div>
-          </>
-        ) : (
-          <>
-            <Btn onClick={handlePrevSection} disabled={secIdx === 0 || (secIdx - 1 === personalIdx && personalLocked)}>
-              <ChevronLeft size={15} /> Previous Section
-            </Btn>
-            {/* Secondary styling — Save & Next (or the section/submit button that
-                takes its place on the last question) is the primary way through a
-                section; jumping sections outright is a less common action and
-                shouldn't compete with it. Disabled outright once there's no next
-                section to jump to — submitting happens on the right/aside instead. */}
-            <Btn onClick={handleNextSection} disabled={isLastSection}>
-              Next Section <ChevronRight size={15} />
-            </Btn>
-
-            {!isCompre && (
-              <>
-                <Btn variant={marked[secId]?.[qIdx] ? 'review' : 'default'} onClick={() => { toggleMark(qIdx); if (qIdx < totalQ - 1) gotoQ(qIdx + 1) }}>
-                  <Flag size={13} /> Mark for Review &amp; Next
-                </Btn>
-                <Btn onClick={() => clearAnswer(qIdx)} disabled={secAnswers[qIdx] === null || secAnswers[qIdx] === undefined}>
-                  <RotateCcw size={13} /> Clear Response
-                </Btn>
-              </>
-            )}
-
-            {/* Previous/Save & Next: pages through this section's own questions.
-                In a comprehension section every question is already on screen, so
-                this just scrolls to the next one (same as clicking its palette dot).
-                On the last question of a section this becomes "Save & Next Section"
-                (jumps straight there); on the last question of the last section it
-                becomes the Submit trigger instead, since there's nowhere left to go. */}
-            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <Btn onClick={() => gotoQ(Math.max(0, qIdx - 1))} disabled={qIdx === 0}>
-                <ChevronLeft size={15} /> Previous
-              </Btn>
-              {qIdx < totalQ - 1 ? (
-                <Btn variant="primary" onClick={() => { unmark(qIdx); gotoQ(qIdx + 1) }}>
-                  Save &amp; Next <ChevronRight size={15} />
-                </Btn>
-              ) : isLastSection ? (
-                <Btn variant="submit" onClick={() => { unmark(qIdx); setConfirming(true) }} disabled={personalMissing.length > 0}>
-                  <Send size={14} /> Submit Assessment
-                </Btn>
-              ) : (
-                <Btn variant="primary" onClick={() => { unmark(qIdx); handleNextSection() }}>
-                  Save &amp; Next Section <ChevronRight size={15} />
-                </Btn>
-              )}
-            </div>
-          </>
-        )}
-      </footer>
 
       {/* ══ Submit confirmation ══ */}
       {confirming && (

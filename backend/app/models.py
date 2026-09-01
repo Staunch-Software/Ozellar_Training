@@ -312,5 +312,6 @@ class ScreeningAttempt(Base):
     wrong_count = Column(Integer, default=0)
     unanswered_count = Column(Integer, default=0)
     photo_path = Column(String)       # relative path to candidate passport photo
+    tab_switch_count = Column(Integer, default=0)  # times the candidate left the exam tab/window
 
     candidate = relationship("ScreeningCandidate", back_populates="attempt")

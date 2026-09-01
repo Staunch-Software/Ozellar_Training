@@ -2545,6 +2545,7 @@ def screening_get_test(
             "startedAt": attempt.started_at.isoformat() if attempt else None,
             "submittedAt": attempt.submitted_at.isoformat() if attempt and attempt.submitted_at else None,
             "status": candidate.status,
+            "tabSwitchCount": attempt.tab_switch_count or 0,
         } if attempt else None,
     }
 
@@ -2568,6 +2569,22 @@ def screening_start(
     db.commit()
     db.refresh(attempt)
     return {"startedAt": attempt.started_at.isoformat(), "ok": True}
+
+
+@app.post("/api/screening/tab-switch")
+def screening_tab_switch(
+    candidate: models.ScreeningCandidate = Depends(get_current_candidate),
+    db: Session = Depends(get_db),
+):
+    """Record one instance of the candidate leaving the exam tab/window."""
+    if candidate.status == "submitted":
+        raise HTTPException(403, "Test already submitted")
+    attempt = candidate.attempt
+    if not attempt:
+        raise HTTPException(400, "Test not started")
+    attempt.tab_switch_count = (attempt.tab_switch_count or 0) + 1
+    db.commit()
+    return {"tabSwitchCount": attempt.tab_switch_count}
 
 
 @app.post("/api/screening/photo")
@@ -2979,6 +2996,7 @@ def admin_list_candidates(
             "startedAt": att.started_at.isoformat() if att and att.started_at else None,
             "submittedAt": att.submitted_at.isoformat() if att and att.submitted_at else None,
             "score": att.score if att else None,
+            "tabSwitchCount": att.tab_switch_count or 0 if att else 0,
         })
     return result
 
@@ -3080,6 +3098,7 @@ def admin_screening_results(
             "maxScore": max_score,
             "totalQuestions": total_q,
             "personalData": att.personal_data,
+            "tabSwitchCount": att.tab_switch_count or 0,
         })
     return rows
 
