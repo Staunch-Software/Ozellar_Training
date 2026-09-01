@@ -270,7 +270,7 @@ class ScreeningQuestion(Base):
     prompt = Column(Text, nullable=False)
     options = Column(JSON)      # ["option a", "option b", "option c", "option d"]
     answer = Column(Integer)    # 0-based index of the correct option
-    image_url = Column(String)  # optional image path (for visual/reasoning questions)
+    image_urls = Column(JSON)   # optional list of image paths, shown labelled a/b/c/... (visual/reasoning questions)
     order = Column(Integer, default=0)
 
     section = relationship("ScreeningSection", back_populates="questions")

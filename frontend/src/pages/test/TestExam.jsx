@@ -23,6 +23,9 @@ import {
 
 const PAD = n => String(n).padStart(2, '0')
 
+// Lowercase letters label each image on a question: a, b, c, ... z, aa, ab, ...
+const imageLabel = (i) => (i < 26 ? String.fromCharCode(97 + i) : imageLabel(Math.floor(i / 26) - 1) + imageLabel(i % 26))
+
 /* ------------------------------------------------------------------
    Visual identity: the same deep-navy / brass language as the login
    and welcome screens (Anchor mark, navy gradient chrome) rather than
@@ -381,6 +384,14 @@ export default function TestExam() {
     return { ...prev, [secId]: cur }
   })
 
+  // Plain Save & Next commits the answer and drops any review flag — Mark
+  // for Review & Next is the only action that leaves a question marked.
+  const unmark = (qi) => setMarked(prev => {
+    const cur = { ...(prev[secId] || {}) }
+    delete cur[qi]
+    return { ...prev, [secId]: cur }
+  })
+
   const gotoQ = (qi) => {
     setQIdx(qi)
     if (isCompre) {
@@ -621,7 +632,7 @@ export default function TestExam() {
                     </span>
                     {isM && (
                       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 11, fontWeight: 700, color: C.review, background: C.reviewSoft, border: '1px solid #d7c2f7', padding: '2px 9px', borderRadius: 20 }}>
-                        <Flag size={10} /> Marked for review
+                        <Flag size={10} /> {sel !== null && sel !== undefined ? 'Answered & marked for review' : 'Marked for review'}
                       </span>
                     )}
                     <span style={{ marginLeft: 'auto', fontSize: 11.5, fontWeight: 600, color: C.inkFaint }}>
@@ -631,8 +642,17 @@ export default function TestExam() {
 
                   <div style={{ padding: '20px 22px' }}>
                     <p style={{ margin: '0 0 18px', fontSize: 15.5, fontWeight: 600, lineHeight: 1.65, color: C.ink, whiteSpace: 'pre-wrap' }}>{q.prompt}</p>
-                    {q.imageUrl && (
-                      <img src={q.imageUrl} alt="" style={{ maxWidth: '100%', borderRadius: 8, border: `1px solid ${C.line}`, marginBottom: 18 }} />
+                    {(q.imageUrls || []).length > 0 && (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 14, marginBottom: 18 }}>
+                        {q.imageUrls.map((url, imgIdx) => (
+                          <div key={imgIdx} style={{ position: 'relative' }}>
+                            <img src={url} alt={`Figure ${imageLabel(imgIdx)}`} style={{ display: 'block', maxWidth: 320, maxHeight: 320, borderRadius: 8, border: `1px solid ${C.line}` }} />
+                            <span style={{ position: 'absolute', top: 6, left: 6, width: 22, height: 22, borderRadius: 6, background: 'rgba(16,31,43,.78)', color: '#fff', fontSize: 12, fontWeight: 800, display: 'grid', placeItems: 'center' }}>
+                              {imageLabel(imgIdx)}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                     )}
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 9 }}>
                       {(q.options || []).map((opt, oi) => {
@@ -715,7 +735,7 @@ export default function TestExam() {
                       <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 7, fontSize: 11.5, color: C.inkMut, fontWeight: 500 }}>
                         <span style={{ position: 'relative', width: 18, height: 18, borderRadius: '50%', background: s.bg, border: `1px solid ${s.bd}`, color: s.fg, display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 800, flexShrink: 0 }}>
                           {counts[k]}
-                          {s.dot && <span style={{ position: 'absolute', top: -2, right: -2, width: 7, height: 7, borderRadius: '50%', background: C.ok, border: '1.5px solid #fff' }} />}
+                          {s.dot && <span style={{ position: 'absolute', top: -3, right: -3, width: 10, height: 10, borderRadius: '50%', background: C.ok, border: '2px solid #fff', boxShadow: '0 0 0 1px ' + C.ok }} />}
                         </span>
                         <span style={{ lineHeight: 1.25 }}>{s.label}</span>
                       </div>
@@ -751,7 +771,7 @@ export default function TestExam() {
                           outline: cur ? `2.5px solid ${C.brandMid}` : 'none', outlineOffset: 2,
                         }}>
                         {qi + 1}
-                        {s.dot && <span style={{ position: 'absolute', top: -2, right: -1, width: 8, height: 8, borderRadius: '50%', background: C.ok, border: '1.5px solid #fff' }} />}
+                        {s.dot && <span style={{ position: 'absolute', top: -3, right: -2, width: 11, height: 11, borderRadius: '50%', background: C.ok, border: '2px solid #fff', boxShadow: '0 0 0 1px ' + C.ok }} />}
                       </button>
                     )
                   })}
@@ -777,54 +797,78 @@ export default function TestExam() {
       </div>
 
       {/* ══ Action bar — section navigation is completely free: any section,
-          any order, any time before submit. Previous/Next Section jump
-          straight there; the intra-section Previous/Save & Next pair (MCQ
-          sections only) just pages through that section's own questions. ══ */}
+          any order, any time before submit. Previous/Next Section sit on the
+          left since they're the primary way to move around the test; the
+          intra-section Previous/Save & Next pair (MCQ sections only) pages
+          through that section's own questions and stays on the right. ══ */}
       <footer style={{ flexShrink: 0, background: '#fff', borderTop: `1px solid ${C.line}`, padding: '12px 24px', display: 'flex', alignItems: 'center', gap: 10 }}>
         {isPersonal ? (
-          <div style={{ fontSize: 12.5, color: C.inkMut }}>
-            {personalMissing.length === 0
-              ? 'All required details captured.'
-              : `${personalMissing.length} required field${personalMissing.length !== 1 ? 's' : ''} still empty.`}
-          </div>
+          <>
+            <div style={{ fontSize: 12.5, color: C.inkMut }}>
+              {personalMissing.length === 0
+                ? 'All required details captured.'
+                : `${personalMissing.length} required field${personalMissing.length !== 1 ? 's' : ''} still empty.`}
+            </div>
+            <div style={{ marginLeft: 'auto' }}>
+              <Btn variant={isLastSection ? 'submit' : 'primary'} onClick={handleNextSection}
+                disabled={isLastSection && personalMissing.length > 0}>
+                {isLastSection
+                  ? <><Send size={14} /> Submit Assessment</>
+                  : <>Next Section <ChevronRight size={15} /></>}
+              </Btn>
+            </div>
+          </>
         ) : (
-          !isCompre && (
-            <>
-              <Btn variant={marked[secId]?.[qIdx] ? 'review' : 'default'} onClick={() => { toggleMark(qIdx); if (qIdx < totalQ - 1) gotoQ(qIdx + 1) }}>
-                <Flag size={13} /> Mark for Review &amp; Next
-              </Btn>
-              <Btn onClick={() => clearAnswer(qIdx)} disabled={secAnswers[qIdx] === null || secAnswers[qIdx] === undefined}>
-                <RotateCcw size={13} /> Clear Response
-              </Btn>
-            </>
-          )
-        )}
+          <>
+            <Btn onClick={handlePrevSection} disabled={secIdx === 0 || (secIdx - 1 === personalIdx && personalLocked)}>
+              <ChevronLeft size={15} /> Previous Section
+            </Btn>
+            {/* Secondary styling — Save & Next (or the section/submit button that
+                takes its place on the last question) is the primary way through a
+                section; jumping sections outright is a less common action and
+                shouldn't compete with it. Disabled outright once there's no next
+                section to jump to — submitting happens on the right/aside instead. */}
+            <Btn onClick={handleNextSection} disabled={isLastSection}>
+              Next Section <ChevronRight size={15} />
+            </Btn>
 
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <Btn onClick={handlePrevSection} disabled={secIdx === 0 || (secIdx - 1 === personalIdx && personalLocked)}>
-            <ChevronLeft size={15} /> Previous Section
-          </Btn>
+            {!isCompre && (
+              <>
+                <Btn variant={marked[secId]?.[qIdx] ? 'review' : 'default'} onClick={() => { toggleMark(qIdx); if (qIdx < totalQ - 1) gotoQ(qIdx + 1) }}>
+                  <Flag size={13} /> Mark for Review &amp; Next
+                </Btn>
+                <Btn onClick={() => clearAnswer(qIdx)} disabled={secAnswers[qIdx] === null || secAnswers[qIdx] === undefined}>
+                  <RotateCcw size={13} /> Clear Response
+                </Btn>
+              </>
+            )}
 
-          {!isPersonal && !isCompre && (
-            <>
+            {/* Previous/Save & Next: pages through this section's own questions.
+                In a comprehension section every question is already on screen, so
+                this just scrolls to the next one (same as clicking its palette dot).
+                On the last question of a section this becomes "Save & Next Section"
+                (jumps straight there); on the last question of the last section it
+                becomes the Submit trigger instead, since there's nowhere left to go. */}
+            <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
               <Btn onClick={() => gotoQ(Math.max(0, qIdx - 1))} disabled={qIdx === 0}>
                 <ChevronLeft size={15} /> Previous
               </Btn>
-              {qIdx < totalQ - 1 && (
-                <Btn variant="primary" onClick={() => gotoQ(qIdx + 1)}>
+              {qIdx < totalQ - 1 ? (
+                <Btn variant="primary" onClick={() => { unmark(qIdx); gotoQ(qIdx + 1) }}>
                   Save &amp; Next <ChevronRight size={15} />
                 </Btn>
+              ) : isLastSection ? (
+                <Btn variant="submit" onClick={() => { unmark(qIdx); setConfirming(true) }} disabled={personalMissing.length > 0}>
+                  <Send size={14} /> Submit Assessment
+                </Btn>
+              ) : (
+                <Btn variant="primary" onClick={() => { unmark(qIdx); handleNextSection() }}>
+                  Save &amp; Next Section <ChevronRight size={15} />
+                </Btn>
               )}
-            </>
-          )}
-
-          <Btn variant={isLastSection ? 'submit' : 'primary'} onClick={handleNextSection}
-            disabled={isLastSection && personalMissing.length > 0}>
-            {isLastSection
-              ? <><Send size={14} /> Submit Assessment</>
-              : <>Next Section <ChevronRight size={15} /></>}
-          </Btn>
-        </div>
+            </div>
+          </>
+        )}
       </footer>
 
       {/* ══ Submit confirmation ══ */}

@@ -113,7 +113,7 @@ SECTIONS = [
             {
                 "prompt": "Which set of figures best illustrates the transformation where closed shapes gradually open up and open shapes gradually close?",
                 "options": ["Option 1", "Option 2", "Option 3", "Option 4"], "answer": 0,
-                "imageUrl": f"/api/uploads/{IMAGE_STORAGE_NAMESPACE}/{IMAGE_STORAGE_FILENAME}",
+                "imageUrls": [f"/api/uploads/{IMAGE_STORAGE_NAMESPACE}/{IMAGE_STORAGE_FILENAME}"],
             },
             {"prompt": "A boat travels 90 nautical miles against the current and then returns with the current to its starting point. If the speed against the current is 12 knots and with the current is 18 knots, what is the total time required for the entire journey?", "options": ["12 hours", "10 hours", "9 hours", "11 hours"], "answer": 0},
             {"prompt": "A team of 5 workers can finish a job in 24 days. If only 3 workers are assigned to the same job, how many days will they need to complete it at the same pace?", "options": ["36 days", "30 days", "18 days", "40 days"], "answer": 3},
@@ -249,7 +249,7 @@ def main():
         )
         created = next(s for s in sec_resp["sections"] if s["title"] == sec["title"])
         questions = [
-            {"prompt": q["prompt"], "options": q["options"], "answer": q["answer"], "imageUrl": q.get("imageUrl")}
+            {"prompt": q["prompt"], "options": q["options"], "answer": q["answer"], "imageUrls": q.get("imageUrls")}
             for q in sec["questions"]
         ]
         api_request(

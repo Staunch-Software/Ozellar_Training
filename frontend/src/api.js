@@ -267,6 +267,11 @@ export const adminDeleteScreeningSection = (testId, sectionId) =>
 export const adminSaveScreeningQuestions = (testId, sectionId, questions) =>
   req(`/admin/screening/tests/${testId}/sections/${sectionId}/questions`,
     { method: 'PUT', body: JSON.stringify({ questions }) })
+export const adminUploadScreeningQuestionImage = (file) => {
+  const fd = new FormData()
+  fd.append('file', file)
+  return uploadReq('/admin/screening/upload-question-image', fd)
+}
 
 export const adminListScreeningCandidates = (testId) =>
   req(`/admin/screening/candidates${testId ? `?test_id=${testId}` : ''}`)

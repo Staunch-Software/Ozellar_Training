@@ -4,7 +4,7 @@ import {
   Download, ChevronRight, ChevronDown, CheckCircle2, Clock,
   AlertTriangle, X, Save, Eye, EyeOff, BookOpen, Layers,
   User, Phone, ToggleLeft, ToggleRight, RefreshCw,
-  TrendingUp, Award, Search, Filter,
+  TrendingUp, Award, Search, Filter, Image as ImageIcon, Upload,
 } from 'lucide-react'
 import * as api from '../../api.js'
 
@@ -593,17 +593,38 @@ function TestBuilder({ test, section, onSelectSection, onBack, onRefresh, onErro
 // ============================================================
 // QUESTION EDITOR
 // ============================================================
+// Lowercase letters label each image on a question: a, b, c, ... z, aa, ab, ...
+const imageLabel = (i) => (i < 26 ? String.fromCharCode(97 + i) : imageLabel(Math.floor(i / 26) - 1) + imageLabel(i % 26))
+
 function QuestionEditor({ test, section, onBack, onError }) {
-  const [questions, setQuestions] = useState((section.questions || []).map(q => ({ ...q, options: q.options || ['','','',''] })))
+  const [questions, setQuestions] = useState((section.questions || []).map(q => ({ ...q, options: q.options || ['','','',''], imageUrls: q.imageUrls || [] })))
   const [passage, setPassage] = useState(section.passage || '')
   const [editPassage, setEditPassage] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [uploadingIdx, setUploadingIdx] = useState(null)
+  const fileInputRef = useRef(null)
+  const pendingUploadIdx = useRef(null)
   const LTRS = ['A','B','C','D']
 
-  const addQ = () => setQuestions(qs => [...qs, { prompt:'', options:['','','',''], answer:0, order:qs.length }])
+  const addQ = () => setQuestions(qs => [...qs, { prompt:'', options:['','','',''], answer:0, imageUrls:[], order:qs.length }])
   const remQ = (i) => setQuestions(qs => qs.filter((_,j) => j !== i))
   const upQ  = (i,f,v) => setQuestions(qs => qs.map((q,j) => j===i ? {...q,[f]:v} : q))
   const upOpt = (qi,oi,v) => setQuestions(qs => qs.map((q,j) => j===qi ? {...q, options:q.options.map((o,k)=>k===oi?v:o)} : q))
+  const removeImage = (qi, imgIdx) => setQuestions(qs => qs.map((q,j) => j===qi ? {...q, imageUrls: q.imageUrls.filter((_,k)=>k!==imgIdx)} : q))
+
+  const pickImage = (qi) => { pendingUploadIdx.current = qi; fileInputRef.current?.click() }
+  const onImageChosen = async (e) => {
+    const file = e.target.files?.[0]
+    const qi = pendingUploadIdx.current
+    e.target.value = ''
+    if (!file || qi == null) return
+    setUploadingIdx(qi)
+    try {
+      const { imageUrl } = await api.adminUploadScreeningQuestionImage(file)
+      setQuestions(qs => qs.map((q,j) => j===qi ? {...q, imageUrls: [...(q.imageUrls||[]), imageUrl]} : q))
+    } catch (err) { onError(err.message) }
+    finally { setUploadingIdx(null) }
+  }
 
   const save = async () => {
     for (let i = 0; i < questions.length; i++) {
@@ -613,13 +634,15 @@ function QuestionEditor({ test, section, onBack, onError }) {
     setSaving(true)
     try {
       if (editPassage) await api.adminUpdateScreeningSection(test.id, section.id, { title:section.title, section_type:section.type, passage })
-      await api.adminSaveScreeningQuestions(test.id, section.id, questions.map((q,i) => ({ prompt:q.prompt, options:q.options, answer:q.answer, imageUrl:q.imageUrl, order:i })))
+      await api.adminSaveScreeningQuestions(test.id, section.id, questions.map((q,i) => ({ prompt:q.prompt, options:q.options, answer:q.answer, imageUrls:q.imageUrls||[], order:i })))
       await onBack()
     } catch(e) { onError(e.message) } finally { setSaving(false) }
   }
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:18 }}>
+      <input ref={fileInputRef} type="file" accept="image/*" style={{ display:'none' }} onChange={onImageChosen}/>
+
       {/* Breadcrumb */}
       <div style={{ display:'flex', alignItems:'center', gap:8, fontSize:13.5, color:'var(--text-mut)' }}>
         <button onClick={onBack} style={{ background:'none', border:'none', cursor:'pointer', color:'var(--accent)', fontWeight:700, padding:0, fontSize:13.5 }}>← {test.title}</button>
@@ -653,6 +676,29 @@ function QuestionEditor({ test, section, onBack, onError }) {
                 value={q.prompt} onChange={e => upQ(qi,'prompt',e.target.value)}/>
               <button className="iconbtn" onClick={() => remQ(qi)} title="Remove"><Trash2 size={14} color="var(--danger)"/></button>
             </div>
+
+            {/* Images (optional, multiple — for figure/diagram-based questions).
+                Each is labelled a, b, c… in upload order, shown to candidates
+                the same way so "compare figure a and figure b" reads correctly. */}
+            <div style={{ padding:'12px 20px 0', display:'flex', flexWrap:'wrap', alignItems:'flex-start', gap:12 }}>
+              {(q.imageUrls||[]).map((url, imgIdx) => (
+                <div key={imgIdx} style={{ position:'relative', flexShrink:0 }}>
+                  <img src={url} alt="" style={{ display:'block', maxHeight:90, borderRadius:8, border:'1px solid var(--border)', background:'var(--bg)' }}/>
+                  <span style={{ position:'absolute', top:4, left:4, width:18, height:18, borderRadius:5, background:'rgba(17,17,17,.72)', color:'#fff', fontSize:11, fontWeight:800, display:'grid', placeItems:'center', textTransform:'lowercase' }}>
+                    {imageLabel(imgIdx)}
+                  </span>
+                  <button className="iconbtn" onClick={() => removeImage(qi, imgIdx)} title="Remove image"
+                    style={{ position:'absolute', top:-8, right:-8, width:22, height:22, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:'50%', boxShadow:'0 1px 4px rgba(0,0,0,.15)' }}>
+                    <X size={12} color="var(--danger)"/>
+                  </button>
+                </div>
+              ))}
+              <button className="btn sm" style={{ display:'inline-flex', alignItems:'center', gap:6 }}
+                onClick={() => pickImage(qi)} disabled={uploadingIdx===qi}>
+                {uploadingIdx===qi ? 'Uploading…' : <><ImageIcon size={13}/> Add Image</>}
+              </button>
+            </div>
+
             <div style={{ padding:'14px 20px 18px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
               {q.options.map((opt, oi) => (
                 <div key={oi} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:10, border:`1.5px solid ${q.answer===oi ? 'var(--success)' : 'var(--border)'}`, background: q.answer===oi ? 'var(--success-weak)' : 'transparent', transition:'all .15s' }}>

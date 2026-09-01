@@ -2514,7 +2514,7 @@ def screening_get_test(
             "passage": sec.passage,
             "questions": [
                 {"id": q.id, "prompt": q.prompt, "options": q.options,
-                 "imageUrl": q.image_url, "order": q.order}
+                 "imageUrls": q.image_urls or [], "order": q.order}
                 for q in sec.questions
             ],
         }
@@ -2749,7 +2749,7 @@ class QuestionRequest(BaseModel):
     prompt: str
     options: list[str]
     answer: int
-    imageUrl: Optional[str] = None
+    imageUrls: Optional[list[str]] = None
     order: int = 0
 
 
@@ -2784,7 +2784,7 @@ def serialize_test(t, include_sections=False, db=None):
                 "passage": s.passage, "order": s.order,
                 "questions": [
                     {"id": q.id, "prompt": q.prompt, "options": q.options,
-                     "answer": q.answer, "imageUrl": q.image_url, "order": q.order}
+                     "answer": q.answer, "imageUrls": q.image_urls or [], "order": q.order}
                     for q in s.questions
                 ],
             }
@@ -2923,11 +2923,37 @@ def admin_save_section_questions(
     for i, q in enumerate(req.questions):
         db.add(models.ScreeningQuestion(
             section_id=section_id, prompt=q.prompt, options=q.options,
-            answer=q.answer, image_url=q.imageUrl, order=i,
+            answer=q.answer, image_urls=q.imageUrls, order=i,
         ))
     db.commit()
     test = db.get(models.ScreeningTest, test_id)
     return serialize_test(test, include_sections=True)
+
+
+@app.post("/api/admin/screening/upload-question-image")
+async def admin_upload_screening_question_image(
+    file: UploadFile = File(...),
+    admin: models.User = Depends(require_admin),
+):
+    """Upload an image for a screening MCQ question (figure/diagram-based
+    reasoning questions). Returns the URL to save into the question's
+    imageUrl — goes through the same storage backend as everything else
+    (local disk in dev, Azure Blob in prod), unlike the always-local
+    candidate identity photos."""
+    from PIL import Image
+    data = await file.read()
+    try:
+        img = Image.open(io.BytesIO(data))
+        img.verify()
+    except Exception:
+        raise HTTPException(400, "Invalid image file")
+    img2 = Image.open(io.BytesIO(data)).convert("RGB")
+    img2.thumbnail((1000, 1000))
+    filename = f"{uuid.uuid4().hex}.jpg"
+    tmp_path = os.path.join(UPLOAD_DIR, f"_tmp_{filename}")
+    img2.save(tmp_path, "JPEG", quality=88)
+    storage.save("screening-questions", filename, tmp_path)
+    return {"imageUrl": f"/api/uploads/screening-questions/{filename}"}
 
 
 # --- Candidates ---
