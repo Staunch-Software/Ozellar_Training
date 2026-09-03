@@ -805,8 +805,8 @@ export default function TestExam() {
                     Save &amp; Next <ChevronRight size={15} />
                   </Btn>
                 ) : isLastSection ? (
-                  <Btn variant="primary" disabled>
-                    Save &amp; Next <ChevronRight size={15} />
+                  <Btn variant="primary" onClick={() => setConfirming(true)} disabled={personalMissing.length > 0}>
+                    Done — Review &amp; Submit <ChevronRight size={15} />
                   </Btn>
                 ) : (
                   <Btn variant="primary" onClick={() => { unmark(qIdx); handleNextSection() }}>

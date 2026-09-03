@@ -36,8 +36,14 @@ const chip = (status) => {
 function fmtDt(iso) {
   if (!iso) return '—'
   try {
+    // The backend stores naive local (IST) datetimes and serialises them via
+    // .isoformat() without a timezone suffix.  JavaScript parses suffix-free
+    // strings as local time, which is correct here (server == IST).
+    // We only normalise strings that already carry an explicit UTC marker so
+    // we don't accidentally double-shift them.
     return new Date(iso).toLocaleString('en-IN', {
-      day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit',
+      day: '2-digit', month: 'short', year: 'numeric',
+      hour: '2-digit', minute: '2-digit', hour12: true,
       timeZone: 'Asia/Kolkata',
     }) + ' IST'
   }
@@ -172,6 +178,94 @@ function CreateCandidateCard({ form, setForm, saving, allTests, onCreate, onCanc
   )
 }
 
+
+// ============================================================
+// EDIT CANDIDATE CARD COMPONENT
+// ============================================================
+function EditCandidateCard({ candidate, allTests, onSave, onCancel }) {
+  const [fullName, setFullName] = useState(candidate.fullName)
+  const [mobileNumber, setMobileNumber] = useState(candidate.mobileNumber || '')
+  const [testId, setTestId] = useState(candidate.testId)
+  const [password, setPassword] = useState('')
+  const [showPw, setShowPw] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  const testChanged = testId !== candidate.testId
+  const hasProgress = candidate.status !== 'pending'
+
+  const submit = async (e) => {
+    e.preventDefault()
+    if (testChanged && hasProgress) {
+      const ok = confirm(
+        `${candidate.fullName} already has ${candidate.status === 'submitted' ? 'a submitted result' : 'progress'} on "${candidate.testTitle}". ` +
+        `Switching to a different test will permanently erase that attempt (score, answers, timings) and reset them to "pending" on the new test. Continue?`
+      )
+      if (!ok) return
+    }
+    setSaving(true)
+    const patch = { fullName, mobileNumber }
+    if (password) patch.password = password
+    if (testChanged) patch.testId = testId
+    try { await onSave(patch) } finally { setSaving(false) }
+  }
+
+  return (
+    <div style={{ background:'#fff', borderRadius:16, border:'1px solid var(--border)', boxShadow:'0 12px 32px rgba(0,0,0,.08), 0 4px 12px rgba(79,70,229,.06)', animation:'tw-in .3s ease-out' }}>
+      <div style={{ background:'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)', padding:'20px 24px', borderRadius:'16px 16px 0 0', borderBottom:'1px solid rgba(99,102,241,.15)', display:'flex', alignItems:'center', gap:14 }}>
+        <div style={{ width:40, height:40, borderRadius:12, background:'#4f46e5', display:'grid', placeItems:'center', flexShrink:0, boxShadow:'0 4px 12px rgba(79,70,229,.3)' }}>
+          <Edit3 size={18} color="#fff" />
+        </div>
+        <div>
+          <div style={{ fontSize:15, fontWeight:800, color:'#312e81', letterSpacing:'-.01em' }}>Edit Candidate</div>
+          <div style={{ fontSize:12.5, color:'#4f46e5', marginTop:3, fontWeight:600 }}>{candidate.testTitle}</div>
+        </div>
+      </div>
+      <form onSubmit={submit} style={{ padding:'28px 24px', display:'flex', flexDirection:'column', gap:20 }}>
+        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+          <Input label="Full Name *" type="text" required value={fullName} onChange={e => setFullName(e.target.value)} style={{ padding:'12px 14px', borderRadius:10 }}/>
+          <Input label="Mobile Number" type="tel" inputMode="numeric" pattern="[0-9]{10}" maxLength={10} value={mobileNumber} onChange={e => setMobileNumber(e.target.value.replace(/\D/g,'').slice(0,10))} style={{ padding:'12px 14px', borderRadius:10 }}/>
+        </div>
+
+        <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
+          <label style={{ fontSize:12.5, fontWeight:600, color:'var(--text-mut)' }}>Assigned Test</label>
+          <CardSelect value={testId} onChange={setTestId} options={allTests} placeholder="Select test…" icon={<BookOpen size={14}/>}/>
+          {testChanged && (
+            <div style={{ display:'flex', alignItems:'flex-start', gap:8, marginTop:6, padding:'10px 12px', borderRadius:10, background:'rgba(239,68,68,.08)', border:'1px solid rgba(239,68,68,.2)', color:'#b91c1c', fontSize:12.5, fontWeight:600 }}>
+              <AlertTriangle size={14} style={{ flexShrink:0, marginTop:1 }}/>
+              {hasProgress
+                ? 'This candidate already has an attempt on the current test. Changing the test will permanently delete that attempt (score, answers, timings) and reset status to Pending.'
+                : 'Changing the assigned test will reset this candidate to Pending on the new test.'}
+            </div>
+          )}
+        </div>
+
+        <div style={{ display:'flex', flexDirection:'column', gap:5, maxWidth:320 }}>
+          <label style={{ fontSize:12.5, fontWeight:600, color:'var(--text-mut)' }}>Reset Password (optional)</label>
+          <div style={{ position:'relative' }}>
+            <input type={showPw?'text':'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Leave blank to keep current"
+              style={{ width:'100%', padding:'12px 42px 12px 14px', borderRadius:10, border:'1.5px solid var(--border)', background:'var(--bg)', color:'var(--text)', fontSize:14, fontFamily:'inherit', outline:'none', boxSizing:'border-box', transition:'border .15s' }}
+              onFocus={e=>e.target.style.borderColor='var(--accent)'} onBlur={e=>e.target.style.borderColor='var(--border)'}/>
+            <button type="button" onClick={()=>setShowPw(v=>!v)}
+              style={{ position:'absolute', right:12, top:'50%', transform:'translateY(-50%)', background:'none', border:'none', cursor:'pointer', color:'var(--text-mut)', display:'grid', placeItems:'center' }}>
+              {showPw ? <EyeOff size={16}/> : <Eye size={16}/>}
+            </button>
+          </div>
+        </div>
+
+        <div style={{ height:1, background:'#e5e7eb', margin:'8px -24px 0' }}/>
+
+        <div style={{ display:'flex', justifyContent:'flex-end', gap:12 }}>
+          <button type="button" onClick={onCancel} style={{ padding:'11px 24px', borderRadius:12, border:'1px solid #d1d5db', background:'#fff', fontWeight:600, color:'#4b5563', cursor:'pointer', fontSize:14, transition:'all .2s' }}>
+            Cancel
+          </button>
+          <button type="submit" disabled={saving} style={{ padding:'11px 28px', borderRadius:12, border:'none', background: saving ? '#a5b4fc' : '#4f46e5', color:'#fff', fontWeight:700, fontSize:14, cursor: saving ? 'not-allowed' : 'pointer', transition:'all .2s', boxShadow:'0 4px 14px rgba(79,70,229,.25)' }}>
+            {saving ? 'Saving…' : 'Save Changes'}
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
 
 // ============================================================
 export default function AdminScreening() {
@@ -738,6 +832,7 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
   const [filterTest, setFilterTest] = useState('')
   const [search, setSearch] = useState('')
   const [showPw, setShowPw] = useState(false)
+  const [editCand, setEditCand] = useState(null)
 
   useEffect(() => { api.adminListScreeningTests().then(setAllTests).catch(()=>{}) }, [])
 
@@ -750,6 +845,11 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
   const del = async (id) => {
     if (!confirm('Delete this candidate and their attempt?')) return
     try { await api.adminDeleteScreeningCandidate(id); onRefresh() } catch(e) { onError(e.message) }
+  }
+
+  const saveEdit = async (patch) => {
+    try { await api.adminUpdateScreeningCandidate(editCand.id, patch); setEditCand(null); onRefresh() }
+    catch(e) { onError(e.message) }
   }
 
   const filtered = candidates
@@ -775,6 +875,8 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
       </div>
 
       {showCreate && <CreateCandidateCard form={form} setForm={setForm} saving={saving} allTests={allTests} onCreate={create} onCancel={() => setShowCreate(false)} />}
+
+      {editCand && <EditCandidateCard candidate={editCand} allTests={allTests} onSave={saveEdit} onCancel={() => setEditCand(null)} />}
 
       {/* Stats row */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }}>
@@ -829,7 +931,8 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
                     <td style={{ padding:'14px 20px', color:'var(--text-mut)', fontSize:12.5, whiteSpace:'nowrap' }}>{fmtDt(c.submittedAt)}</td>
                     <td style={{ padding:'14px 20px', fontWeight:800, color: c.score!=null ? 'var(--accent)' : 'var(--text-faint)', fontSize:14 }}>{c.score!=null?c.score:'—'}</td>
                     <td style={{ padding:'14px 20px' }}>{tabSwitchBadge(c.tabSwitchCount)}</td>
-                    <td style={{ padding:'14px 20px', textAlign:'right' }}>
+                    <td style={{ padding:'14px 20px', textAlign:'right', whiteSpace:'nowrap' }}>
+                      <button className="iconbtn" onClick={() => setEditCand(c)} title="Edit Candidate"><Edit3 size={15} color="var(--accent)"/></button>
                       <button className="iconbtn" onClick={() => del(c.id)} title="Delete Candidate"><Trash2 size={15} color="var(--danger)"/></button>
                     </td>
                   </tr>

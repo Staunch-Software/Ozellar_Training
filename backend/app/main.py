@@ -3035,10 +3035,21 @@ def admin_update_candidate(
         raise HTTPException(404, "Candidate not found")
     if "isActive" in req:
         c.is_active = req["isActive"]
+    if "fullName" in req and req["fullName"].strip():
+        c.full_name = req["fullName"].strip()
     if "mobileNumber" in req:
         c.mobile_number = req["mobileNumber"]
     if "password" in req and req["password"]:
         c.password_hash = hash_password(req["password"])
+    if "testId" in req and req["testId"] and req["testId"] != c.test_id:
+        new_test = db.get(models.ScreeningTest, req["testId"])
+        if not new_test:
+            raise HTTPException(404, "Test not found")
+        # switching tests invalidates any progress/result on the old one
+        if c.attempt:
+            db.delete(c.attempt)
+        c.test_id = req["testId"]
+        c.status = "pending"
     db.commit()
     return {"ok": True}
 
