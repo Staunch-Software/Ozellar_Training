@@ -36,12 +36,15 @@ const chip = (status) => {
 function fmtDt(iso) {
   if (!iso) return '—'
   try {
-    // The backend stores naive local (IST) datetimes and serialises them via
-    // .isoformat() without a timezone suffix.  JavaScript parses suffix-free
-    // strings as local time, which is correct here (server == IST).
-    // We only normalise strings that already carry an explicit UTC marker so
-    // we don't accidentally double-shift them.
-    return new Date(iso).toLocaleString('en-IN', {
+    // The backend stores naive IST wall-clock datetimes and serialises them
+    // via .isoformat() without a timezone suffix. A suffix-free string is
+    // parsed by JS as *the viewer's own browser/OS timezone*, not the
+    // server's — so on any admin machine not itself set to IST this used to
+    // render the wrong time (e.g. shifted by the viewer's UTC offset).
+    // Attaching the +05:30 offset explicitly makes the instant unambiguous
+    // regardless of the viewing browser's local timezone.
+    const withOffset = /[Zz]|[+-]\d\d:\d\d$/.test(iso) ? iso : `${iso}+05:30`
+    return new Date(withOffset).toLocaleString('en-IN', {
       day: '2-digit', month: 'short', year: 'numeric',
       hour: '2-digit', minute: '2-digit', hour12: true,
       timeZone: 'Asia/Kolkata',
@@ -833,8 +836,16 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
   const [search, setSearch] = useState('')
   const [showPw, setShowPw] = useState(false)
   const [editCand, setEditCand] = useState(null)
+  const editFormRef = useRef(null)
 
   useEffect(() => { api.adminListScreeningTests().then(setAllTests).catch(()=>{}) }, [])
+
+  // Clicking Edit on a row far down a long candidate table opens the edit
+  // form up near the top of the page, out of view — scroll it into sight
+  // rather than leaving the admin to notice and scroll up themselves.
+  useEffect(() => {
+    if (editCand) editFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }, [editCand])
 
   const create = async (e) => {
     e.preventDefault(); setSaving(true)
@@ -876,7 +887,11 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
 
       {showCreate && <CreateCandidateCard form={form} setForm={setForm} saving={saving} allTests={allTests} onCreate={create} onCancel={() => setShowCreate(false)} />}
 
-      {editCand && <EditCandidateCard candidate={editCand} allTests={allTests} onSave={saveEdit} onCancel={() => setEditCand(null)} />}
+      {editCand && (
+        <div ref={editFormRef}>
+          <EditCandidateCard candidate={editCand} allTests={allTests} onSave={saveEdit} onCancel={() => setEditCand(null)} />
+        </div>
+      )}
 
       {/* Stats row */}
       <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }}>

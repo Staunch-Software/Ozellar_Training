@@ -239,6 +239,7 @@ export default function TestExam() {
   const [photoUrl,   setPhotoUrl]   = useState(null)
   const [tabSwitchCount, setTabSwitchCount] = useState(0)
   const [tabWarning, setTabWarning] = useState('')      // separate from `notice` so it survives section changes
+  const [saveState,  setSaveState]  = useState('idle')  // 'idle' | 'saving' | 'saved' | 'error'
 
   const submitRef = useRef(null)
 
@@ -257,7 +258,20 @@ export default function TestExam() {
         : total
       setDeadline(Date.now() + left * 1000)
       setTimeLeft(left)
-      setPersonalData(p => ({ ...p, fullName: user?.name || p.fullName || '' }))
+
+      // Resume from the server's last autosave when local browser storage has
+      // nothing for this attempt — covers a power-off/crash that wiped session
+      // storage, or the candidate logging back in on a different device.
+      const serverAnswers = data.attempt?.sectionAnswers
+      if (serverAnswers && Object.keys(serverAnswers).length > 0) {
+        setAnswers(prev => (Object.keys(prev).length > 0 ? prev : serverAnswers))
+      }
+      const serverPersonal = data.attempt?.personalData
+      setPersonalData(p => {
+        const base = Object.keys(p).length > 0 ? p : (serverPersonal || {})
+        return { ...base, fullName: user?.name || base.fullName || '' }
+      })
+
       setTabSwitchCount(data.attempt?.tabSwitchCount || 0)
     }).catch(err => setError('Could not load the assessment: ' + err.message))
   }, [])
@@ -292,6 +306,54 @@ export default function TestExam() {
   useEffect(() => { sessionStorage.setItem('ss_exam_visited', JSON.stringify(visited)) }, [visited])
   useEffect(() => { sessionStorage.setItem('ss_exam_marked', JSON.stringify(marked)) }, [marked])
   useEffect(() => { sessionStorage.setItem('ss_exam_personal_locked', personalLocked ? '1' : '0') }, [personalLocked])
+
+  /* ── Autosave to the server. sessionStorage above only survives a page
+     refresh in the same browser — it's gone if the device loses power or
+     crashes. This periodically writes the candidate's in-progress answers
+     to ScreeningAttempt.section_answers so that's recoverable; it never
+     grades or finalises anything (only /submit does that). ── */
+  const answersRef = useRef(answers)
+  useEffect(() => { answersRef.current = answers }, [answers])
+  const personalDataRef = useRef(personalData)
+  useEffect(() => { personalDataRef.current = personalData }, [personalData])
+  const savingRef = useRef(false)
+
+  const doAutosave = useCallback(async () => {
+    if (!testData || submitting || savingRef.current) return
+    savingRef.current = true
+    setSaveState('saving')
+    try {
+      const payload = {}
+      for (const sec of (testData.sections || [])) {
+        if (sec.type === 'personal_data') continue
+        payload[sec.id] = (sec.questions || []).map((_, i) => answersRef.current[sec.id]?.[i] ?? null)
+      }
+      await api.screeningAutosave({ personal_data: personalDataRef.current, section_answers: payload })
+      setSaveState('saved')
+    } catch {
+      setSaveState('error')
+    } finally {
+      savingRef.current = false
+    }
+  }, [testData, submitting])
+
+  // Debounced: fires shortly after the candidate stops changing anything.
+  useEffect(() => {
+    if (!testData || submitting) return
+    const t = setTimeout(doAutosave, 2500)
+    return () => clearTimeout(t)
+  }, [answers, personalData, testData, submitting, doAutosave])
+
+  // Safety-net interval, independent of the debounce above, plus a
+  // best-effort save the moment the tab is hidden/backgrounded (device
+  // sleep, browser/tab switch) so a save is never more than ~20s stale.
+  useEffect(() => {
+    if (!testData || submitting) return
+    const id = setInterval(doAutosave, 20000)
+    const onHide = () => { if (document.visibilityState === 'hidden') doAutosave() }
+    document.addEventListener('visibilitychange', onHide)
+    return () => { clearInterval(id); document.removeEventListener('visibilitychange', onHide) }
+  }, [testData, submitting, doAutosave])
 
   const sections   = testData?.sections || []
   const section    = sections[secIdx]
@@ -548,6 +610,9 @@ export default function TestExam() {
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,.55)', textTransform: 'uppercase', letterSpacing: '.09em' }}>Time Remaining</div>
             <div style={{ fontSize: 20, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: '#fff', lineHeight: 1.1 }}>{fmtTime(timeLeft)}</div>
+            <div style={{ fontSize: 9.5, fontWeight: 600, marginTop: 2, color: saveState === 'error' ? '#f0a99f' : 'rgba(255,255,255,.6)' }}>
+              {saveState === 'saving' ? 'Saving…' : saveState === 'saved' ? 'Progress saved' : saveState === 'error' ? 'Save failed — retrying' : ' '}
+            </div>
           </div>
           <TimerRing seconds={timeLeft} fraction={timerFraction} color={timerFg} />
         </div>

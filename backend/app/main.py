@@ -2546,6 +2546,11 @@ def screening_get_test(
             "submittedAt": attempt.submitted_at.isoformat() if attempt and attempt.submitted_at else None,
             "status": candidate.status,
             "tabSwitchCount": attempt.tab_switch_count or 0,
+            # Last autosaved (or submitted) answers — lets the client resume
+            # from the server's copy if local browser storage was lost
+            # (device power-off, different browser/device, cleared storage).
+            "sectionAnswers": attempt.section_answers or {},
+            "personalData": attempt.personal_data or {},
         } if attempt else None,
     }
 
@@ -2696,6 +2701,27 @@ def screening_submit(
         "sectionResults": section_results,
         "submittedAt": attempt.submitted_at.isoformat(),
     }
+
+
+@app.post("/api/screening/autosave")
+def screening_autosave(
+    req: ScreeningSubmitRequest,
+    candidate: models.ScreeningCandidate = Depends(get_current_candidate),
+    db: Session = Depends(get_db),
+):
+    """Periodically persist in-progress answers so a device power-off,
+    crash, or connection drop mid-test doesn't lose the candidate's work.
+    Never grades or finalises anything — that only happens in /submit."""
+    if candidate.status == "submitted":
+        raise HTTPException(403, "Test already submitted")
+    attempt = candidate.attempt
+    if not attempt:
+        raise HTTPException(400, "Test not started")
+    attempt.section_answers = req.section_answers
+    if req.personal_data:
+        attempt.personal_data = req.personal_data
+    db.commit()
+    return {"ok": True, "savedAt": datetime.now(timezone.utc).isoformat()}
 
 
 @app.get("/api/screening/result")

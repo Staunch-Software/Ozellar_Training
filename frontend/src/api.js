@@ -225,6 +225,9 @@ export const screeningTabSwitch = () => req('/screening/tab-switch', { method: '
 export const screeningSubmit = (body) =>
   req('/screening/submit', { method: 'POST', body: JSON.stringify(body) })
 
+export const screeningAutosave = (body) =>
+  req('/screening/autosave', { method: 'POST', body: JSON.stringify(body) })
+
 export const screeningGetResult = () => req('/screening/result')
 
 export const screeningUploadPhoto = (file) => {
