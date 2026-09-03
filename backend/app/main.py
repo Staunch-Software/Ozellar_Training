@@ -3168,6 +3168,7 @@ def admin_screening_results_xlsx(
     headers = [
         "Name", "Mobile Number", "Test", "Start Time", "Submit Time",
         "Time Taken (min)", "Correct", "Wrong", "Unanswered", "Score",
+        "Remark", "Shortlisted",
     ]
     ws.append(headers)
     for col_idx, _ in enumerate(headers, 1):
@@ -3195,6 +3196,8 @@ def admin_screening_results_xlsx(
             r["timeTakenMinutes"] or "",
             r["correct"], r["wrong"], r["unanswered"],
             r["score"],
+            "",  # Remark     — to be filled manually by admin
+            "",  # Shortlisted — to be filled manually by admin
         ])
         fill = alt_fill if row_i % 2 == 0 else None
         for col_idx in range(1, len(headers) + 1):
@@ -3205,7 +3208,7 @@ def admin_screening_results_xlsx(
                 cell.fill = fill
 
     # Column widths
-    col_widths = [28, 18, 28, 20, 20, 18, 10, 10, 12, 10]
+    col_widths = [28, 18, 28, 20, 20, 18, 10, 10, 12, 10, 15, 30]
     for i, w in enumerate(col_widths, 1):
         ws.column_dimensions[get_column_letter(i)].width = w
 
