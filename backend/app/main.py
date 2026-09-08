@@ -2132,6 +2132,7 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                   message="Rendering slides (this is the slow part on big decks)…")
     try:
         course = db.query(models.Course).filter(models.Course.id == course_id).first()
+        db.close()
         if not course: return
 
         import string
@@ -2246,6 +2247,9 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                     total_vids = sum(1 for n in z.namelist()
                                      if n.startswith("ppt/media/") and n.lower().endswith(".mp4"))
                     done_vids = 0
+                    # media part -> served URL, so each video is only ever
+                    # extracted and compressed once (see the note below).
+                    processed_media: dict[str, str] = {}
                     for name in z.namelist():
                         if name.startswith("ppt/slides/_rels/slide") and name.endswith(".xml.rels"):
                             try:
@@ -2260,6 +2264,20 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                                     if target and target.startswith("../media/") and target.lower().endswith(".mp4"):
                                         media_path = "ppt/" + target[3:]
                                         if media_path in z.namelist():
+                                            # PowerPoint writes TWO relationships
+                                            # per video shape (a `video` and a
+                                            # `media` ref) pointing at the same
+                                            # part, so without this cache every
+                                            # video is extracted and re-encoded
+                                            # twice — roughly doubling the job.
+                                            # Keying on the media part also means
+                                            # one video reused across slides is
+                                            # compressed once and shared.
+                                            if media_path in processed_media:
+                                                slide_videos.setdefault(slide_idx, set()).add(
+                                                    processed_media[media_path])
+                                                continue
+
                                             basename = os.path.basename(target)
                                             vid_filename = f"slide{slide_num_str}_{basename}"
                                             vid_path = os.path.join(course_dir, vid_filename)
@@ -2286,6 +2304,7 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                                                     pass
                                             storage.save(course_id, vid_filename, final_vid_path)
                                             vid_url = f"/api/uploads/{course_id}/{vid_filename}"
+                                            processed_media[media_path] = vid_url
                                             if slide_idx not in slide_videos:
                                                 slide_videos[slide_idx] = set()
                                             slide_videos[slide_idx].add(vid_url)
@@ -2310,9 +2329,9 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
             # unexpectedly", losing the whole import at the last step.
             # `pool_pre_ping` can't save us here: it validates a connection when
             # it is checked OUT of the pool, and this one was checked out before
-            # the long wait. So drop the stale session and take a fresh one;
-            # pre_ping then guarantees the replacement is actually alive.
-            db.close()
+            # the long wait. We already closed the initial session at the start,
+            # so now we just take a fresh one. pre_ping then guarantees the
+            # replacement is actually alive.
             db = SessionLocal()
             course = db.query(models.Course).filter(models.Course.id == course_id).first()
             if not course:
@@ -2427,6 +2446,7 @@ async def upload_course_pptx(course_id: str, background_tasks: BackgroundTasks,
                              admin: models.User = Depends(require_admin),
                              db: Session = Depends(get_db)):
     course = db.query(models.Course).filter(models.Course.id == course_id).first()
+    db.close()
     if not course:
         raise HTTPException(404, "Course not found")
     if not (file.filename or "").lower().endswith((".pptx", ".pptm")):
