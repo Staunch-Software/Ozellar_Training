@@ -7,7 +7,7 @@ import {
 import {
   adminGetCourseBuilder, adminUploadPptx, adminUploadVideo, adminCreateQuizChapter,
   adminSaveQuizQuestions, adminReorderChapters, adminDeleteChapter, adminSaveAssessment,
-  adminUpdateCourse, adminListUsers
+  adminUpdateCourse, adminListUsers, adminPptxStatus
 } from '../../api.js'
 
 const EMPTY_Q = () => ({ q: '', options: ['', '', '', ''], answer: 0, explain: '' })
@@ -24,9 +24,12 @@ export default function AdminCourseBuilder() {
   const [dragOverIdx, setDragOverIdx] = useState(null)
   const [draggableIdx, setDraggableIdx] = useState(null)
 
-  const [pptxProcessing, setPptxProcessing] = useState(
-    () => sessionStorage.getItem(`pptx-processing-${id}`) === '1'
-  )
+  const [pptxProcessing, setPptxProcessing] = useState(false)
+  // Byte-level progress of the upload leg (XHR), then server-side stage +
+  // percentage of the processing leg (polled). Big decks spend minutes in
+  // each, so both need to be visible.
+  const [upload, setUpload] = useState(null)      // { pct, loaded, total }
+  const [proc, setProc] = useState(null)          // { stage, pct, message }
   const [openQuiz, setOpenQuiz] = useState(null)   // chapter id whose quiz editor is open
   const [showVideoForm, setShowVideoForm] = useState(false)
   const [showAddOptions, setShowAddOptions] = useState(false)
@@ -48,24 +51,62 @@ export default function AdminCourseBuilder() {
     }
   }
 
+  const stopPolling = () => {
+    if (pollRef.current) clearInterval(pollRef.current)
+    pollRef.current = null
+    sessionStorage.removeItem(`pptx-processing-${id}`)
+    setPptxProcessing(false)
+    setProc(null)
+    setUpload(null)
+  }
+
   const startPolling = (prevChapterCount) => {
     sessionStorage.setItem(`pptx-processing-${id}`, String(prevChapterCount))
     setPptxProcessing(true)
+    setProc({ stage: 'queued', pct: 0, message: 'Upload received — starting processing…' })
     if (pollRef.current) clearInterval(pollRef.current)
     pollRef.current = setInterval(async () => {
       try {
-        const updated = await adminGetCourseBuilder(id)
-        const storedCount = Number(sessionStorage.getItem(`pptx-processing-${id}`))
-        if (updated.chapters.length > storedCount) {
-          clearInterval(pollRef.current)
-          sessionStorage.removeItem(`pptx-processing-${id}`)
-          setPptxProcessing(false)
+        const st = await adminPptxStatus(id)
+
+        // "idle" means the server has no job for this course — normally a
+        // restart killed it. Fall back to the old chapter-count check so a run
+        // that actually finished still resolves instead of spinning forever.
+        if (st.stage === 'idle') {
+          const updated = await adminGetCourseBuilder(id)
+          const storedCount = Number(sessionStorage.getItem(`pptx-processing-${id}`))
+          if (updated.chapters.length > storedCount) {
+            stopPolling()
+            setCourse(updated)
+            setLocalChapters(updated.chapters)
+            setSuccessMsg('PPT processed successfully! Your new slides are ready.')
+            setTimeout(() => setSuccessMsg(''), 8000)
+          } else {
+            stopPolling()
+            setError('Processing stopped unexpectedly (the server may have restarted). Please try the upload again.')
+          }
+          return
+        }
+
+        setProc(st)
+
+        if (st.done) {
+          if (st.error) {
+            stopPolling()
+            setError(st.error)
+            return
+          }
+          const updated = await adminGetCourseBuilder(id)
+          stopPolling()
           setCourse(updated)
-          setSuccessMsg('PPT processed successfully! Your new slides are ready.')
+          setLocalChapters(updated.chapters)
+          setSuccessMsg(st.added
+            ? `PPT processed successfully! ${st.added} new slides are ready.`
+            : 'PPT processed successfully! Your new slides are ready.')
           setTimeout(() => setSuccessMsg(''), 8000)
         }
-      } catch (_) {}
-    }, 3000)
+      } catch (_) { /* transient network blip — keep polling */ }
+    }, 2000)
   }
 
   const load = () => adminGetCourseBuilder(id).then((c) => {
@@ -97,7 +138,17 @@ export default function AdminCourseBuilder() {
 
   const uploadPptx = (file) => withBusy(async () => {
     const currentCount = course.chapters.length
-    await adminUploadPptx(id, file)
+    setProc(null)
+    setUpload({ pct: 0, loaded: 0, total: file.size })
+    setPptxProcessing(true)
+    try {
+      await adminUploadPptx(id, file, (p) => setUpload(p))
+    } catch (e) {
+      setUpload(null)
+      setPptxProcessing(false)
+      throw e
+    }
+    setUpload(null)
     startPolling(currentCount)
   })
 
@@ -248,6 +299,8 @@ export default function AdminCourseBuilder() {
             )}
           </div>
           
+          {(upload || proc) && <PptxProgress upload={upload} proc={proc} />}
+
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
             {/* PPT Card */}
             <button type="button" className="module-type-card" disabled={busy || pptxProcessing} onClick={() => !pptxProcessing && pptxInput.current?.click()}>
@@ -256,7 +309,9 @@ export default function AdminCourseBuilder() {
               </div>
               <div>
                 <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 15, marginBottom: 4 }}>
-                  {pptxProcessing ? 'Processing slides...' : 'PowerPoint'}
+                  {upload ? `Uploading… ${upload.pct}%`
+                    : proc ? `Processing… ${proc.pct ?? 0}%`
+                    : 'PowerPoint'}
                 </div>
                 <div style={{ fontSize: 13, color: '#64748b' }}>Extract slides into individual lessons</div>
               </div>
@@ -320,6 +375,59 @@ export default function AdminCourseBuilder() {
         />
       )}
     </>
+  )
+}
+
+const PPTX_STAGES = {
+  queued:     'Queued',
+  rendering:  'Rendering slide images',
+  extracting: 'Extracting text and videos',
+  video:      'Compressing embedded video',
+  slides:     'Building lessons',
+  done:       'Finished',
+  failed:     'Failed',
+}
+
+const mb = (bytes) => `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+
+/* Two-stage progress for a PPTX import: the browser->server upload (real byte
+   counts from XHR) and then the server-side processing (stage + percentage
+   polled from /pptx-status). A deck with embedded video can spend several
+   minutes in each, so both get an explicit percentage rather than a spinner. */
+function PptxProgress({ upload, proc }) {
+  const uploading = !!upload
+  const pct = uploading ? upload.pct : (proc?.pct ?? 0)
+  const label = uploading ? 'Uploading file' : (PPTX_STAGES[proc?.stage] || 'Processing')
+  const failed = proc?.stage === 'failed'
+
+  return (
+    <div style={{
+      background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
+      padding: 16, display: 'flex', flexDirection: 'column', gap: 10,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+        <div style={{ fontWeight: 600, fontSize: 14, color: '#1e293b' }}>
+          {uploading ? 'Step 1 of 2 — ' : 'Step 2 of 2 — '}{label}
+        </div>
+        <div style={{ fontWeight: 700, fontSize: 14, color: failed ? '#ef4444' : '#3b82f6', fontVariantNumeric: 'tabular-nums' }}>
+          {pct}%
+        </div>
+      </div>
+
+      <div style={{ height: 8, background: '#e2e8f0', borderRadius: 99, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', width: `${pct}%`, borderRadius: 99,
+          background: failed ? '#ef4444' : '#3b82f6',
+          transition: 'width 0.25s ease',
+        }} />
+      </div>
+
+      <div style={{ fontSize: 12.5, color: '#64748b' }}>
+        {uploading
+          ? `${mb(upload.loaded)} of ${mb(upload.total)} sent — keep this tab open.`
+          : (proc?.message || 'Working on the server…')}
+      </div>
+    </div>
   )
 }
 

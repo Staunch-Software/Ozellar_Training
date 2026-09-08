@@ -180,32 +180,63 @@ export const adminDeleteChapter = (courseId, chapterId) =>
 export const adminSaveAssessment = (courseId, body) =>
   req(`/admin/courses/${courseId}/assessment`, { method: 'PUT', body: JSON.stringify(body) })
 
-// file uploads need FormData, so they can't go through req()'s JSON-only body
-async function uploadReq(path, formData) {
-  const res = await fetch(API + path, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${getToken()}` },
-    body: formData,
+// File uploads need FormData, so they can't go through req()'s JSON-only body.
+// XHR rather than fetch: fetch gives no upload progress, and course decks run
+// to hundreds of MB — without a real percentage the admin has no way to tell a
+// slow upload from a dead one. `onProgress` receives { loaded, total, pct }
+// as the bytes go out.
+function uploadReq(path, formData, onProgress) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open('POST', API + path)
+    xhr.setRequestHeader('Authorization', `Bearer ${getToken()}`)
+
+    if (onProgress) {
+      xhr.upload.onprogress = (e) => {
+        if (!e.lengthComputable) return
+        onProgress({
+          loaded: e.loaded,
+          total: e.total,
+          pct: Math.round((e.loaded / e.total) * 100),
+        })
+      }
+    }
+
+    xhr.onload = () => {
+      let body = {}
+      try { body = JSON.parse(xhr.responseText || '{}') } catch { /* non-JSON error page */ }
+      if (xhr.status >= 200 && xhr.status < 300) return resolve(body)
+      if (xhr.status === 413) {
+        return reject(new Error('The server rejected this file as too large. ' +
+          'Ask an admin to raise nginx client_max_body_size.'))
+      }
+      reject(new Error(body.detail || `Upload failed (${xhr.status})`))
+    }
+    xhr.onerror = () => reject(new Error('Network error during upload — the connection dropped.'))
+    xhr.ontimeout = () => reject(new Error('The upload timed out.'))
+    xhr.onabort = () => reject(new Error('Upload cancelled.'))
+
+    xhr.send(formData)
   })
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({}))
-    throw new Error(body.detail || `Upload failed (${res.status})`)
-  }
-  return res.json()
 }
 
-export const adminUploadPptx = (courseId, file) => {
+export const adminUploadPptx = (courseId, file, onProgress) => {
   const fd = new FormData()
   fd.append('file', file)
-  return uploadReq(`/admin/courses/${courseId}/upload-pptx`, fd)
+  return uploadReq(`/admin/courses/${courseId}/upload-pptx`, fd, onProgress)
 }
 
-export const adminUploadVideo = (courseId, file, { chapterId, title } = {}) => {
+// Progress of the server-side work that runs after the last byte arrives
+// (LibreOffice render, video extraction, chapter creation).
+export const adminPptxStatus = (courseId) =>
+  req(`/admin/courses/${courseId}/pptx-status`)
+
+export const adminUploadVideo = (courseId, file, { chapterId, title } = {}, onProgress) => {
   const fd = new FormData()
   fd.append('file', file)
   if (chapterId) fd.append('chapterId', chapterId)
   if (title) fd.append('title', title)
-  return uploadReq(`/admin/courses/${courseId}/upload-video`, fd)
+  return uploadReq(`/admin/courses/${courseId}/upload-video`, fd, onProgress)
 }
 
 

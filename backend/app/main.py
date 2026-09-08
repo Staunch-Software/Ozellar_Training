@@ -2040,9 +2040,96 @@ def admin_get_course_builder(course_id: str, admin: models.User = Depends(requir
 
 from fastapi import BackgroundTasks
 import time
+import zipfile as _zipfile
+
+# ---------------------------------------------------------------------------
+# PPTX upload/processing job tracker
+#
+# The browser can measure the *upload* itself (XHR upload.onprogress), but
+# everything after the last byte lands — LibreOffice rendering, video
+# extraction, ffmpeg — happens in a background task with no HTTP response to
+# hang progress off. This in-memory map is what `GET .../pptx-status` reports
+# so the admin UI can show a real stage + percentage instead of an
+# indeterminate spinner that never ends when processing fails.
+#
+# In-memory is deliberate: a single uvicorn worker owns the background task,
+# and a restart legitimately means the job died anyway.
+# ---------------------------------------------------------------------------
+_pptx_jobs: dict[str, dict] = {}
+
+
+def _safe_unlink(path: str) -> None:
+    try:
+        os.remove(path)
+    except OSError:
+        pass
+
+
+# LibreOffice needs far longer than 2 minutes on a multi-hundred-MB deck.
+PPTX_SOFFICE_TIMEOUT = int(os.getenv("PPTX_SOFFICE_TIMEOUT", "1800"))
+
+
+# Media parts that LibreOffice does not need in order to draw a slide.
+_PPTX_MEDIA_EXT = (".mp4", ".mov", ".avi", ".wmv", ".m4v", ".mkv",
+                   ".mp3", ".wav", ".m4a", ".wma")
+
+
+def _pptx_render_copy(pptx_path: str, tmp_dir: str) -> str:
+    """A copy of the deck with embedded audio/video emptied out, for rendering.
+
+    Course decks are mostly video — a 1.4 GB file can be 1.26 GB of MP4 — and
+    handing all of that to LibreOffice is what made slide rendering take tens
+    of minutes on big decks. The videos are extracted separately below and
+    replayed by our own player, so the render copy only needs the slide
+    artwork. Each media part is rewritten as a zero-byte entry rather than
+    dropped, which keeps every filename and relationship intact so the package
+    stays valid. Falls back to the original path if anything goes wrong.
+    """
+    try:
+        out = os.path.join(tmp_dir, "render_" + os.path.basename(pptx_path))
+        stripped = 0
+        with _zipfile.ZipFile(pptx_path) as src,                 _zipfile.ZipFile(out, "w", _zipfile.ZIP_DEFLATED) as dst:
+            for item in src.infolist():
+                if item.filename.lower().endswith(_PPTX_MEDIA_EXT):
+                    dst.writestr(item.filename, b"")
+                    stripped += 1
+                else:
+                    with src.open(item) as f:
+                        dst.writestr(item, f.read())
+        if not stripped:
+            _safe_unlink(out)
+            return pptx_path
+        before, after = os.path.getsize(pptx_path), os.path.getsize(out)
+        print(f"[pptx] render copy: emptied {stripped} media parts "
+              f"({before / 1048576:.0f} MB -> {after / 1048576:.0f} MB)")
+        return out
+    except Exception as e:
+        print(f"[pptx] could not build a render copy ({e}); rendering the original")
+        return pptx_path
+
+
+def _pptx_job_set(course_id: str, *, stage: str, pct: int | None = None,
+                  message: str = "", error: str | None = None,
+                  done: bool = False, added: int | None = None):
+    job = _pptx_jobs.setdefault(course_id, {})
+    job.update({
+        "stage": stage,
+        "message": message,
+        "error": error,
+        "done": done,
+        "updated": time.time(),
+    })
+    if pct is not None:
+        job["pct"] = max(0, min(100, int(pct)))
+    if added is not None:
+        job["added"] = added
+    return job
+
 
 def process_pptx_background(course_id: str, pptx_path: str, original_filename: str, course_dir: str):
     db = SessionLocal()
+    _pptx_job_set(course_id, stage="rendering", pct=5,
+                  message="Rendering slides (this is the slow part on big decks)…")
     try:
         course = db.query(models.Course).filter(models.Course.id == course_id).first()
         if not course: return
@@ -2064,31 +2151,35 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
             success = False
             last_err = None
             env_tmp = os.path.join(tmp, "soffice_env").replace(os.sep, "/")
-            # Skip LibreOffice PDF generation for extremely large files (>150MB) 
-            # to prevent LibreOffice from hanging or taking 30+ minutes.
-            # Slide images won't be generated, but text and videos will still be extracted.
-            file_size_mb = os.path.getsize(pptx_path) / (1024 * 1024)
-            if file_size_mb > 150:
-                print(f"Skipping LibreOffice PDF generation for large file ({file_size_mb:.1f} MB)")
-                last_err = "File too large for PDF conversion"
-            else:
-                for sp in soffice_paths:
-                    try:
-                        subprocess.run(
-                            [sp, f"-env:UserInstallation=file:///{env_tmp}", "--headless", "--nologo", "--nofirststartwizard", "--convert-to", "pdf", "--outdir", tmp, pptx_path],
-                            check=True, capture_output=True, timeout=1800,
-                        )
-                        success = True
-                        break
-                    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
-                        last_err = e
 
-            pdf_filename = os.path.splitext(os.path.basename(pptx_path))[0] + ".pdf"
+            # Render from a video-free copy. This is what replaces the old
+            # "skip LibreOffice entirely above 150 MB" rule: big decks now get
+            # slide images too, because the part that made them big is exactly
+            # the part rendering doesn't need.
+            render_src = _pptx_render_copy(pptx_path, tmp)
+
+            for sp in soffice_paths:
+                try:
+                    subprocess.run(
+                        [sp, f"-env:UserInstallation=file:///{env_tmp}", "--headless", "--nologo", "--nofirststartwizard", "--convert-to", "pdf", "--outdir", tmp, render_src],
+                        check=True, capture_output=True, timeout=PPTX_SOFFICE_TIMEOUT,
+                    )
+                    success = True
+                    break
+                except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
+                    last_err = e
+
+            pdf_filename = os.path.splitext(os.path.basename(render_src))[0] + ".pdf"
             pdf_path = os.path.join(tmp, pdf_filename)
             has_pdf = success and os.path.exists(pdf_path)
             
             if not has_pdf:
                 print(f"Background PPTX conversion to PDF failed or skipped: {last_err}")
+                _pptx_job_set(course_id, stage="rendering", pct=25,
+                              message="Slide images unavailable — importing text only.")
+            else:
+                _pptx_job_set(course_id, stage="extracting", pct=35,
+                              message="Extracting slide text and videos…")
 
             import fitz
             from pptx import Presentation
@@ -2162,12 +2253,17 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                                     if target and target.startswith("../media/") and target.lower().endswith(".mp4"):
                                         media_path = "ppt/" + target[3:]
                                         if media_path in z.namelist():
-                                            media_data = z.read(media_path)
                                             basename = os.path.basename(target)
                                             vid_filename = f"slide{slide_num_str}_{basename}"
                                             vid_path = os.path.join(course_dir, vid_filename)
-                                            with open(vid_path, "wb") as vf:
-                                                vf.write(media_data)
+                                            # copy in chunks — a single embedded
+                                            # MP4 can be 500 MB+, and z.read()
+                                            # would hold all of it in RAM.
+                                            with z.open(media_path) as src, open(vid_path, "wb") as vf:
+                                                shutil.copyfileobj(src, vf, 1024 * 1024)
+                                            _pptx_job_set(
+                                                course_id, stage="video", pct=45,
+                                                message=f"Compressing embedded video {vid_filename}…")
                                             final_vid_path = compress_video(vid_path)
                                             if final_vid_path == vid_path:
                                                 try:
@@ -2191,6 +2287,8 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
             
             if num_slides == 0:
                 print("No slides found in PPTX or PDF")
+                _pptx_job_set(course_id, stage="failed", pct=100, done=True,
+                              error="No slides could be read from this file.")
                 return
 
             start_n = max((ch.n or 0 for ch in course.chapters), default=0)
@@ -2255,14 +2353,25 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                     quiz_questions=quiz_questions
                 )
                 db.add(ch)
+                if num_slides:
+                    _pptx_job_set(course_id, stage="slides",
+                                  pct=60 + int(35 * (i + 1) / num_slides),
+                                  message=f"Building lesson {i + 1} of {num_slides}…")
             
             if doc:
                 doc.close()
             db.commit()
+            _pptx_job_set(course_id, stage="done", pct=100, done=True,
+                          added=num_slides,
+                          message=f"Imported {num_slides} slides.")
             print(f"Background PPTX processing finished for {course_id}")
 
         finally:
-            import shutil
+            # NB: no `import shutil` here. A function-local import binds the
+            # name for the *whole* function, shadowing the module-level
+            # `shutil` and making every earlier use in this function an
+            # UnboundLocalError (which the video extractor's except-clause
+            # swallowed, leaving 0-byte video files behind).
             try:
                 shutil.rmtree(tmp)
             except OSError:
@@ -2271,6 +2380,8 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
             
     except Exception as e:
         print(f"Background PPTX processing failed entirely: {e}")
+        _pptx_job_set(course_id, stage="failed", pct=100, done=True,
+                      error=f"Processing failed: {e}")
         import traceback
         traceback.print_exc()
     finally:
@@ -2282,7 +2393,7 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                 pass
 
 @app.post("/api/admin/courses/{course_id}/upload-pptx")
-def upload_course_pptx(course_id: str, background_tasks: BackgroundTasks,
+async def upload_course_pptx(course_id: str, background_tasks: BackgroundTasks,
                              file: UploadFile = File(...),
                              admin: models.User = Depends(require_admin),
                              db: Session = Depends(get_db)):
@@ -2294,17 +2405,76 @@ def upload_course_pptx(course_id: str, background_tasks: BackgroundTasks,
 
     course_dir = os.path.join(UPLOAD_DIR, course_id)
     os.makedirs(course_dir, exist_ok=True)
-    
+
     pptx_filename = f"pending_{int(time.time())}_{file.filename}"
     pptx_path = os.path.join(course_dir, pptx_filename)
-    with open(pptx_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
 
+    # Stream the body to disk in chunks. The previous
+    # `shutil.copyfileobj(file.file, f)` was a blocking, whole-file copy inside
+    # an `async def` — on a 1 GB deck it froze the event loop (every other API
+    # request stalled) for as long as the copy took. `await file.read(...)`
+    # yields between chunks, so the rest of the API stays responsive.
+    CHUNK = 4 * 1024 * 1024
+    size = 0
+    try:
+        with open(pptx_path, "wb") as f:
+            while True:
+                chunk = await file.read(CHUNK)
+                if not chunk:
+                    break
+                f.write(chunk)
+                size += len(chunk)
+    except Exception as e:
+        _safe_unlink(pptx_path)
+        raise HTTPException(500, f"Could not save the upload: {e}")
+
+    # Validate before accepting. A .pptx is a zip; a truncated or partially
+    # copied file has no central directory and every downstream step
+    # (python-pptx, LibreOffice, the video extractor) fails on it. Catching it
+    # here turns a silent background failure + endless spinner into an
+    # immediate, actionable error.
+    try:
+        with _zipfile.ZipFile(pptx_path) as z:
+            names = z.namelist()
+        if "ppt/presentation.xml" not in names:
+            raise ValueError("missing ppt/presentation.xml")
+    except Exception:
+        _safe_unlink(pptx_path)
+        raise HTTPException(
+            400,
+            f"'{file.filename}' is not a readable PowerPoint file — it looks "
+            f"truncated or corrupt ({size / (1024 * 1024):.0f} MB received). "
+            "Re-open it in PowerPoint and use File > Save As to write a fresh "
+            "copy, then upload that.",
+        )
+
+    _pptx_job_set(course_id, stage="queued", pct=0,
+                  message="Upload received — starting processing…")
     background_tasks.add_task(process_pptx_background, course_id, pptx_path, file.filename, course_dir)
-    return {"message": "Processing started in background."}
+    return {"message": "Processing started in background.", "bytes": size}
+
+
+@app.get("/api/admin/courses/{course_id}/pptx-status")
+def pptx_status(course_id: str, admin: models.User = Depends(require_admin)):
+    """Progress of the background PPTX import for this course.
+
+    Returns `{stage: "idle"}` when nothing is running — including after a
+    server restart, which the UI treats as "stopped" rather than hanging.
+    """
+    job = _pptx_jobs.get(course_id)
+    if not job:
+        return {"stage": "idle", "pct": 0, "done": True, "error": None, "message": ""}
+    return {
+        "stage": job.get("stage", "queued"),
+        "pct": job.get("pct", 0),
+        "message": job.get("message", ""),
+        "error": job.get("error"),
+        "done": bool(job.get("done")),
+        "added": job.get("added"),
+    }
 
 @app.post("/api/admin/courses/{course_id}/upload-video")
-def admin_upload_video(course_id: str, file: UploadFile = File(...),
+async def admin_upload_video(course_id: str, file: UploadFile = File(...),
                              chapterId: str | None = Form(None), title: str | None = Form(None),
                              admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
     course = db.get(models.Course, course_id)
