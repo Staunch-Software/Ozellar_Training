@@ -2239,6 +2239,13 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
             slide_videos = {}
             try:
                 with zipfile.ZipFile(pptx_path, "r") as z:
+                    # Count the videos up front so the progress bar can actually
+                    # move through this phase. ffmpeg on a deck's worth of video
+                    # is the longest part of the whole job (minutes), so a fixed
+                    # percentage here reads as "stuck" even though it's working.
+                    total_vids = sum(1 for n in z.namelist()
+                                     if n.startswith("ppt/media/") and n.lower().endswith(".mp4"))
+                    done_vids = 0
                     for name in z.namelist():
                         if name.startswith("ppt/slides/_rels/slide") and name.endswith(".xml.rels"):
                             try:
@@ -2262,9 +2269,14 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                                             with z.open(media_path) as src, open(vid_path, "wb") as vf:
                                                 shutil.copyfileobj(src, vf, 1024 * 1024)
                                             _pptx_job_set(
-                                                course_id, stage="video", pct=45,
-                                                message=f"Compressing embedded video {vid_filename}…")
+                                                course_id, stage="video",
+                                                pct=40 + int(20 * done_vids / max(total_vids, 1)),
+                                                message=(f"Compressing video {done_vids + 1} of "
+                                                         f"{total_vids} — {basename} "
+                                                         f"({os.path.getsize(vid_path) // 1048576} MB). "
+                                                         "Large videos take several minutes each."))
                                             final_vid_path = compress_video(vid_path)
+                                            done_vids += 1
                                             if final_vid_path == vid_path:
                                                 try:
                                                     from qtfaststart import processor
