@@ -2303,6 +2303,23 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                               error="No slides could be read from this file.")
                 return
 
+            # Everything above (LibreOffice render, video extraction, ffmpeg)
+            # can run for 20+ minutes without issuing a single query, and
+            # Postgres drops the idle SSL connection long before that — the
+            # next statement then dies with "SSL connection has been closed
+            # unexpectedly", losing the whole import at the last step.
+            # `pool_pre_ping` can't save us here: it validates a connection when
+            # it is checked OUT of the pool, and this one was checked out before
+            # the long wait. So drop the stale session and take a fresh one;
+            # pre_ping then guarantees the replacement is actually alive.
+            db.close()
+            db = SessionLocal()
+            course = db.query(models.Course).filter(models.Course.id == course_id).first()
+            if not course:
+                _pptx_job_set(course_id, stage="failed", pct=100, done=True,
+                              error="Course no longer exists.")
+                return
+
             start_n = max((ch.n or 0 for ch in course.chapters), default=0)
             next_order = _next_chapter_order(course)
             

@@ -12,7 +12,11 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./dev.db")
 # SQLite needs a special flag for use across threads (dev only).
 connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
 
-engine = create_engine(DATABASE_URL, connect_args=connect_args, pool_pre_ping=True)
+# pool_recycle: discard pooled connections older than 30 min rather than handing
+# out one the server has already dropped. pool_pre_ping catches most of that on
+# checkout, but recycling also protects long-lived sessions in background jobs.
+engine = create_engine(DATABASE_URL, connect_args=connect_args,
+                       pool_pre_ping=True, pool_recycle=1800)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
