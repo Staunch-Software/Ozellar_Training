@@ -2474,7 +2474,7 @@ def pptx_status(course_id: str, admin: models.User = Depends(require_admin)):
     }
 
 @app.post("/api/admin/courses/{course_id}/upload-video")
-async def admin_upload_video(course_id: str, file: UploadFile = File(...),
+def admin_upload_video(course_id: str, file: UploadFile = File(...),
                              chapterId: str | None = Form(None), title: str | None = Form(None),
                              admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
     course = db.get(models.Course, course_id)
