@@ -2064,17 +2064,24 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
             success = False
             last_err = None
             env_tmp = os.path.join(tmp, "soffice_env").replace(os.sep, "/")
-            
-            for sp in soffice_paths:
-                try:
-                    subprocess.run(
-                        [sp, f"-env:UserInstallation=file:///{env_tmp}", "--headless", "--nologo", "--nofirststartwizard", "--convert-to", "pdf", "--outdir", tmp, pptx_path],
-                        check=True, capture_output=True, timeout=120,
-                    )
-                    success = True
-                    break
-                except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
-                    last_err = e
+            # Skip LibreOffice PDF generation for extremely large files (>150MB) 
+            # to prevent LibreOffice from hanging or taking 30+ minutes.
+            # Slide images won't be generated, but text and videos will still be extracted.
+            file_size_mb = os.path.getsize(pptx_path) / (1024 * 1024)
+            if file_size_mb > 150:
+                print(f"Skipping LibreOffice PDF generation for large file ({file_size_mb:.1f} MB)")
+                last_err = "File too large for PDF conversion"
+            else:
+                for sp in soffice_paths:
+                    try:
+                        subprocess.run(
+                            [sp, f"-env:UserInstallation=file:///{env_tmp}", "--headless", "--nologo", "--nofirststartwizard", "--convert-to", "pdf", "--outdir", tmp, pptx_path],
+                            check=True, capture_output=True, timeout=1800,
+                        )
+                        success = True
+                        break
+                    except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
+                        last_err = e
 
             pdf_filename = os.path.splitext(os.path.basename(pptx_path))[0] + ".pdf"
             pdf_path = os.path.join(tmp, pdf_filename)
@@ -2275,7 +2282,7 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                 pass
 
 @app.post("/api/admin/courses/{course_id}/upload-pptx")
-async def upload_course_pptx(course_id: str, background_tasks: BackgroundTasks,
+def upload_course_pptx(course_id: str, background_tasks: BackgroundTasks,
                              file: UploadFile = File(...),
                              admin: models.User = Depends(require_admin),
                              db: Session = Depends(get_db)):
@@ -2297,7 +2304,7 @@ async def upload_course_pptx(course_id: str, background_tasks: BackgroundTasks,
     return {"message": "Processing started in background."}
 
 @app.post("/api/admin/courses/{course_id}/upload-video")
-async def admin_upload_video(course_id: str, file: UploadFile = File(...),
+def admin_upload_video(course_id: str, file: UploadFile = File(...),
                              chapterId: str | None = Form(None), title: str | None = Form(None),
                              admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
     course = db.get(models.Course, course_id)
