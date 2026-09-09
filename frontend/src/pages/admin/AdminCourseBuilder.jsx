@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, ArrowUp, ArrowDown, Trash2, Upload, Video, Image as ImageIcon,
-  HelpCircle, Plus, X, AlertCircle, ChevronDown, ChevronUp, Save, Check, Edit2, GripVertical, Settings, Search
+  HelpCircle, Plus, X, AlertCircle, ChevronDown, ChevronUp, Save, Check, Edit2, GripVertical, Settings, Search, Play
 } from 'lucide-react'
 import {
   adminGetCourseBuilder, adminUploadPptx, adminUploadVideo, adminCreateQuizChapter,
@@ -234,9 +234,25 @@ export default function AdminCourseBuilder() {
           <h1 style={{ fontSize: 26, margin: '6px 0 4px' }}>{course.title}</h1>
           {course.subtitle && <p className="mut" style={{ margin: 0 }}>{course.subtitle}</p>}
         </div>
-        <button className="btn" onClick={openSettings}>
-          <Settings size={16} /> Course Settings
-        </button>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <button 
+            onClick={() => navigate(`/admin/courses/${id}/preview`)}
+            style={{
+              display: 'flex', alignItems: 'center', gap: 6,
+              background: '#0f172a', color: 'white', border: 'none', borderRadius: 6, padding: '0 16px',
+              height: 36, fontSize: 14, fontWeight: 600, cursor: 'pointer',
+              boxShadow: '0 4px 6px -1px rgba(15, 23, 42, 0.2)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseEnter={e => { e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseLeave={e => { e.currentTarget.style.background = '#0f172a'; e.currentTarget.style.transform = 'none'; }}
+          >
+            <Play size={16} fill="white" /> Preview Course
+          </button>
+          <button className="btn" onClick={openSettings}>
+            <Settings size={16} /> Course Settings
+          </button>
+        </div>
       </div>
 
       {error && <div className="form-error" style={{ marginBottom: 14 }}><AlertCircle size={15} /> {error}</div>}

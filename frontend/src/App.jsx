@@ -19,6 +19,7 @@ import AdminReport from './pages/admin/AdminReport.jsx'
 import AdminCourses from './pages/admin/AdminCourses.jsx'
 import AdminCourseBuilder from './pages/admin/AdminCourseBuilder.jsx'
 import AdminScreening from './pages/admin/AdminScreening.jsx'
+import AdminCoursePreview from './pages/admin/AdminCoursePreview.jsx'
 import TestWelcome from './pages/test/TestWelcome.jsx'
 import TestExam from './pages/test/TestExam.jsx'
 import TestResult from './pages/test/TestResult.jsx'
@@ -122,6 +123,7 @@ export default function App() {
         <Route path="/test/exam" element={T(<TestExam />)} />
         <Route path="/test/result" element={T(<TestResult />)} />
 
+        <Route path="/admin/courses/:id/preview" element={<AdminRoute><AdminCoursePreview /></AdminRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route index element={<AdminDashboard />} />
           <Route path="users" element={<AdminUsers />} />
