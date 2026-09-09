@@ -8,6 +8,7 @@ Run:  uvicorn app.main:app --reload
 """
 import csv
 import io
+import json
 import os
 import re
 import shutil
@@ -2048,14 +2049,47 @@ import zipfile as _zipfile
 # The browser can measure the *upload* itself (XHR upload.onprogress), but
 # everything after the last byte lands — LibreOffice rendering, video
 # extraction, ffmpeg — happens in a background task with no HTTP response to
-# hang progress off. This in-memory map is what `GET .../pptx-status` reports
-# so the admin UI can show a real stage + percentage instead of an
+# hang progress off. This file-based store is what `GET .../pptx-status`
+# reports so the admin UI can show a real stage + percentage instead of an
 # indeterminate spinner that never ends when processing fails.
 #
-# In-memory is deliberate: a single uvicorn worker owns the background task,
-# and a restart legitimately means the job died anyway.
+# WHY FILE-BASED (not in-memory):
+#   With a single uvicorn process an in-memory dict works fine.  Under gunicorn
+#   with -w N, each worker is a separate OS process with its own heap.  The
+#   upload POST lands on Worker A which stores the job in A's dict; the
+#   subsequent status GETs are round-robin'd to Workers B and C which have no
+#   record of the job and return {stage: "idle"} — the UI then shows
+#   "Processing stopped unexpectedly" even though A is happily converting.
+#   Writing state to a small JSON file in the course upload directory makes it
+#   visible to every worker without needing Redis or a DB schema change.
+#   Writes use an atomic rename so a reader never sees a half-written file.
 # ---------------------------------------------------------------------------
-_pptx_jobs: dict[str, dict] = {}
+import threading as _threading
+_pptx_job_lock = _threading.Lock()   # serialises writes within one worker process
+
+
+def _pptx_job_path(course_id: str) -> str:
+    """Absolute path of the per-course job-state JSON file."""
+    return os.path.join(UPLOAD_DIR, course_id, "_pptx_job.json")
+
+
+def _pptx_job_read(course_id: str) -> dict | None:
+    """Return the current job dict, or None if no file exists."""
+    try:
+        with open(_pptx_job_path(course_id), "r", encoding="utf-8") as fh:
+            return json.loads(fh.read())
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
+def _pptx_job_write(course_id: str, job: dict) -> None:
+    """Atomically overwrite the job-state file (tmp + rename)."""
+    path = _pptx_job_path(course_id)
+    tmp = path + ".tmp"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(tmp, "w", encoding="utf-8") as fh:
+        fh.write(json.dumps(job))
+    os.replace(tmp, path)   # atomic on POSIX; best-effort on Windows
 
 
 def _safe_unlink(path: str) -> None:
@@ -2111,18 +2145,26 @@ def _pptx_render_copy(pptx_path: str, tmp_dir: str) -> str:
 def _pptx_job_set(course_id: str, *, stage: str, pct: int | None = None,
                   message: str = "", error: str | None = None,
                   done: bool = False, added: int | None = None):
-    job = _pptx_jobs.setdefault(course_id, {})
-    job.update({
-        "stage": stage,
-        "message": message,
-        "error": error,
-        "done": done,
-        "updated": time.time(),
-    })
-    if pct is not None:
-        job["pct"] = max(0, min(100, int(pct)))
-    if added is not None:
-        job["added"] = added
+    """Update (or create) the on-disk job state for course_id.
+
+    Uses a threading lock + atomic rename so concurrent writes inside the same
+    worker process are safe, and readers on other worker processes never see a
+    partially-written file.
+    """
+    with _pptx_job_lock:
+        job = _pptx_job_read(course_id) or {}
+        job.update({
+            "stage": stage,
+            "message": message,
+            "error": error,
+            "done": done,
+            "updated": time.time(),
+        })
+        if pct is not None:
+            job["pct"] = max(0, min(100, int(pct)))
+        if added is not None:
+            job["added"] = added
+        _pptx_job_write(course_id, job)
     return job
 
 
@@ -2510,7 +2552,7 @@ def pptx_status(course_id: str, admin: models.User = Depends(require_admin)):
     Returns `{stage: "idle"}` when nothing is running — including after a
     server restart, which the UI treats as "stopped" rather than hanging.
     """
-    job = _pptx_jobs.get(course_id)
+    job = _pptx_job_read(course_id)
     if not job:
         return {"stage": "idle", "pct": 0, "done": True, "error": None, "message": ""}
     return {
