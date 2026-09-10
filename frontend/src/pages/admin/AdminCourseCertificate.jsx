@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ArrowLeft, Award, Plus, Trash2, Save, AlertCircle, RefreshCw, GripVertical, CheckCircle2, ArrowRight } from 'lucide-react'
 import { adminGetCourseBuilder, adminSaveCourseCertificate, adminCourseCertificatePreviewUrl } from '../../api.js'
@@ -57,6 +57,41 @@ export default function AdminCourseCertificate() {
   const setTopic = (i, v) => setTopics(ts => ts.map((t, idx) => idx === i ? v : t))
   const removeTopic = (i) => setTopics(ts => ts.filter((_, idx) => idx !== i))
   const addTopic = () => setTopics(ts => [...ts, ''])
+
+  // Drag-to-reorder — only armed while the grip handle is held down, so
+  // dragging text inside the input itself still works normally.
+  const dragIndex = useRef(null)
+  const dragOverIndex = useRef(null)
+  const [armedIdx, setArmedIdx] = useState(null)
+  const [dragOverIdx, setDragOverIdx] = useState(null)
+
+  const handleDragStart = (e, i) => {
+    dragIndex.current = i
+    e.dataTransfer.effectAllowed = 'move'
+  }
+  const handleDragEnter = (e, i) => {
+    e.preventDefault()
+    if (dragIndex.current !== null && dragIndex.current !== i) {
+      dragOverIndex.current = i
+      setDragOverIdx(i)
+    }
+  }
+  const handleDragEnd = () => {
+    setArmedIdx(null)
+    setDragOverIdx(null)
+    if (dragIndex.current !== null && dragOverIndex.current !== null && dragIndex.current !== dragOverIndex.current) {
+      const from = dragIndex.current
+      const to = dragOverIndex.current
+      setTopics(prev => {
+        const next = [...prev]
+        const [moved] = next.splice(from, 1)
+        next.splice(to, 0, moved)
+        return next
+      })
+    }
+    dragIndex.current = null
+    dragOverIndex.current = null
+  }
 
   const save = async (andContinue) => {
     setError(''); setBusy(true)
@@ -152,13 +187,27 @@ export default function AdminCourseCertificate() {
             {topics.map((t, i) => (
               <div
                 key={i}
+                draggable={armedIdx === i}
+                onDragStart={e => handleDragStart(e, i)}
+                onDragEnter={e => handleDragEnter(e, i)}
+                onDragOver={e => e.preventDefault()}
+                onDragEnd={handleDragEnd}
                 style={{
                   display: 'flex', gap: 8, alignItems: 'center',
-                  background: 'var(--surface-2)', border: '1px solid var(--border)',
+                  background: 'var(--surface-2)',
+                  border: `1px solid ${dragOverIdx === i ? '#f59e0b' : 'var(--border)'}`,
                   borderRadius: 10, padding: '4px 6px 4px 10px',
+                  opacity: armedIdx === i ? 0.5 : 1,
+                  transition: 'border-color 0.12s ease, opacity 0.12s ease',
                 }}
               >
-                <GripVertical size={14} style={{ color: 'var(--text-faint)', flexShrink: 0 }} />
+                <span
+                  onMouseDown={() => setArmedIdx(i)}
+                  onMouseUp={() => setArmedIdx(null)}
+                  style={{ display: 'flex', cursor: 'grab', flexShrink: 0 }}
+                >
+                  <GripVertical size={14} style={{ color: 'var(--text-faint)' }} />
+                </span>
                 <span style={{
                   width: 20, height: 20, borderRadius: 6, flexShrink: 0,
                   background: 'rgba(245,158,11,0.14)', color: '#f59e0b',
