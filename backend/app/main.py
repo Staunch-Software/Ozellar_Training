@@ -1263,7 +1263,10 @@ def admin_user_view(db, u):
 
 @app.get("/api/admin/users")
 def admin_list_users(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
-    users = db.query(models.User).order_by(models.User.role, models.User.full_name).all()
+    """Crew (learner) users only — admin/super_admin accounts are managed
+    separately via /api/admin/panel/admins."""
+    users = (db.query(models.User).filter_by(role="learner")
+             .order_by(models.User.full_name).all())
     return [admin_user_view(db, u) for u in users]
 
 
