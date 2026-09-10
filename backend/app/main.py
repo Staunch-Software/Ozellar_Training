@@ -1240,6 +1240,7 @@ class UpdateUserRequest(BaseModel):
     fullName: str | None = None
     rank: str | None = None
     ppNo: str | None = None
+    role: str | None = None
 
 
 class AssignRequest(BaseModel):
@@ -1395,6 +1396,12 @@ def admin_panel_update_admin(user_id: str, req: UpdateUserRequest,
         user.full_name = req.fullName.strip()
     if req.rank is not None:
         user.rank = req.rank.strip() or None
+    if req.role is not None:
+        if req.role not in ("admin", "super_admin"):
+            raise HTTPException(400, "Role must be 'admin' or 'super_admin'")
+        if user.id == admin.id and req.role != user.role:
+            raise HTTPException(400, "You cannot change your own role")
+        user.role = req.role
     db.commit()
     return {
         "id": user.id, "role": user.role, "name": user.full_name,

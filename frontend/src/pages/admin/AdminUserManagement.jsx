@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Shield, UserPlus, Check, Ban, AlertCircle, X, Mail, Lock, User,
          Crown, Pencil, Save, Search, Users } from 'lucide-react'
 import { adminPanelListAdmins, adminPanelCreateAdmin, adminPanelUpdateAdmin } from '../../api.js'
+import { useAuth } from '../../auth.jsx'
 
 const EMPTY_CREATE = { role: 'admin', fullName: '', email: '', password: '', rank: '' }
 
@@ -186,17 +187,21 @@ function CreateModal({ onClose, onCreated }) {
 
 /* ─── Edit Admin modal ─── */
 function EditModal({ user, onClose, onSaved }) {
-  const [form, setForm] = useState({ fullName: user.name || '', rank: user.rank || '' })
+  const { user: me } = useAuth()
+  const isSelf = me?.id === user.id
+  const [form, setForm] = useState({ fullName: user.name || '', rank: user.rank || '', role: user.role || 'admin' })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
-  const cfg = ROLE_CONFIG[user.role] || ROLE_CONFIG.admin
+  const cfg = ROLE_CONFIG[form.role] || ROLE_CONFIG.admin
 
   const save = async (e) => {
     e.preventDefault()
     if (!form.fullName.trim()) { setError('Full name is required'); return }
     setError(''); setBusy(true)
     try {
-      await adminPanelUpdateAdmin(user.id, { fullName: form.fullName.trim(), rank: form.rank.trim() })
+      await adminPanelUpdateAdmin(user.id, {
+        fullName: form.fullName.trim(), rank: form.rank.trim(), role: form.role,
+      })
       onSaved()
       onClose()
     } catch (err) {
@@ -205,7 +210,7 @@ function EditModal({ user, onClose, onSaved }) {
   }
 
   return (
-    <Modal title={`Edit ${cfg.label}`} icon={<Pencil size={14} />} accent={cfg} onClose={onClose}>
+    <Modal title={`Edit ${ROLE_CONFIG[user.role]?.label || 'Admin'}`} icon={<Pencil size={14} />} accent={cfg} onClose={onClose}>
       <form onSubmit={save}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
           <div>
@@ -220,6 +225,40 @@ function EditModal({ user, onClose, onSaved }) {
             }}>
               <Mail size={13} /> {user.email}
             </div>
+          </div>
+
+          <div>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-mut)', display: 'block', marginBottom: 6 }}>
+              Role
+            </label>
+            <div style={{ display: 'flex', gap: 10 }}>
+              {['admin', 'super_admin'].map(r => {
+                const c = ROLE_CONFIG[r]; const Icon = c.Icon; const active = form.role === r
+                return (
+                  <button
+                    key={r} type="button" disabled={isSelf}
+                    onClick={() => setForm(f => ({ ...f, role: r }))}
+                    style={{
+                      flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+                      padding: '10px 14px', borderRadius: 10,
+                      cursor: isSelf ? 'not-allowed' : 'pointer',
+                      opacity: isSelf ? 0.6 : 1,
+                      border: `2px solid ${active ? c.color : 'var(--border)'}`,
+                      background: active ? c.bg : 'var(--surface-2)',
+                      color: active ? c.color : 'var(--text-mut)',
+                      fontWeight: 700, fontSize: 13,
+                    }}
+                  >
+                    <Icon size={14} /> {c.label}
+                  </button>
+                )
+              })}
+            </div>
+            {isSelf && (
+              <div className="mut" style={{ fontSize: 11, marginTop: 6 }}>
+                You can't change your own role.
+              </div>
+            )}
           </div>
 
           <Field label="Full Name" icon={<User size={13} />} required>
