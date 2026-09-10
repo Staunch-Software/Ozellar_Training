@@ -242,8 +242,9 @@ export default function AdminCourseCertificate() {
             </div>
           )}
           <p className="mut" style={{ fontSize: 11.5, marginTop: 10 }}>
-            Applies to every certificate issued for this course going forward — certificates already
-            issued to crew who've passed won't change.
+            This changes what's shown on every certificate for this course — including ones already
+            issued. Anyone who re-downloads or re-views an existing certificate will see the updated
+            topics, not what was there when they originally earned it.
           </p>
         </div>
 
