@@ -94,20 +94,21 @@ def send_digest_email(admin_email: str, approvals: list):
         accept_url = f"{PUBLIC_BASE_URL}/api/approve?token={ap['token']}"
         reject_url = f"{PUBLIC_BASE_URL}/api/reject?token={ap['token']}"
         preview_url = f"{PUBLIC_BASE_URL}/api/preview-certificate?token={ap['token']}"
-        
+
         score_str = f"{ap['score']}%" if ap.get('score') is not None else "N/A"
 
         rows += f"""
         <tr>
             <td style="padding: 8px; border: 1px solid #ddd;">{ap['learner_name']}</td>
             <td style="padding: 8px; border: 1px solid #ddd;">{ap['crew_id']}</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{ap.get('rank') or '—'}</td>
             <td style="padding: 8px; border: 1px solid #ddd;">{ap['course_title']}</td>
             <td style="padding: 8px; border: 1px solid #ddd;">{score_str}</td>
             <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
                 <a href="{preview_url}" style="background-color: #2196F3; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px;">Preview</a>
             </td>
             <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
-                <a href="{accept_url}" style="background-color: #4CAF50; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px;">Accept</a>
+                <a href="{accept_url}" style="background-color: #4CAF50; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px;">Approve</a>
             </td>
             <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
                 <a href="{reject_url}" style="background-color: #f44336; color: white; padding: 6px 12px; text-decoration: none; border-radius: 4px;">Reject</a>
@@ -125,16 +126,17 @@ def send_digest_email(admin_email: str, approvals: list):
     </head>
     <body>
         <h2>Pending Assessment Approvals</h2>
-        <p>The following crew members have passed their assessments and are waiting for their certificates.</p>
+        <p>The following crew members have passed their assessments and are waiting for their certificates. Clicking <b>Approve</b> opens a confirmation page where you'll add a remark before the certificate is issued.</p>
         <table>
             <thead>
                 <tr>
                     <th>Name</th>
                     <th>Crew ID</th>
+                    <th>Rank</th>
                     <th>Course</th>
                     <th>Score</th>
                     <th>Preview</th>
-                    <th>Accept</th>
+                    <th>Approve</th>
                     <th>Reject</th>
                 </tr>
             </thead>

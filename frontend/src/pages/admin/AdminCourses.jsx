@@ -2,7 +2,6 @@ import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BookOpen, Plus, AlertCircle, X, ChevronRight, Search, GraduationCap } from 'lucide-react'
 import { adminListCourses, adminCreateCourse, adminListUsers } from '../../api.js'
-import AdminHeader from '../../components/AdminHeader.jsx'
 
 const EMPTY = { title: '', subtitle: '', durationLabel: '', passMark: 80, maxAttempts: '' }
 
@@ -98,12 +97,44 @@ export default function AdminCourses() {
   if (!courses) return <div className="spinner">Loading courses…</div>
 
   return (
-    <>
-      <AdminHeader icon={GraduationCap} title="Courses" eyebrow="Fleet training · Content">
-        <button className={showForm ? "btn" : "btn primary"} onClick={() => { setShowForm((s) => !s); setError('') }}>
-          {showForm ? <><X size={16} /> Close</> : <><Plus size={16} /> New course</>}
-        </button>
-      </AdminHeader>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      <div style={{
+        background: 'var(--surface)',
+        borderBottom: '1px solid var(--border)',
+        padding: '10px 0',
+        marginBottom: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px'
+      }}>
+        <div style={{
+          width: '4px',
+          height: '36px',
+          background: 'linear-gradient(180deg, #4f46e5, #7c3aed)',
+          borderRadius: '0 4px 4px 0',
+          flexShrink: 0
+        }} />
+        <div style={{
+          width: '36px',
+          height: '36px',
+          borderRadius: '10px',
+          background: 'rgba(79,70,229,0.1)',
+          color: '#4f46e5',
+          display: 'grid',
+          placeItems: 'center'
+        }}>
+          <GraduationCap size={18} />
+        </div>
+        <div style={{ flex: 1 }}>
+          <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#4f46e5', opacity: 0.8, marginRight: 8 }}>Fleet Training ·</span>
+          <span style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em' }}>Courses</span>
+        </div>
+        <div>
+          <button className={showForm ? "btn" : "btn primary"} onClick={() => { setShowForm((s) => !s); setError('') }}>
+            {showForm ? <><X size={16} /> Close</> : <><Plus size={16} /> New course</>}
+          </button>
+        </div>
+      </div>
 
       {showForm && (
         <form className="admin-card" onSubmit={create} style={{ marginBottom: 20 }}>
@@ -264,7 +295,7 @@ export default function AdminCourses() {
           </tbody>
         </table>
       </div>
-    </>
+    </div>
   )
 }
 

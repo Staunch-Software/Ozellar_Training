@@ -78,7 +78,7 @@ export default function AdminNotificationBell() {
     addViewed(item.id)
     setViewed(getViewed())
     setOpen(false)
-    navigate(`/admin/report?crew=${encodeURIComponent(item.learnerName)}&course=${encodeURIComponent(item.courseId)}&status=pending`)
+    navigate(`/admin/course-management/report?crew=${encodeURIComponent(item.learnerName)}&course=${encodeURIComponent(item.courseId)}&status=pending`)
   }
 
   return (
@@ -172,7 +172,7 @@ export default function AdminNotificationBell() {
               <button
                 className="linklike"
                 style={{ fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
-                onClick={() => { setOpen(false); navigate('/admin/report?status=pending') }}
+                onClick={() => { setOpen(false); navigate('/admin/course-management/report?status=pending') }}
               >
                 View all pending in Report <ArrowRight size={12} />
               </button>

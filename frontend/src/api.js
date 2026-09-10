@@ -97,9 +97,15 @@ export const adminUnassign = (id, courseId) =>
   req(`/admin/users/${id}/enrollments/${courseId}`, { method: 'DELETE' })
 export const adminReport = () => req('/admin/report')
 export const adminDashboardStats = () => req('/admin/dashboard-stats')
-export const adminApproveCertificate = (userId, courseId) =>
-  req(`/admin/users/${userId}/courses/${courseId}/approve`, { method: 'POST' })
+export const adminApproveCertificate = (userId, courseId, remark = '') =>
+  req(`/admin/users/${userId}/courses/${courseId}/approve`, { method: 'POST', body: JSON.stringify({ remark }) })
+
 export const adminGetNotifications = () => req('/admin/notifications')
+
+// Admin Panel — manage Admin and Super Admin users
+export const adminPanelListAdmins = () => req('/admin/panel/admins')
+export const adminPanelCreateAdmin = (body) => req('/admin/panel/admins', { method: 'POST', body: JSON.stringify(body) })
+export const adminPanelUpdateAdmin = (id, body) => req(`/admin/panel/admins/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
 
 
 // CSV needs the auth header, so fetch as a blob and trigger a download

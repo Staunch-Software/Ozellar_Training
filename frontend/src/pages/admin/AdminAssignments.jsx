@@ -1,7 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
-import { Check, Award, Clock, ClipboardList, Search, X, ChevronDown } from 'lucide-react'
+import { Check, Award, Clock, Search, X, ChevronDown, Grid3x3 } from 'lucide-react'
 import { adminReport, adminAssign, adminUnassign } from '../../api.js'
-import AdminHeader from '../../components/AdminHeader.jsx'
 import Pagination from '../../components/Pagination.jsx'
 
 export default function AdminAssignments() {
@@ -64,10 +63,43 @@ export default function AdminAssignments() {
   const totalPages = Math.ceil(filteredRows.length / itemsPerPage)
   const currentRows = filteredRows.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
 
+  const totalAssignments = data.rows.reduce((sum, row) => sum + Object.keys(row.cells || {}).length, 0)
+
   return (
-    <>
-      <AdminHeader icon={ClipboardList} title="Course assignments" eyebrow="Fleet training · Enrollments">
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      <div style={{
+        background: 'var(--surface)',
+        borderBottom: '1px solid var(--border)',
+        padding: '10px 0',
+        marginBottom: '12px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '12px'
+      }}>
+        <div style={{
+          width: '4px',
+          height: '36px',
+          background: 'linear-gradient(180deg, #7c3aed, #a855f7)',
+          borderRadius: '0 4px 4px 0',
+          flexShrink: 0
+        }}></div>
+        <div style={{
+          width: '36px',
+          height: '36px',
+          borderRadius: '10px',
+          background: 'rgba(124,58,237,0.1)',
+          color: '#7c3aed',
+          display: 'grid',
+          placeItems: 'center'
+        }}>
+          <Grid3x3 size={18} />
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#7c3aed', opacity: 0.8 }}>Fleet Training · Enrollments</span>
+          <h1 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', margin: '1px 0 0' }}>Assignments</h1>
+        </div>
+
+        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
           <div className="rpt-search-wrap" style={{ minWidth: 280, maxWidth: 400, margin: 0 }}>
             <Search size={14} className="rpt-field-icon" />
             <input
@@ -126,13 +158,15 @@ export default function AdminAssignments() {
             )}
           </div>
         </div>
-      </AdminHeader>
-      <p className="mut" style={{ marginBottom: 8, marginTop: -8 }}>
+      </div>
+
+
+      <p className="mut" style={{ marginBottom: 16, marginTop: 0 }}>
         Tick a cell to assign a course to a crew member. <Award size={13} style={{ verticalAlign: -2 }} /> passed
         · <Clock size={13} style={{ verticalAlign: -2 }} /> in progress. Unassigning hides the course but keeps their record.
       </p>
 
-      <div className="admin-card" style={{ padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 500 }}>
+      <div className="admin-card" style={{ padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <div className="admin-table-wrap" style={{ flex: 1 }}>
           <table className="admin-table matrix">
             <thead>
@@ -190,6 +224,6 @@ export default function AdminAssignments() {
           onPageChange={setCurrentPage}
         />
       </div>
-    </>
+    </div>
   )
 }

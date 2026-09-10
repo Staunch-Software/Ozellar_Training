@@ -15,7 +15,7 @@ class User(Base):
     admins log in with email + password."""
     __tablename__ = "users"
     id = Column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
-    role = Column(String, nullable=False)              # 'learner' | 'admin'
+    role = Column(String, nullable=False)              # 'learner' | 'admin' | 'super_admin'
     crew_id = Column(String, unique=True, index=True)  # learner login id
     email = Column(String, unique=True, index=True)    # admin login id
     full_name = Column(String, nullable=False)
@@ -209,6 +209,7 @@ class AssessmentApproval(Base):
     digest_sent = Column(Boolean, default=False)  # included in a digest email?
     approval_token = Column(String, unique=True, index=True)  # signed JWT for one-click action
     decided_at = Column(DateTime)
+    remark = Column(String, nullable=True)  # optional admin note on approval
     created_at = Column(DateTime, server_default=func.now())
 
 

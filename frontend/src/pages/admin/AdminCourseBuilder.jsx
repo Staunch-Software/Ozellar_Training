@@ -224,7 +224,7 @@ export default function AdminCourseBuilder() {
 
   return (
     <>
-      <button className="btn" style={{ marginBottom: 14 }} onClick={() => navigate('/admin/courses')}>
+      <button className="btn" style={{ marginBottom: 14 }} onClick={() => navigate('/admin/course-management/courses')}>
         <ArrowLeft size={15} /> All courses
       </button>
 

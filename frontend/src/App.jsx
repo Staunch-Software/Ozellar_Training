@@ -18,8 +18,11 @@ import AdminAssignments from './pages/admin/AdminAssignments.jsx'
 import AdminReport from './pages/admin/AdminReport.jsx'
 import AdminCourses from './pages/admin/AdminCourses.jsx'
 import AdminCourseBuilder from './pages/admin/AdminCourseBuilder.jsx'
+import AdminCourseManagement from './pages/admin/AdminCourseManagement.jsx'
+import AdminOrientationProgram from './pages/admin/AdminOrientationProgram.jsx'
 import AdminScreening from './pages/admin/AdminScreening.jsx'
 import AdminCoursePreview from './pages/admin/AdminCoursePreview.jsx'
+import AdminUserManagement from './pages/admin/AdminUserManagement.jsx'
 import TestWelcome from './pages/test/TestWelcome.jsx'
 import TestExam from './pages/test/TestExam.jsx'
 import TestResult from './pages/test/TestResult.jsx'
@@ -126,12 +129,19 @@ export default function App() {
         <Route path="/admin/courses/:id/preview" element={<AdminRoute><AdminCoursePreview /></AdminRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route index element={<AdminDashboard />} />
-          <Route path="users" element={<AdminUsers />} />
-          <Route path="courses" element={<AdminCourses />} />
+          
+          <Route path="course-management" element={<AdminCourseManagement />}>
+            <Route path="courses" element={<AdminCourses />} />
+            <Route path="assignments" element={<AdminAssignments />} />
+            <Route path="report" element={<AdminReport />} />
+            <Route path="users" element={<AdminUsers />} />
+          </Route>
+
+          {/* Keep builder at /admin/courses/:id so navigation from inside courses works properly */}
           <Route path="courses/:id" element={<AdminCourseBuilder />} />
-          <Route path="assignments" element={<AdminAssignments />} />
-          <Route path="report" element={<AdminReport />} />
+          <Route path="orientation-program" element={<AdminOrientationProgram />} />
           <Route path="screening" element={<AdminScreening />} />
+          <Route path="user-management" element={<AdminUserManagement />} />
         </Route>
       </Routes>
     </ThemeProvider>

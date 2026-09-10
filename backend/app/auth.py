@@ -86,8 +86,14 @@ def get_current_user(
 
 
 def require_admin(user: "models.User" = Depends(get_current_user)) -> "models.User":
-    if user.role != "admin":
+    if user.role not in ("admin", "super_admin"):
         raise HTTPException(403, "Admin access required")
+    return user
+
+
+def require_super_admin(user: "models.User" = Depends(get_current_user)) -> "models.User":
+    if user.role != "super_admin":
+        raise HTTPException(403, "Super admin access required")
     return user
 
 

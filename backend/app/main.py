@@ -31,7 +31,7 @@ from . import models, email_service, storage
 from .video import compress_video
 from .certificates import build_certificate_pdf
 from .auth import (
-    create_token, get_current_user, require_admin, user_public,
+    create_token, get_current_user, require_admin, require_super_admin, user_public,
     verify_password, hash_password, parse_ddmmyyyy, normalize_name,
     check_rate_limit, clear_rate_limit,
     # screening test auth
@@ -57,26 +57,33 @@ smartpal_scheduler = None
 email_scheduler = None
 
 def send_pending_digest_job():
-    # Job to scan for pending approvals and send the digest
+    # Job to scan for pending approvals and send the digest to all super admins
     from datetime import datetime, timezone, timedelta
-    
-    admin_email = os.getenv("ADMIN_EMAIL")
-    if not admin_email:
-        print("[send_pending_digest] Skipped: ADMIN_EMAIL not set")
-        return
 
     with SessionLocal() as db:
+        super_admin_emails = [
+            u.email for u in
+            db.query(models.User).filter_by(role="super_admin", is_active=True).all()
+            if u.email
+        ]
+        # fall back to a configured mailbox if no super admin accounts exist yet
+        admin_email_fallback = os.getenv("ADMIN_EMAIL")
+        recipients = super_admin_emails or ([admin_email_fallback] if admin_email_fallback else [])
+        if not recipients:
+            print("[send_pending_digest] Skipped: no super admin accounts and ADMIN_EMAIL not set")
+            return
+
         pending = db.query(models.AssessmentApproval).filter_by(status="pending", digest_sent=False).all()
         if not pending:
             return
-            
+
         approvals_list = []
         for ap in pending:
             user = db.get(models.User, ap.learner_id)
             course = db.get(models.Course, ap.course_id)
             if not user or not course:
                 continue
-                
+
             # Create a one-off token for approval. Valid for 7 days.
             from .auth import SECRET_KEY, ALGORITHM
             token_payload = {
@@ -87,18 +94,20 @@ def send_pending_digest_job():
             token = jwt.encode(token_payload, SECRET_KEY, algorithm=ALGORITHM)
             ap.approval_token = token
             ap.digest_sent = True
-            
+
             approvals_list.append({
                 "learner_name": user.full_name,
                 "crew_id": user.crew_id,
+                "rank": user.rank,
                 "course_title": course.title,
                 "score": ap.score,
                 "token": token
             })
-            
+
         db.commit()
         if approvals_list:
-            email_service.send_digest_email(admin_email, approvals_list)
+            for recipient in recipients:
+                email_service.send_digest_email(recipient, approvals_list)
 
 
 @asynccontextmanager
@@ -249,7 +258,9 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
     elif req.mode == "admin":
         email = (req.email or "").strip().lower()
         check_rate_limit(db, f"admin:{email}")
-        user = db.query(models.User).filter_by(email=email, role="admin").first()
+        user = (db.query(models.User)
+                .filter(models.User.email == email, models.User.role.in_(["admin", "super_admin"]))
+                .first())
         if not user or not user.password_hash or not verify_password(req.password or "", user.password_hash):
             raise HTTPException(401, "Invalid email or password")
         clear_rate_limit(db, f"admin:{email}")
@@ -332,7 +343,7 @@ def enrolled_course_ids(db, user_id):
 
 def require_enrollment(db, user, course_id):
     """Admins may access any course (preview); learners must be assigned it."""
-    if user.role == "admin":
+    if user.role in ("admin", "super_admin"):
         return
     is_enrolled = db.query(models.Enrollment).filter_by(
         learner_id=user.id, course_id=course_id).first()
@@ -439,7 +450,7 @@ def learner(user: models.User = Depends(get_current_user)):
 def list_courses(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     lid = user.id
     q = db.query(models.Course).order_by(models.Course.order)
-    if user.role != "admin":
+    if user.role not in ("admin", "super_admin"):
         # learners see only the courses assigned to them
         assigned = enrolled_course_ids(db, user.id)
         if not assigned:
@@ -782,16 +793,93 @@ def _styled_html_response(title: str, message: str, is_success: bool = True):
     </html>
     """)
 
+def _decode_approval_token(token: str) -> str:
+    """Returns the AssessmentApproval id encoded in a mailed approval/rejection token, or raises."""
+    payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+    if payload.get("type") != "approval":
+        raise ValueError("Invalid token type")
+    sub = payload.get("sub", "")
+    if not sub.startswith("approve:"):
+        raise ValueError()
+    return sub.split(":")[1]
+
+
+def _approve_remark_form_page(ap, user, course, token: str, error: str | None = None):
+    """Confirmation page shown when a super admin clicks Approve in the digest email —
+    a remark is required before the certificate is actually issued."""
+    score_str = f"{ap.score}%" if ap.score is not None else "N/A"
+    error_html = f'<div class="error">{error}</div>' if error else ""
+    return HTMLResponse(f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Approve Certificate — Ozellar Marine Training</title>
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+        <style>
+            body {{
+                font-family: 'Inter', sans-serif; background-color: #f6f7f9; color: #16181d;
+                display: flex; align-items: center; justify-content: center;
+                min-height: 100vh; margin: 0; padding: 24px; box-sizing: border-box;
+            }}
+            .card {{
+                background: #ffffff; padding: 36px; border-radius: 12px;
+                box-shadow: 0 4px 6px -1px rgba(0,0,0,.1), 0 2px 4px -1px rgba(0,0,0,.06);
+                max-width: 480px; width: 100%;
+            }}
+            h2 {{ margin: 0 0 4px; font-size: 20px; font-weight: 700; }}
+            .sub {{ margin: 0 0 20px; color: #5c626d; font-size: 13px; }}
+            .info {{ background: #f6f7f9; border-radius: 8px; padding: 14px 16px; margin-bottom: 20px; }}
+            .info-row {{ display: flex; justify-content: space-between; font-size: 13.5px; padding: 3px 0; }}
+            .info-row span:first-child {{ color: #5c626d; }}
+            .info-row span:last-child {{ font-weight: 600; }}
+            label {{ display: block; font-size: 12px; font-weight: 600; color: #5c626d; margin-bottom: 6px; }}
+            textarea {{
+                width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px;
+                border: 1px solid #d0d5dd; font-family: inherit; font-size: 14px; resize: vertical;
+            }}
+            .error {{ color: #dc2626; font-size: 13px; margin: 10px 0 0; }}
+            .actions {{ display: flex; gap: 10px; margin-top: 20px; }}
+            .btn {{
+                flex: 1; display: inline-block; text-align: center; border: none; cursor: pointer;
+                background-color: #15a34a; color: white; padding: 11px 20px; border-radius: 8px;
+                font-weight: 600; font-size: 14px;
+            }}
+            .btn:hover {{ background-color: #128a3e; }}
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h2>Approve Certificate</h2>
+            <p class="sub">Add a remark to confirm this certificate approval.</p>
+            <div class="info">
+                <div class="info-row"><span>Crew Member</span><span>{user.full_name}</span></div>
+                <div class="info-row"><span>Crew ID</span><span>{user.crew_id or '—'}</span></div>
+                <div class="info-row"><span>Rank</span><span>{user.rank or '—'}</span></div>
+                <div class="info-row"><span>Course</span><span>{course.title}</span></div>
+                <div class="info-row"><span>Score</span><span>{score_str}</span></div>
+            </div>
+            <form method="POST" action="/api/approve">
+                <input type="hidden" name="token" value="{token}">
+                <label for="remark">Approval remark (required)</label>
+                <textarea id="remark" name="remark" rows="3" required placeholder="e.g. Verified against onboard assessment records"></textarea>
+                {error_html}
+                <div class="actions">
+                    <button type="submit" class="btn">Approve &amp; Issue Certificate</button>
+                </div>
+            </form>
+        </div>
+    </body>
+    </html>
+    """)
+
+
 @app.get("/api/approve", response_class=HTMLResponse)
-def approve_assessment(token: str, db: Session = Depends(get_db)):
+def approve_assessment_form(token: str, db: Session = Depends(get_db)):
+    """Shows the remark-entry confirmation page linked from the digest email."""
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        if payload.get("type") != "approval":
-            raise ValueError("Invalid token type")
-        sub = payload.get("sub", "")
-        if not sub.startswith("approve:"):
-            raise ValueError()
-        ap_id = sub.split(":")[1]
+        ap_id = _decode_approval_token(token)
     except Exception:
         return _styled_html_response("Link Expired", "This approval link is invalid or has expired.", False)
 
@@ -801,12 +889,38 @@ def approve_assessment(token: str, db: Session = Depends(get_db)):
 
     user = db.get(models.User, ap.learner_id)
     course = db.query(models.Course).filter_by(id=ap.course_id).first()
-    
+    if not user or not course:
+        return _styled_html_response("Not Found", "The learner or course for this approval could not be found.", False)
+
+    return _approve_remark_form_page(ap, user, course, token)
+
+
+@app.post("/api/approve", response_class=HTMLResponse)
+def approve_assessment(token: str = Form(...), remark: str = Form(...), db: Session = Depends(get_db)):
+    try:
+        ap_id = _decode_approval_token(token)
+    except Exception:
+        return _styled_html_response("Link Expired", "This approval link is invalid or has expired.", False)
+
+    ap = db.get(models.AssessmentApproval, ap_id)
+    if not ap or ap.status != "pending":
+        return _styled_html_response("Already Processed", "This approval has already been processed or does not exist.", False)
+
+    user = db.get(models.User, ap.learner_id)
+    course = db.query(models.Course).filter_by(id=ap.course_id).first()
+    if not user or not course:
+        return _styled_html_response("Not Found", "The learner or course for this approval could not be found.", False)
+
+    remark = (remark or "").strip()
+    if not remark:
+        return _approve_remark_form_page(ap, user, course, token, error="A remark is required to approve.")
+
     # Generate certificate
     cert_info = issue_certificate(db, user, course)
     ap.status = "approved"
     ap.decided_at = datetime.now(timezone.utc)
-    
+    ap.remark = remark
+
     notify(db, user.id, "certificate", "Certificate Ready",
            f"Your certificate for {course.title} has been approved.",
            f"/course/{course.slug}/certificate")
@@ -966,7 +1080,7 @@ def admin_get_crew_certificate_pdf(
         raise HTTPException(401, "Session expired")
     except jwt.PyJWTError:
         raise HTTPException(401, "Invalid token")
-    if payload.get("type", "session") != "session" or payload.get("role") != "admin":
+    if payload.get("type", "session") != "session" or payload.get("role") not in ("admin", "super_admin"):
         raise HTTPException(403, "Admin access required")
 
     course = db.query(models.Course).filter_by(id=course_id).first()
@@ -1111,14 +1225,14 @@ def admin_notifications(admin: models.User = Depends(require_admin), db: Session
 
 
 class CreateUserRequest(BaseModel):
-    role: str                       # 'learner' | 'admin'
+    role: str                       # 'learner' | 'admin' | 'super_admin'
     fullName: str
     crewId: str | None = None       # learner
     dob: str | None = None          # learner — 8 digits DDMMYYYY
     rank: str | None = None
     ppNo: str | None = None
-    email: str | None = None        # admin
-    password: str | None = None     # admin
+    email: str | None = None        # admin / super_admin
+    password: str | None = None     # admin / super_admin
 
 
 class UpdateUserRequest(BaseModel):
@@ -1172,7 +1286,7 @@ def admin_create_user(req: CreateUserRequest, admin: models.User = Depends(requi
                            rank=(req.rank or "").strip() or None, date_of_birth=dob,
                            pp_no=(req.ppNo or "").strip() or None)
 
-    elif req.role == "admin":
+    elif req.role in ("admin", "super_admin"):
         email = (req.email or "").strip().lower()
         if not email:
             raise HTTPException(400, "Email is required")
@@ -1180,11 +1294,11 @@ def admin_create_user(req: CreateUserRequest, admin: models.User = Depends(requi
             raise HTTPException(400, "Password must be at least 8 characters")
         if db.query(models.User).filter_by(email=email).first():
             raise HTTPException(400, "That email is already in use")
-        user = models.User(role="admin", email=email, full_name=name,
+        user = models.User(role=req.role, email=email, full_name=name,
                            rank=(req.rank or "").strip() or None,
                            password_hash=hash_password(req.password))
     else:
-        raise HTTPException(400, "Role must be 'learner' or 'admin'")
+        raise HTTPException(400, "Role must be 'learner', 'admin', or 'super_admin'")
 
     db.add(user)
     db.commit()
@@ -1212,9 +1326,91 @@ def admin_update_user(user_id: str, req: UpdateUserRequest,
     return admin_user_view(db, user)
 
 
+# ============================================================
+# ADMIN PANEL — Manage Admin / Super Admin users
+# ============================================================
+
+@app.get("/api/admin/panel/admins")
+def admin_panel_list_admins(admin: models.User = Depends(require_admin),
+                            db: Session = Depends(get_db)):
+    """List all admin and super_admin users."""
+    users = (db.query(models.User)
+             .filter(models.User.role.in_(["admin", "super_admin"]))
+             .order_by(models.User.role, models.User.full_name)
+             .all())
+    return [{
+        "id": u.id, "role": u.role, "name": u.full_name,
+        "email": u.email, "rank": u.rank,
+        "isActive": bool(u.is_active),
+        "createdAt": u.created_at.isoformat() if u.created_at else None,
+    } for u in users]
+
+
+@app.post("/api/admin/panel/admins")
+def admin_panel_create_admin(req: CreateUserRequest,
+                             admin: models.User = Depends(require_admin),
+                             db: Session = Depends(get_db)):
+    """Create a new admin or super_admin user."""
+    if req.role not in ("admin", "super_admin"):
+        raise HTTPException(400, "Role must be 'admin' or 'super_admin'")
+    name = (req.fullName or "").strip()
+    if not name:
+        raise HTTPException(400, "Full name is required")
+    email = (req.email or "").strip().lower()
+    if not email:
+        raise HTTPException(400, "Email is required")
+    if not req.password or len(req.password) < 8:
+        raise HTTPException(400, "Password must be at least 8 characters")
+    if db.query(models.User).filter_by(email=email).first():
+        raise HTTPException(400, "That email is already in use")
+    user = models.User(
+        role=req.role, email=email, full_name=name,
+        rank=(req.rank or "").strip() or None,
+        password_hash=hash_password(req.password),
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+    return {
+        "id": user.id, "role": user.role, "name": user.full_name,
+        "email": user.email, "rank": user.rank,
+        "isActive": bool(user.is_active),
+        "createdAt": user.created_at.isoformat() if user.created_at else None,
+    }
+
+
+@app.patch("/api/admin/panel/admins/{user_id}")
+def admin_panel_update_admin(user_id: str, req: UpdateUserRequest,
+                             admin: models.User = Depends(require_admin),
+                             db: Session = Depends(get_db)):
+    """Activate/deactivate or update an admin/super_admin user."""
+    user = db.get(models.User, user_id)
+    if not user or user.role not in ("admin", "super_admin"):
+        raise HTTPException(404, "Admin user not found")
+    if req.isActive is not None:
+        if user.id == admin.id and req.isActive is False:
+            raise HTTPException(400, "You cannot deactivate your own account")
+        user.is_active = req.isActive
+    if req.fullName is not None:
+        user.full_name = req.fullName.strip()
+    if req.rank is not None:
+        user.rank = req.rank.strip() or None
+    db.commit()
+    return {
+        "id": user.id, "role": user.role, "name": user.full_name,
+        "email": user.email, "rank": user.rank,
+        "isActive": bool(user.is_active),
+        "createdAt": user.created_at.isoformat() if user.created_at else None,
+    }
+
+
+class InlineApproveRequest(BaseModel):
+    remark: Optional[str] = None
+
 @app.post("/api/admin/users/{user_id}/courses/{course_id}/approve")
 def admin_inline_approve(user_id: str, course_id: str,
-                         admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                         body: InlineApproveRequest = InlineApproveRequest(),
+                         admin: models.User = Depends(require_super_admin), db: Session = Depends(get_db)):
     """Inline approval of a pending certificate from the Admin Report page."""
     ap = db.query(models.AssessmentApproval).filter_by(
         learner_id=user_id, course_id=course_id, status="pending"
@@ -1226,6 +1422,8 @@ def admin_inline_approve(user_id: str, course_id: str,
     cert_info = issue_certificate(db, user, course)
     ap.status = "approved"
     ap.decided_at = datetime.now(timezone.utc)
+    if body.remark:
+        ap.remark = body.remark.strip()
     notify(db, user.id, "certificate", "Certificate Ready",
            f"Your certificate for {course.title} has been approved.",
            f"/course/{course.slug}/certificate")
@@ -1278,13 +1476,18 @@ def _report(db):
     enrollments = db.query(models.Enrollment).all()
     progress_all = db.query(models.Progress).all()
     certs = db.query(models.Certificate).all()
-    approvals = db.query(models.AssessmentApproval).filter_by(status="pending").all()
+    approvals = (db.query(models.AssessmentApproval)
+                 .order_by(models.AssessmentApproval.created_at).all())
     attempts_counts = db.query(models.Attempt.learner_id, models.Attempt.course_id, func.count(models.Attempt.id)).group_by(models.Attempt.learner_id, models.Attempt.course_id).all()
-    
+
     e_map = {(e.learner_id, e.course_id): e for e in enrollments}
     p_map = {(p.learner_id, p.course_id): p for p in progress_all}
     c_map = {(c.learner_id, c.course_id): c for c in certs}
-    ap_map = {(a.learner_id, a.course_id): a for a in approvals}
+    # keep the most recent approval per learner/course (any status) so an
+    # approved/rejected decision's remark still surfaces in the report
+    ap_map = {}
+    for a in approvals:
+        ap_map[(a.learner_id, a.course_id)] = a
     a_map = {(l, c): count for l, c, count in attempts_counts}
     
     # Pre-compute total chapter count per course (avoids N+1 queries)
@@ -1324,7 +1527,8 @@ def _report(db):
                 "score": prog.score if prog else None,
                 "startedOn": enr.assigned_at.strftime("%Y-%m-%d") if enr and enr.assigned_at else None,
                 "passedOn": passed_on,
-                "pendingApproval": bool(ap),
+                "pendingApproval": bool(ap and ap.status == "pending"),
+                "approvalRemark": ap.remark if ap and ap.remark else None,
                 "attempts": attempts,
                 "completionPct":     pct,
                 "completedChapters": done_chs,
@@ -1482,12 +1686,12 @@ def admin_report_csv(admin: models.User = Depends(require_admin), db: Session = 
     courses, rows = _report(db)
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["Crew ID", "Name", "Rank", "Active", "Course", "Status", "Score", "Completed On"])
+    w.writerow(["Crew ID", "Name", "Rank", "Active", "Course", "Status", "Score", "Completed On", "Approval Remark"])
     for r in rows:
         active = "yes" if r["isActive"] else "no"
         if not r["cells"]:
             w.writerow([r["crewId"], r["name"], r["rank"] or "", active,
-                        "(no courses assigned)", "", "", ""])
+                        "(no courses assigned)", "", "", "", ""])
             continue
         for c in courses:
             cell = r["cells"].get(c.id)
@@ -1495,7 +1699,7 @@ def admin_report_csv(admin: models.User = Depends(require_admin), db: Session = 
                 continue
             w.writerow([r["crewId"], r["name"], r["rank"] or "", active, c.title,
                         cell["status"], "" if cell["score"] is None else cell["score"],
-                        cell["passedOn"] or ""])
+                        cell["passedOn"] or "", cell.get("approvalRemark") or ""])
     return Response(content=buf.getvalue(), media_type="text/csv",
                     headers={"Content-Disposition": "attachment; filename=ozellar-compliance-report.csv"})
 
@@ -1571,14 +1775,14 @@ def admin_report_xlsx(
     title_text = "Ozellar Marine — Compliance Report"
     if filter_note:
         title_text += f"  |  Filters: {', '.join(filter_note)}"
-    ws.merge_cells("A1:H1")
+    ws.merge_cells("A1:K1")
     tc = ws.cell(row=1, column=1, value=title_text)
     tc.font = Font(bold=True, size=12, color="1E3A5F")
     tc.alignment = Alignment(horizontal="left", vertical="center")
     ws.row_dimensions[1].height = 22
 
     # ---- sub-title row (row 2): generated timestamp + row count ----
-    ws.merge_cells("A2:H2")
+    ws.merge_cells("A2:K2")
     sc = ws.cell(row=2, column=1,
                  value=f"Generated: {datetime.now(timezone.utc).strftime('%d %b %Y %H:%M UTC')}  ·  "
                        f"{len(rows)} crew member(s) shown")
@@ -1588,7 +1792,7 @@ def admin_report_xlsx(
 
     # ---- column headers (row 3) ----
     headers = ["Crew ID", "Name", "Rank", "Active",
-               "Course", "Status", "Score (%)", "Attempts", "Started On", "Completed On"]
+               "Course", "Status", "Score (%)", "Attempts", "Started On", "Completed On", "Approval Remark"]
     ws.append(headers)
     for ci, h in enumerate(headers, 1):
         cell = ws.cell(row=3, column=ci)
@@ -1606,9 +1810,9 @@ def admin_report_xlsx(
         
         if not r["cells"]:
             data = [r["crewId"], r["name"], r["rank"] or "", active,
-                    "(no courses assigned)", "", "", "", "", ""]
+                    "(no courses assigned)", "", "", "", "", "", ""]
             ws.append(data)
-            for ci in range(1, 11):
+            for ci in range(1, 12):
                 c = ws.cell(row=row_idx, column=ci)
                 c.fill = ASGN_FILL if ci > 4 else WHITE_FILL
                 c.font = BODY_FONT
@@ -1627,10 +1831,11 @@ def admin_report_xlsx(
             passed_on = cell_data.get("passedOn") or ""
             attempts = cell_data.get("attempts", 0)
             if attempts == 0: attempts = ""
+            remark = cell_data.get("approvalRemark") or ""
 
             fill = PASS_FILL if status == "passed" else (WIP_FILL if status == "in-progress" else ASGN_FILL)
             data = [r["crewId"], r["name"], r["rank"] or "", active,
-                    course.title, label, score, attempts, started_on, passed_on]
+                    course.title, label, score, attempts, started_on, passed_on, remark]
             ws.append(data)
             for ci, val in enumerate(data, 1):
                 c = ws.cell(row=row_idx, column=ci)
@@ -1640,18 +1845,18 @@ def admin_report_xlsx(
                 c.alignment = left
                 c.border = border
             row_idx += 1
-            
+
         # merge cells for crew info if they span multiple rows
         if row_idx - 1 > start_row:
             for ci in range(1, 5):
                 ws.merge_cells(start_row=start_row, start_column=ci, end_row=row_idx-1, end_column=ci)
-                
+
         # apply thick bottom border to the last row of this user's block to separate users
-        for ci in range(1, 11):
+        for ci in range(1, 12):
             ws.cell(row=row_idx-1, column=ci).border = border_thick_bottom
 
     # ---- auto column widths ----
-    col_widths = [14, 26, 18, 8, 36, 14, 11, 10, 14, 14]
+    col_widths = [14, 26, 18, 8, 36, 14, 11, 10, 14, 14, 40]
     for ci, w in enumerate(col_widths, 1):
         ws.column_dimensions[get_column_letter(ci)].width = w
 
@@ -1681,7 +1886,7 @@ def crew_my_report_xlsx(status: Optional[str] = None, user: models.User = Depend
     from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
     from openpyxl.utils import get_column_letter
 
-    if user.role == "admin":
+    if user.role in ("admin", "super_admin"):
         raise HTTPException(403, "Use /api/admin/report.xlsx for admin reports")
 
     wb = openpyxl.Workbook()

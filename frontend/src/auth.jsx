@@ -59,7 +59,7 @@ export function AdminRoute({ children }) {
   const { user, loading } = useAuth()
   if (loading) return <div className="spinner">Loading…</div>
   if (!user) return <Navigate to="/" replace />
-  if (user.role !== 'admin') return <Navigate to={homeFor(user)} replace />
+  if (user.role !== 'admin' && user.role !== 'super_admin') return <Navigate to={homeFor(user)} replace />
   return children
 }
 
@@ -74,7 +74,7 @@ export function TestRoute({ children }) {
 
 // where a signed-in user belongs by role
 export const homeFor = (u) => {
-  if (u?.role === 'admin') return '/admin'
+  if (u?.role === 'admin' || u?.role === 'super_admin') return '/admin'
   if (u?.role === 'test_taker') return '/test/welcome'
   return '/my-courses'
 }

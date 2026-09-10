@@ -1,6 +1,12 @@
-# Ozellar Marine Training API — FastAPI/uvicorn under systemd.
+# Ozellar Marine Training API — FastAPI/uvicorn under systemd (gunicorn process manager).
 # Install:  sudo cp deploy/ozellar-api.service /etc/systemd/system/ozellar-api.service
 #           sudo systemctl daemon-reload && sudo systemctl enable --now ozellar-api
+# --timeout 1800  : gunicorn worker timeout (seconds). Must be >= the longest
+#                   expected upload time. A 1.3 GB deck over a 10 Mbps link
+#                   takes ~18 min; 30 min (1800 s) gives ample headroom.
+#                   The default (30 s) silently kills workers during large uploads.
+# --graceful-timeout 30 : give in-flight requests 30 s to finish on SIGTERM.
+# --keep-alive 65 : slightly longer than nginx's 60 s keepalive_timeout.
 # Assumes the repo is at /opt/ozellar and a venv at /opt/ozellar/backend/.venv.
 [Unit]
 Description=Ozellar Marine Training API (FastAPI/uvicorn)
@@ -12,7 +18,13 @@ Type=simple
 User=Deployer
 WorkingDirectory=/opt/ozellar/backend
 EnvironmentFile=/opt/ozellar/backend/.env
-ExecStart=/opt/ozellar/backend/.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8021
+ExecStart=/opt/ozellar/backend/.venv/bin/gunicorn app.main:app \
+    -k uvicorn.workers.UvicornWorker \
+    -w 3 \
+    -b 127.0.0.1:8021 \
+    --timeout 1800 \
+    --graceful-timeout 30 \
+    --keep-alive 65
 Restart=on-failure
 RestartSec=3
 

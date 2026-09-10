@@ -3,11 +3,135 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Award, Clock, Circle, FileSpreadsheet, FileText,
   Users, CheckCircle, AlertCircle, Search, X, SlidersHorizontal,
-  TrendingUp, Download, RefreshCw, ChevronDown, ChevronLeft, ChevronRight, Eye
+  TrendingUp, Download, RefreshCw, ChevronDown, ChevronLeft, ChevronRight, Eye, BarChart3,
+  MessageSquare, Lock
 } from 'lucide-react'
 import { adminReport, adminDownloadReportCsv, adminDownloadReportXlsx, adminApproveCertificate } from '../../api.js'
 import { getToken } from '../../api.js'
-import AdminHeader from '../../components/AdminHeader.jsx'
+import { useAuth } from '../../auth.jsx'
+
+/* ------------------------------------------------------------------ */
+/*  Approve-with-remark modal                                          */
+/* ------------------------------------------------------------------ */
+function ApproveModal({ learnerName, courseName, onCancel, onConfirm, busy }) {
+  const [remark, setRemark] = useState('')
+  const [touched, setTouched] = useState(false)
+  const canSubmit = remark.trim().length > 0
+
+  return (
+    <div
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel() }}
+      style={{
+        position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)',
+        backdropFilter: 'blur(2px)', zIndex: 300,
+        display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20,
+      }}
+    >
+      <div style={{
+        width: 'min(440px, 100%)', background: 'var(--surface)', borderRadius: 16,
+        border: '1.5px solid rgba(16,185,129,0.3)', boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+      }}>
+        <div style={{
+          display: 'flex', alignItems: 'center', gap: 10, padding: '18px 22px',
+          borderBottom: '1px solid rgba(16,185,129,0.25)', background: 'rgba(16,185,129,0.08)',
+        }}>
+          <div style={{
+            width: 32, height: 32, borderRadius: 8, background: 'linear-gradient(135deg,#059669,#10b981)',
+            display: 'grid', placeItems: 'center', color: '#fff', flexShrink: 0,
+          }}>
+            <CheckCircle size={16} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 14, color: 'var(--text)' }}>Approve Certificate</div>
+            <div style={{ fontSize: 12, color: 'var(--text-mut)' }}>{learnerName} · {courseName}</div>
+          </div>
+          <button onClick={onCancel} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-mut)' }}>
+            <X size={18} />
+          </button>
+        </div>
+        <div style={{ padding: 22 }}>
+          <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-mut)', display: 'block', marginBottom: 6 }}>
+            Approval remark <i className="req">*</i>
+          </label>
+          <textarea
+            autoFocus
+            value={remark}
+            onChange={e => setRemark(e.target.value)}
+            onBlur={() => setTouched(true)}
+            placeholder="e.g. Verified against onboard assessment records"
+            rows={3}
+            style={{
+              width: '100%', resize: 'vertical', padding: '10px 12px', borderRadius: 8,
+              border: '1px solid var(--border)', background: 'var(--surface-2)',
+              color: 'var(--text)', fontSize: 13, fontFamily: 'inherit',
+            }}
+          />
+          {touched && !canSubmit && (
+            <div className="form-error" style={{ marginTop: 8 }}><AlertCircle size={13} /> A remark is required to approve.</div>
+          )}
+          <div style={{ marginTop: 16, display: 'flex', gap: 10 }}>
+            <button
+              className="btn primary"
+              disabled={!canSubmit || busy}
+              style={{ background: 'linear-gradient(135deg,#059669,#10b981)' }}
+              onClick={() => onConfirm(remark.trim())}
+            >
+              <CheckCircle size={14} /> {busy ? 'Approving…' : 'Approve'}
+            </button>
+            <button className="btn" onClick={onCancel}>Cancel</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+/* ------------------------------------------------------------------ */
+/*  Approval-remark hover tooltip                                       */
+/* ------------------------------------------------------------------ */
+function RemarkTooltip({ learnerName, courseName, remark, anchor }) {
+  const WIDTH = 260
+  const GAP = 10
+  let left = anchor.x - WIDTH / 2
+  left = Math.max(12, Math.min(left, window.innerWidth - WIDTH - 12))
+  const showAbove = anchor.y > 160
+  const top = showAbove ? anchor.y - GAP : anchor.y + GAP
+  const arrowLeft = Math.max(14, Math.min(anchor.x - left, WIDTH - 14))
+
+  return (
+    <div
+      style={{
+        position: 'fixed', left, width: WIDTH, zIndex: 400, pointerEvents: 'none',
+        top: showAbove ? undefined : top,
+        bottom: showAbove ? window.innerHeight - top : undefined,
+        animation: 'rptTipIn .12s ease-out',
+      }}
+    >
+      <div style={{
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        borderRadius: 10, boxShadow: '0 10px 30px rgba(0,0,0,0.18)',
+        padding: '10px 12px',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+          <MessageSquare size={11} style={{ color: 'var(--accent)', flexShrink: 0 }} />
+          <span style={{ fontWeight: 700, fontSize: 11, color: 'var(--text)' }}>Remark</span>
+          <span style={{ fontSize: 10.5, color: 'var(--text-mut)' }}>· {learnerName} · {courseName}</span>
+        </div>
+        <div style={{ fontSize: 12.5, lineHeight: 1.45, color: 'var(--text)', whiteSpace: 'pre-wrap' }}>
+          {remark}
+        </div>
+      </div>
+      <div style={{
+        position: 'absolute', left: arrowLeft, width: 9, height: 9,
+        background: 'var(--surface)', border: '1px solid var(--border)',
+        transform: `translateX(-50%) rotate(45deg)`,
+        ...(showAbove
+          ? { bottom: -5, borderTop: 'none', borderLeft: 'none' }
+          : { top: -5, borderBottom: 'none', borderRight: 'none' }),
+      }} />
+    </div>
+  )
+}
 
 /* ------------------------------------------------------------------ */
 /*  Status config                                                       */
@@ -31,6 +155,8 @@ function initials(name = '') {
 export default function AdminReport() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
+  const isSuperAdmin = user?.role === 'super_admin'
 
   // Extract individual values — these are stable string primitives React can diff correctly
   const paramCrew   = searchParams.get('crew')   || ''
@@ -47,6 +173,8 @@ export default function AdminReport() {
   const [loading,        setLoading]       = useState(true)
   const [page,           setPage]          = useState(1)
   const [approvingCell,  setApprovingCell] = useState(null) // 'learnerId-courseId'
+  const [approveTarget,  setApproveTarget] = useState(null) // { learnerId, courseId, learnerName, courseName }
+  const [hoverRemark,    setHoverRemark]   = useState(null) // { x, y, learnerName, courseName, remark }
   const ROWS_PER_PAGE = 50
 
   /* Sync filters whenever URL params change — depends on primitive strings, not the object */
@@ -138,7 +266,7 @@ export default function AdminReport() {
     setSelectedStatus('all')
     setPage(1)
     if (searchParams.toString()) {
-      navigate('/admin/report', { replace: true })
+      navigate('/admin/course-management/report', { replace: true })
     }
   }
 
@@ -205,81 +333,109 @@ export default function AdminReport() {
   return (
     <div className="rpt-root" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
 
-      {/* ═══════════════════════ PAGE HEADER (standard admin style) ═══════════════════════ */}
-      <div style={{ marginBottom: 12 }}>
-        <AdminHeader 
-          icon={FileText} 
-          title="Completion Report" 
-          eyebrow="Fleet Training · Compliance"
-          subtitle={`${data.rows.length} crew members · ${data.courses.length} courses`}
-        >
-          <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-            
-            {/* ═══════════════════════ FILTERS (Moved to Header) ═══════════════════════ */}
-            <div className="rpt-filter-row" style={{ gap: 8 }}>
-              {/* crew search */}
-              <div className="rpt-search-wrap" style={{ minWidth: 200 }}>
-                <Search size={14} className="rpt-field-icon" />
-                <input
-                  className="rpt-field"
-                  placeholder="Search crew..."
-                  value={crewSearch}
-                  onChange={e => setCrewSearch(e.target.value)}
-                  style={{ padding: '6px 8px 6px 32px' }}
-                />
-                {crewSearch && (
-                  <button className="rpt-x-btn" onClick={() => setCrewSearch('')}>
-                    <X size={12} />
-                  </button>
-                )}
-              </div>
+      {/* ═══════════════════════ PAGE HEADER (Premium Inline) ═══════════════════════ */}
+      <div style={{
+        background: 'var(--surface)',
+        borderBottom: '1px solid var(--border)',
+        padding: '10px 0',
+        marginBottom: 12,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        flexWrap: 'wrap'
+      }}>
+        {/* Accent Bar */}
+        <div style={{
+          width: 4,
+          height: 36,
+          background: 'linear-gradient(180deg, #059669, #10b981)',
+          borderRadius: '0 4px 4px 0',
+          flexShrink: 0
+        }} />
+        
+        {/* Icon Box */}
+        <div style={{
+          width: 36,
+          height: 36,
+          borderRadius: 10,
+          background: 'rgba(5,150,105,0.1)',
+          color: '#059669',
+          display: 'grid',
+          placeItems: 'center'
+        }}>
+          <BarChart3 size={18} />
+        </div>
 
-              {/* course filter */}
-              <div className="rpt-select-wrap">
-                <SlidersHorizontal size={13} className="rpt-field-icon" />
-                <select className="rpt-field rpt-select" value={selectedCourse}
-                  onChange={e => setSelectedCourse(e.target.value)}
-                  style={{ padding: '6px 24px 6px 30px' }}>
-                  <option value="all">All Courses</option>
-                  {data.courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                </select>
-                <ChevronDown size={13} className="rpt-select-caret" />
-              </div>
+        {/* Title only */}
+        <div style={{ flex: 1, minWidth: 160 }}>
+          <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#059669', opacity: 0.8 }}>Fleet Training · Compliance</span>
+          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', marginTop: '1px' }}>Completion Report</div>
+        </div>
 
-              {/* status filter */}
-              <div className="rpt-select-wrap">
-                <Award size={13} className="rpt-field-icon" />
-                <select className="rpt-field rpt-select" value={selectedStatus}
-                  onChange={e => setSelectedStatus(e.target.value)}
-                  style={{ padding: '6px 24px 6px 30px' }}>
-                  <option value="all">All Statuses</option>
-                  <option value="passed">✓ Completed</option>
-                  <option value="pending">⏳ Pending Approval</option>
-                  <option value="in-progress">↻ In Progress</option>
-                  <option value="assigned">○ Not Started</option>
-                </select>
-                <ChevronDown size={13} className="rpt-select-caret" />
-              </div>
-
-              {hasFilters && (
-                <button className="btn sm rpt-clear-all" onClick={clearAll} style={{ padding: '6px 10px' }}>
-                  <X size={12} /> Clear
+        {/* Right side controls */}
+        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="rpt-filter-row" style={{ gap: 8 }}>
+            {/* crew search */}
+            <div className="rpt-search-wrap" style={{ minWidth: 200 }}>
+              <Search size={14} className="rpt-field-icon" />
+              <input
+                className="rpt-field"
+                placeholder="Search crew..."
+                value={crewSearch}
+                onChange={e => setCrewSearch(e.target.value)}
+                style={{ padding: '6px 8px 6px 32px' }}
+              />
+              {crewSearch && (
+                <button className="rpt-x-btn" onClick={() => setCrewSearch('')}>
+                  <X size={12} />
                 </button>
               )}
             </div>
 
-            {/* ═══════════════════════ BUTTONS ═══════════════════════ */}
-            <div style={{ display: 'flex', gap: 8, alignItems: 'center', borderLeft: '1px solid var(--border)', paddingLeft: 16 }}>
-              <button className="btn primary sm" onClick={downloadXlsx} disabled={dlXlsx}>
-                <FileSpreadsheet size={14} />
-                {dlXlsx ? 'Preparing…' : hasFilters ? 'Excel (Filtered)' : 'Excel'}
-              </button>
-              <button className="btn sm" onClick={load} title="Refresh report" style={{ padding: '6px 10px' }}>
-                <RefreshCw size={14} />
-              </button>
+            {/* course filter */}
+            <div className="rpt-select-wrap">
+              <SlidersHorizontal size={13} className="rpt-field-icon" />
+              <select className="rpt-field rpt-select" value={selectedCourse}
+                onChange={e => setSelectedCourse(e.target.value)}
+                style={{ padding: '6px 24px 6px 30px' }}>
+                <option value="all">All Courses</option>
+                {data.courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+              </select>
+              <ChevronDown size={13} className="rpt-select-caret" />
             </div>
+
+            {/* status filter */}
+            <div className="rpt-select-wrap">
+              <Award size={13} className="rpt-field-icon" />
+              <select className="rpt-field rpt-select" value={selectedStatus}
+                onChange={e => setSelectedStatus(e.target.value)}
+                style={{ padding: '6px 24px 6px 30px' }}>
+                <option value="all">All Statuses</option>
+                <option value="passed">✓ Completed</option>
+                <option value="pending">⏳ Pending Approval</option>
+                <option value="in-progress">↻ In Progress</option>
+                <option value="assigned">○ Not Started</option>
+              </select>
+              <ChevronDown size={13} className="rpt-select-caret" />
+            </div>
+
+            {hasFilters && (
+              <button className="btn sm rpt-clear-all" onClick={clearAll} style={{ padding: '6px 10px' }}>
+                <X size={12} /> Clear
+              </button>
+            )}
           </div>
-        </AdminHeader>
+
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', borderLeft: '1px solid var(--border)', paddingLeft: 16 }}>
+            <button className="btn primary sm" onClick={downloadXlsx} disabled={dlXlsx}>
+              <FileSpreadsheet size={14} />
+              {dlXlsx ? 'Preparing…' : hasFilters ? 'Excel (Filtered)' : 'Excel'}
+            </button>
+            <button className="btn sm" onClick={load} title="Refresh report" style={{ padding: '6px 10px' }}>
+              <RefreshCw size={14} />
+            </button>
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -325,7 +481,7 @@ export default function AdminReport() {
       </div>
 
       {/* ═══════════════════════ TABLE ════════════════════════════════ */}
-      <div className="rpt-table-card" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 500 }}>
+      <div className="rpt-table-card" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         {filteredRows.length === 0 ? (
           <div className="rpt-empty">
             <Search size={40} className="rpt-empty-icon" />
@@ -392,43 +548,66 @@ export default function AdminReport() {
                                 <span className="rpt-pending-date">
                                   Completed {cell.passedOn}
                                 </span>
-                                <button
-                                  className="rpt-approve-btn"
-                                  disabled={approvingCell === `${row.learnerId}-${c.id}`}
-                                  onClick={async e => {
-                                    e.stopPropagation()
-                                    const key = `${row.learnerId}-${c.id}`
-                                    setApprovingCell(key)
-                                    try {
-                                      await adminApproveCertificate(row.learnerId, c.id)
-                                      load()
-                                    } catch(err) {
-                                      alert(err.message)
-                                    } finally {
-                                      setApprovingCell(null)
-                                    }
-                                  }}
-                                >
-                                  {approvingCell === `${row.learnerId}-${c.id}` ? 'Approving…' : '✓ Approve'}
-                                </button>
+                                {isSuperAdmin ? (
+                                  <button
+                                    className="rpt-approve-btn"
+                                    disabled={approvingCell === `${row.learnerId}-${c.id}`}
+                                    onClick={e => {
+                                      e.stopPropagation()
+                                      setApproveTarget({
+                                        learnerId: row.learnerId, courseId: c.id,
+                                        learnerName: row.name, courseName: c.title,
+                                      })
+                                    }}
+                                  >
+                                    ✓ Approve
+                                  </button>
+                                ) : (
+                                  <span className="rpt-pending-date" style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                                    <Lock size={10} /> Awaiting Super Admin
+                                  </span>
+                                )}
                               </div>
                             )}
                             {cell.status === 'passed' && !cell.pendingApproval && cell.passedOn && (
-                              <div className="rpt-cert-row">
-                                <span className="rpt-cert-date">
-                                  {cell.score != null ? <>{cell.score}% · </> : null}{cell.passedOn}
-                                </span>
-                                <a
-                                  href={`/api/admin/users/${row.learnerId}/courses/${c.id}/certificate.pdf?token=${getToken()}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  title="View certificate"
-                                  onClick={e => e.stopPropagation()}
-                                  className="rpt-cert-btn"
-                                >
-                                  <Eye size={11} />
-                                </a>
-                              </div>
+                              <>
+                                <div className="rpt-cert-row">
+                                  <span className="rpt-cert-date">
+                                    {cell.score != null ? <>{cell.score}% · </> : null}{cell.passedOn}
+                                  </span>
+                                  <a
+                                    href={`/api/admin/users/${row.learnerId}/courses/${c.id}/certificate.pdf?token=${getToken()}`}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    title="View certificate"
+                                    onClick={e => e.stopPropagation()}
+                                    className="rpt-cert-btn"
+                                  >
+                                    <Eye size={11} />
+                                  </a>
+                                </div>
+                                {cell.approvalRemark && (
+                                  <span
+                                    onMouseEnter={e => {
+                                      const r = e.currentTarget.getBoundingClientRect()
+                                      setHoverRemark({
+                                        x: r.left + r.width / 2, y: r.top,
+                                        learnerName: row.name, courseName: c.title,
+                                        remark: cell.approvalRemark,
+                                      })
+                                    }}
+                                    onMouseLeave={() => setHoverRemark(null)}
+                                    style={{
+                                      display: 'inline-flex', alignItems: 'center', gap: 4,
+                                      marginTop: 4, fontSize: 11, color: 'var(--accent)',
+                                      cursor: 'default', fontWeight: 600,
+                                    }}
+                                  >
+                                    <MessageSquare size={11} />
+                                    View remark
+                                  </span>
+                                )}
+                              </>
                             )}
                             {/* Chapter completion mini-bar — shown only for in-progress */}
                             {cell.status === 'in-progress' && (
@@ -493,6 +672,37 @@ export default function AdminReport() {
         </span>
       </div>
 
+      {approveTarget && (
+        <ApproveModal
+          learnerName={approveTarget.learnerName}
+          courseName={approveTarget.courseName}
+          busy={approvingCell === `${approveTarget.learnerId}-${approveTarget.courseId}`}
+          onCancel={() => setApproveTarget(null)}
+          onConfirm={async (remark) => {
+            const key = `${approveTarget.learnerId}-${approveTarget.courseId}`
+            setApprovingCell(key)
+            try {
+              await adminApproveCertificate(approveTarget.learnerId, approveTarget.courseId, remark)
+              setApproveTarget(null)
+              load()
+            } catch (err) {
+              alert(err.message)
+            } finally {
+              setApprovingCell(null)
+            }
+          }}
+        />
+      )}
+
+      {hoverRemark && (
+        <RemarkTooltip
+          anchor={{ x: hoverRemark.x, y: hoverRemark.y }}
+          learnerName={hoverRemark.learnerName}
+          courseName={hoverRemark.courseName}
+          remark={hoverRemark.remark}
+        />
+      )}
+
     </div>
   )
 }
@@ -508,13 +718,21 @@ function KpiCard({ icon, value, label, color, highlight }) {
     faint:   ['var(--surface-3)',    'var(--text-faint)'],
   }[color] || ['var(--surface-3)', 'var(--text-mut)']
 
+  const borderColors = {
+    accent: '#6366f1',
+    success: '#10b981',
+    warn: '#f59e0b',
+    faint: '#9ca3af'
+  }
+  const borderColor = borderColors[color] || '#9ca3af'
+
   return (
-    <div className={`rpt-kpi${highlight ? ' rpt-kpi--highlight' : ''}`}>
+    <div className={`rpt-kpi${highlight ? ' rpt-kpi--highlight' : ''}`} style={{ borderLeft: `4px solid ${borderColor}`, overflow: 'hidden' }}>
       <div className="rpt-kpi-icon" style={{ background: bg[0], color: bg[1] }}>
         {icon}
       </div>
       <div>
-        <div className="rpt-kpi-value" style={highlight ? { color: 'var(--accent)' } : {}}>
+        <div className="rpt-kpi-value" style={{ fontSize: '24px', fontWeight: 700, ...(highlight ? { color: 'var(--accent)' } : {}) }}>
           {value}
         </div>
         <div className="rpt-kpi-label">{label}</div>
