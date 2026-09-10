@@ -174,6 +174,15 @@ export const adminListCourses = () => req('/admin/courses')
 export const adminCreateCourse = (body) => req('/admin/courses', { method: 'POST', body: JSON.stringify(body) })
 export const adminUpdateCourse = (courseId, body) => req(`/admin/courses/${courseId}`, { method: 'PUT', body: JSON.stringify(body) })
 export const adminGetCourseBuilder = (courseId) => req(`/admin/courses/${courseId}`)
+export const adminSaveCourseCertificate = (courseId, body) =>
+  req(`/admin/courses/${courseId}/certificate`, { method: 'PUT', body: JSON.stringify(body) })
+export const adminCourseCertificatePreviewUrl = (courseId, { titleUpper, topics }) => {
+  const qs = new URLSearchParams()
+  qs.set('token', getToken())
+  if (titleUpper) qs.set('titleUpper', titleUpper)
+  topics.forEach(t => qs.append('topics', t))
+  return `/api/admin/courses/${courseId}/certificate-preview.pdf?${qs.toString()}`
+}
 export const adminCreateQuizChapter = (courseId, body) =>
   req(`/admin/courses/${courseId}/quiz-chapters`, { method: 'POST', body: JSON.stringify(body) })
 export const adminSaveQuizQuestions = (courseId, chapterId, questions) =>

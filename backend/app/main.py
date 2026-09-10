@@ -18,7 +18,7 @@ import uuid
 from datetime import datetime, timezone, timedelta
 from typing import Optional
 
-from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Request
+from fastapi import FastAPI, Depends, HTTPException, UploadFile, File, Form, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -2232,6 +2232,7 @@ def admin_get_course_builder(course_id: str, admin: models.User = Depends(requir
         "passMark": course.pass_mark, "maxAttempts": course.max_attempts,
         "targetRanks": course.target_ranks or [],
         "targetUsers": course.target_users or [],
+        "cert": course.cert or {},
         "chapters": [admin_chapter_detail(ch) for ch in
                      sorted(course.chapters, key=lambda c: c.order)],
         "assessment": {
@@ -2242,6 +2243,91 @@ def admin_get_course_builder(course_id: str, admin: models.User = Depends(requir
             } for q in sorted(course.questions, key=lambda q: q.order)],
         },
     }
+
+
+class SaveCertificateRequest(BaseModel):
+    titleUpper: str | None = None
+    topics: list[str] = []
+
+
+@app.put("/api/admin/courses/{course_id}/certificate")
+def admin_save_course_certificate(course_id: str, req: SaveCertificateRequest,
+                                  admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Sets the topics/title shown on every certificate issued for this course
+    (see cert_pdf_data — falls back to chapter titles if this is never set)."""
+    course = db.get(models.Course, course_id)
+    if not course:
+        raise HTTPException(404, "Course not found")
+    topics = [t.strip() for t in req.topics if t and t.strip()]
+    title_upper = (req.titleUpper or "").strip() or None
+    course.cert = {"titleUpper": title_upper, "topics": topics}
+    db.commit()
+    return course.cert
+
+
+@app.get("/api/admin/courses/{course_id}/certificate-preview.pdf")
+def admin_preview_course_certificate(
+    course_id: str, request: Request,
+    token: Optional[str] = None,
+    titleUpper: Optional[str] = None,
+    topics: list[str] = Query([]),
+    db: Session = Depends(get_db),
+):
+    """Renders a sample certificate for the course builder's live preview —
+    accepts titleUpper/topics as query params so unsaved edits can be
+    previewed before the admin clicks Save (falls back to the saved
+    course.cert, then chapter titles, same as a real issued certificate)."""
+    from .auth import SECRET_KEY, ALGORITHM
+    auth_header = request.headers.get("Authorization", "")
+    raw_token = auth_header.removeprefix("Bearer ").strip() or token
+    if not raw_token:
+        raise HTTPException(401, "Not authenticated")
+    try:
+        payload = jwt.decode(raw_token, SECRET_KEY, algorithms=[ALGORITHM])
+    except jwt.PyJWTError:
+        raise HTTPException(401, "Invalid or expired token")
+    if payload.get("type", "session") != "session" or payload.get("role") not in ("admin", "super_admin"):
+        raise HTTPException(403, "Admin access required")
+
+    course = db.get(models.Course, course_id)
+    if not course:
+        raise HTTPException(404, "Course not found")
+
+    clean_topics = [t.strip() for t in topics if t and t.strip()]
+    if not clean_topics:
+        clean_topics = (course.cert or {}).get("topics") or []
+    if not clean_topics:
+        unwanted = {
+            "introduction", "summary", "conclusion", "quiz", "assessment",
+            "final assessment", "why", "why?", "how", "how?", "what", "what?",
+            "overview", "agenda", "objectives"
+        }
+        clean_topics = [
+            ch.title for ch in course.chapters
+            if ch.kind != "quiz"
+            and ch.title.lower().strip() not in unwanted
+            and not ch.title.lower().strip().startswith("slide ")
+        ]
+
+    class MockUser:
+        full_name = "Sample Crew Member"
+        pp_no = "PP-0000000"
+        id = "preview"
+
+    data = {
+        "id": "PREVIEW",
+        "learner": MockUser.full_name,
+        "ppNo": MockUser.pp_no,
+        "titleUpper": (titleUpper or "").strip() or (course.cert or {}).get("titleUpper") or course.title.upper(),
+        "topics": clean_topics,
+        "issued": datetime.now(timezone.utc).strftime("%d %B %Y"),
+        "location": os.getenv("CERT_LOCATION", "Chennai"),
+        "photoPath": None,
+        "verifyUrl": "",
+    }
+    pdf = build_certificate_pdf(data)
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": 'inline; filename="certificate-preview.pdf"'})
 
 
 from fastapi import BackgroundTasks

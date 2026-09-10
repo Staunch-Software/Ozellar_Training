@@ -18,6 +18,7 @@ import AdminAssignments from './pages/admin/AdminAssignments.jsx'
 import AdminReport from './pages/admin/AdminReport.jsx'
 import AdminCourses from './pages/admin/AdminCourses.jsx'
 import AdminCourseBuilder from './pages/admin/AdminCourseBuilder.jsx'
+import AdminCourseCertificate from './pages/admin/AdminCourseCertificate.jsx'
 import AdminCourseManagement from './pages/admin/AdminCourseManagement.jsx'
 import AdminOrientationProgram from './pages/admin/AdminOrientationProgram.jsx'
 import AdminScreening from './pages/admin/AdminScreening.jsx'
@@ -139,6 +140,7 @@ export default function App() {
 
           {/* Keep builder at /admin/courses/:id so navigation from inside courses works properly */}
           <Route path="courses/:id" element={<AdminCourseBuilder />} />
+          <Route path="courses/:id/certificate" element={<AdminCourseCertificate />} />
           <Route path="orientation-program" element={<AdminOrientationProgram />} />
           <Route path="screening" element={<AdminScreening />} />
           <Route path="user-management" element={<AdminUserManagement />} />

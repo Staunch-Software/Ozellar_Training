@@ -44,7 +44,7 @@ export default function AdminCourses() {
       setTargetRanks([])
       setTargetUsers([])
       setShowForm(false)
-      navigate(`/admin/courses/${created.id}`)
+      navigate(`/admin/courses/${created.id}/certificate`)
     } catch (err) {
       setError(err.message || 'Could not create course')
     } finally {
@@ -240,7 +240,7 @@ export default function AdminCourses() {
 
           {error && <div className="form-error" style={{ marginTop: 14 }}><AlertCircle size={15} /> {error}</div>}
           <p className="mut" style={{ marginTop: 16, fontSize: 13 }}>
-            You'll upload slides/videos and add quizzes on the next screen.
+            Next you'll set the certificate topics, then upload slides/videos and add quizzes.
           </p>
         </form>
       )}

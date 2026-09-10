@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, ArrowUp, ArrowDown, Trash2, Upload, Video, Image as ImageIcon,
-  HelpCircle, Plus, X, AlertCircle, ChevronDown, ChevronUp, Save, Check, Edit2, GripVertical, Settings, Search, Play
+  HelpCircle, Plus, X, AlertCircle, ChevronDown, ChevronUp, Save, Check, Edit2, GripVertical, Settings, Search, Play, Award
 } from 'lucide-react'
 import {
   adminGetCourseBuilder, adminUploadPptx, adminUploadVideo, adminCreateQuizChapter,
@@ -248,6 +248,9 @@ export default function AdminCourseBuilder() {
             onMouseLeave={e => { e.currentTarget.style.background = '#0f172a'; e.currentTarget.style.transform = 'none'; }}
           >
             <Play size={16} fill="white" /> Preview Course
+          </button>
+          <button className="btn" onClick={() => navigate(`/admin/courses/${id}/certificate`)}>
+            <Award size={16} /> Certificate
           </button>
           <button className="btn" onClick={openSettings}>
             <Settings size={16} /> Course Settings
