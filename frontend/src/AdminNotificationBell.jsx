@@ -1,8 +1,13 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bell, BellOff, Award, ArrowRight } from 'lucide-react'
-import { adminGetNotifications } from './api.js'
+import { Bell, BellOff, Award, Info, ArrowRight } from 'lucide-react'
+import {
+  adminGetNotifications, getNotifications, markNotificationRead, markAllNotificationsRead,
+} from './api.js'
 
+// Certificate approvals (AssessmentApproval rows) have no server-side
+// is_read flag — they're "read" for as long as the admin has seen them,
+// tracked client-side since the row itself disappears once approved.
 const VIEWED_KEY = 'ozellar.admin.viewed_notifs'
 
 function getViewed() {
@@ -17,7 +22,6 @@ function addViewed(id) {
 }
 
 function pruneViewed(activeIds) {
-  // Remove IDs that no longer exist in the API (they've been approved)
   const s = getViewed()
   const pruned = [...s].filter(id => activeIds.has(id))
   localStorage.setItem(VIEWED_KEY, JSON.stringify(pruned))
@@ -35,22 +39,28 @@ function timeAgo(iso) {
   return Math.floor(d / 7) + 'w ago'
 }
 
+// One bell, two sources merged into a single timeline: pending
+// certificate approvals (AssessmentApproval, tracked as "viewed" in
+// localStorage since those rows vanish once approved) and generic
+// notifications (the shared Notification table — orientation events,
+// etc., tracked server-side via isRead).
 export default function AdminNotificationBell() {
-  const [open, setOpen]       = useState(false)
-  const [allItems, setAllItems] = useState([])
-  const [viewed, setViewed]   = useState(getViewed)
-  const ref                   = useRef(null)
-  const navigate              = useNavigate()
+  const [open, setOpen] = useState(false)
+  const [certItems, setCertItems] = useState([])
+  const [genData, setGenData] = useState({ unread: 0, items: [] })
+  const [viewed, setViewed] = useState(getViewed)
+  const ref = useRef(null)
+  const navigate = useNavigate()
 
   const load = useCallback(() => {
     adminGetNotifications().then(d => {
       const items = d.items || []
-      // Prune stale viewed IDs (already approved ones disappear from API)
-      const activeIds = new Set(items.map(i => i.id))
+      const activeIds = new Set(items.map(i => `cert-${i.id}`))
       pruneViewed(activeIds)
       setViewed(getViewed())
-      setAllItems(items)
+      setCertItems(items)
     }).catch(() => {})
+    getNotifications().then(setGenData).catch(() => {})
   }, [])
 
   useEffect(() => {
@@ -69,112 +79,97 @@ export default function AdminNotificationBell() {
 
   const toggle = () => { const n = !open; setOpen(n); if (n) load() }
 
-  // Unread = items not yet viewed
-  const unreadItems = allItems.filter(item => !viewed.has(item.id))
-  const unreadCount = unreadItems.length
+  const merged = [
+    ...certItems.map((item) => ({
+      key: `cert-${item.id}`, type: 'cert', raw: item,
+      isRead: viewed.has(`cert-${item.id}`),
+      createdAt: item.createdAt,
+    })),
+    ...genData.items.map((item) => ({
+      key: `gen-${item.id}`, type: 'generic', raw: item,
+      isRead: item.isRead,
+      createdAt: item.createdAt,
+    })),
+  ].sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0))
 
-  const openItem = (item) => {
-    // Mark as read
-    addViewed(item.id)
-    setViewed(getViewed())
+  const unreadCount = merged.filter((m) => !m.isRead).length
+
+  const openItem = (m) => {
     setOpen(false)
-    navigate(`/admin/course-management/report?crew=${encodeURIComponent(item.learnerName)}&course=${encodeURIComponent(item.courseId)}&status=pending`)
+    if (m.type === 'cert') {
+      addViewed(m.key)
+      setViewed(getViewed())
+      navigate(`/admin/course-management/report?crew=${encodeURIComponent(m.raw.learnerName)}&course=${encodeURIComponent(m.raw.courseId)}&status=pending`)
+    } else {
+      if (!m.isRead) markNotificationRead(m.raw.id).then(load).catch(() => {})
+      if (m.raw.link) navigate(m.raw.link)
+    }
+  }
+
+  const readAll = async () => {
+    certItems.forEach((item) => addViewed(`cert-${item.id}`))
+    setViewed(getViewed())
+    await markAllNotificationsRead().catch(() => {})
+    load()
   }
 
   return (
     <div className="notif" ref={ref}>
-      <button
-        className={`iconbtn ${open ? 'open' : ''}`}
-        aria-label="Pending Approvals"
-        onClick={toggle}
-      >
+      <button className={`iconbtn ${open ? 'open' : ''}`} aria-label="Notifications" onClick={toggle}>
         <Bell size={20} />
-        {unreadCount > 0 && (
-          <span className="notif-badge" style={{ background: 'var(--warn)' }}>
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
+        {unreadCount > 0 && <span className="notif-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
       </button>
 
       {open && (
         <div className="notif-pop">
-          {/* Header */}
           <div className="notif-head">
-            <span>Pending Approvals</span>
-            {unreadCount > 0 && (
-              <span style={{
-                fontSize: 11, fontWeight: 700, letterSpacing: '0.04em',
-                background: 'var(--warn-weak)', color: 'var(--warn)',
-                padding: '2px 8px', borderRadius: 99
-              }}>
-                {unreadCount} pending
-              </span>
-            )}
+            <span>Notifications</span>
+            {unreadCount > 0 && <button className="linklike" onClick={readAll}>MARK ALL AS READ</button>}
           </div>
 
-          {/* List — show all pending, dimmed if already viewed */}
           <div className="notif-list">
-            {allItems.length === 0 ? (
+            {merged.length === 0 ? (
               <div className="notif-empty">
-                <BellOff size={38} strokeWidth={1.5} />
-                <span>All caught up — no pending approvals!</span>
+                <BellOff size={40} strokeWidth={1.5} />
+                <span>You're all caught up!</span>
               </div>
             ) : (
-              allItems.map((item) => {
-                const isRead = viewed.has(item.id)
-                return (
-                  <div
-                    key={item.id}
-                    className={`notif-item${isRead ? '' : ' unread'}`}
-                    onClick={() => openItem(item)}
-                    style={{ cursor: 'pointer', opacity: isRead ? 0.55 : 1, transition: 'opacity 0.2s' }}
-                  >
-                    {/* Icon */}
-                    <div
-                      className="notif-icon-wrap"
-                      style={isRead
-                        ? {}
-                        : { background: 'linear-gradient(135deg, #d97706, #f59e0b)', color: '#fff' }
-                      }
-                    >
-                      <Award size={18} strokeWidth={2} />
+              merged.map((m) => (
+                <div key={m.key} className={`notif-item${m.isRead ? '' : ' unread'}`}
+                  onClick={() => openItem(m)} style={{ cursor: 'pointer' }}>
+                  <div className="notif-icon-wrap"
+                    style={m.isRead ? {} : m.type === 'cert'
+                      ? { background: 'linear-gradient(135deg, #d97706, #f59e0b)', color: '#fff' }
+                      : {}}>
+                    {m.type === 'cert' ? <Award size={18} strokeWidth={2} /> : <Info size={20} strokeWidth={2} />}
+                  </div>
+                  <div className="notif-content">
+                    <div className="notif-title-row">
+                      <div className="notif-title">{m.type === 'cert' ? m.raw.learnerName : m.raw.title}</div>
+                      <div className="notif-meta">
+                        <span className="notif-time">{timeAgo(m.createdAt)}</span>
+                        {!m.isRead && (
+                          <div className="notif-dot"
+                            style={m.type === 'cert' ? { background: 'var(--warn)', boxShadow: '0 0 6px #d97706' } : {}} />
+                        )}
+                      </div>
                     </div>
-
-                    {/* Content */}
-                    <div className="notif-content">
-                      <div className="notif-title-row">
-                        <div className="notif-title">{item.learnerName}</div>
-                        <div className="notif-meta">
-                          <span className="notif-time">{timeAgo(item.createdAt)}</span>
-                          {!isRead && (
-                            <div className="notif-dot" style={{ background: 'var(--warn)', boxShadow: '0 0 6px #d97706' }} />
-                          )}
-                        </div>
-                      </div>
-                      <div className="notif-body">
-                        Completed <strong style={{ color: 'var(--text)' }}>{item.courseName}</strong> — awaiting certificate approval
-                      </div>
+                    <div className="notif-body">
+                      {m.type === 'cert'
+                        ? <>Completed <strong style={{ color: 'var(--text)' }}>{m.raw.courseName}</strong> — awaiting certificate approval</>
+                        : m.raw.body}
                     </div>
                   </div>
-                )
-              })
+                </div>
+              ))
             )}
           </div>
 
-          {/* Footer */}
-          {allItems.length > 0 && (
-            <div style={{
-              padding: '12px 20px',
-              borderTop: '1px solid var(--border)',
-              display: 'flex',
-              justifyContent: 'center',
-            }}>
-              <button
-                className="linklike"
-                style={{ fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
-                onClick={() => { setOpen(false); navigate('/admin/course-management/report?status=pending') }}
-              >
-                View all pending in Report <ArrowRight size={12} />
+          {certItems.length > 0 && (
+            <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'center' }}>
+              <button className="linklike" style={{ fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}
+                onClick={() => { setOpen(false); navigate('/admin/course-management/report?status=pending') }}>
+                View all pending certificates <ArrowRight size={12} />
               </button>
             </div>
           )}

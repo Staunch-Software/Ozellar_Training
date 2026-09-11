@@ -307,6 +307,8 @@ def upsert_crew_record(db, rec: dict, now: datetime) -> str:
         pp_no=rec.get("passportNo"),
         nationality=rec.get("nationality"),
         emp_status=rec.get("empStatus"),
+        sign_on_date=parse_iso_date(rec.get("signOnDate")),
+        relief_date=parse_iso_date(rec.get("reliefDate")),
         current_vessel=rec.get("vslName"),
         seamen_book_no=rec.get("seamenBookNo"),
         birth_place=rec.get("birth_place"),

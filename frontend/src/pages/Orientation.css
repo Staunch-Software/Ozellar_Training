@@ -1,0 +1,176 @@
+/* ============================================================
+   Orientation Program — candidate checklist page
+   Scoped to Orientation.jsx only, deliberately distinct from the
+   orn-* admin/approver design language.
+   ============================================================ */
+.cnd-page {
+  --cnd-ink: #0f172a; --cnd-ink-soft: #64748b; --cnd-line: #e5e9f0;
+  --cnd-line-strong: #d3d9e3; --cnd-surface: #ffffff; --cnd-wash: #f7f8fb;
+  --cnd-accent: #0e7490; --cnd-accent-2: #0891b2; --cnd-accent-tint: rgba(14,116,144,.1);
+  --cnd-good: #15803d; --cnd-good-tint: rgba(21,128,61,.1);
+  --cnd-warn: #b45309; --cnd-warn-tint: rgba(180,83,9,.1);
+  --cnd-bad: #dc2626; --cnd-bad-tint: rgba(220,38,38,.1);
+  min-height: 100vh; background: var(--cnd-wash); color: var(--cnd-ink);
+}
+@media (prefers-color-scheme: dark) {
+  .cnd-page {
+    --cnd-ink: #e8eaef; --cnd-ink-soft: #96a1b0; --cnd-line: #26303f; --cnd-line-strong: #37424f;
+    --cnd-surface: #141a23; --cnd-wash: #0c1119; --cnd-accent: #22b8d8; --cnd-accent-2: #45c9e6;
+    --cnd-accent-tint: rgba(34,184,216,.14); --cnd-good-tint: rgba(52,211,153,.14);
+    --cnd-warn-tint: rgba(224,169,79,.14); --cnd-bad-tint: rgba(248,113,113,.14);
+  }
+}
+:root[data-theme="dark"] .cnd-page {
+  --cnd-ink: #e8eaef; --cnd-ink-soft: #96a1b0; --cnd-line: #26303f; --cnd-line-strong: #37424f;
+  --cnd-surface: #141a23; --cnd-wash: #0c1119; --cnd-accent: #22b8d8; --cnd-accent-2: #45c9e6;
+  --cnd-accent-tint: rgba(34,184,216,.14); --cnd-good-tint: rgba(52,211,153,.14);
+  --cnd-warn-tint: rgba(224,169,79,.14); --cnd-bad-tint: rgba(248,113,113,.14);
+}
+:root[data-theme="light"] .cnd-page {
+  --cnd-ink: #0f172a; --cnd-ink-soft: #64748b; --cnd-line: #e5e9f0; --cnd-line-strong: #d3d9e3;
+  --cnd-surface: #ffffff; --cnd-wash: #f7f8fb; --cnd-accent: #0e7490; --cnd-accent-2: #0891b2;
+  --cnd-accent-tint: rgba(14,116,144,.1);
+}
+
+/* ---- nav ---- */
+.cnd-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 24px; background: var(--cnd-surface); border-bottom: 1px solid var(--cnd-line);
+  position: sticky; top: 0; z-index: 20;
+}
+.cnd-brand { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 15px; }
+.cnd-brand-icon {
+  width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, var(--cnd-accent), var(--cnd-accent-2));
+}
+.cnd-nav-right { display: flex; align-items: center; gap: 12px; }
+.cnd-nav-user { font-size: 12.5px; color: var(--cnd-ink-soft); text-align: right; line-height: 1.3; }
+.cnd-nav-user strong { color: var(--cnd-ink); font-weight: 700; }
+
+/* ---- body ---- */
+.cnd-body { max-width: 1320px; margin: 0 auto; padding: 24px 28px 60px; }
+
+.cnd-empty { text-align: center; padding: 80px 20px; color: var(--cnd-ink-soft); }
+.cnd-empty-icon { color: var(--cnd-ink-soft); opacity: .5; margin-bottom: 14px; }
+.cnd-empty-title { font-weight: 700; font-size: 16px; color: var(--cnd-ink); margin-bottom: 6px; }
+.cnd-empty-desc { font-size: 13.5px; max-width: 340px; margin: 0 auto; line-height: 1.6; }
+
+/* ---- full-width layout: task list + sticky summary sidebar ---- */
+.cnd-layout { display: grid; grid-template-columns: 1fr 280px; gap: 24px; align-items: start; }
+.cnd-main { min-width: 0; }
+.cnd-side { position: sticky; top: 76px; display: flex; flex-direction: column; gap: 14px; }
+@media (max-width: 860px) { .cnd-layout { grid-template-columns: 1fr; } .cnd-side { position: static; } }
+
+.cnd-side-card {
+  background: var(--cnd-surface); border: 1px solid var(--cnd-line); border-radius: 16px;
+  padding: 20px; text-align: center;
+}
+.cnd-side-eyebrow {
+  font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--cnd-ink-soft); margin-top: 12px;
+}
+.cnd-side-title { font-size: 15px; font-weight: 800; margin-top: 3px; line-height: 1.3; }
+.cnd-side-meta { font-size: 12px; color: var(--cnd-ink-soft); margin-top: 6px; }
+
+.cnd-side-info {
+  background: var(--cnd-surface); border: 1px solid var(--cnd-line); border-radius: 16px;
+  padding: 16px; display: flex; flex-direction: column; gap: 14px;
+}
+.cnd-side-info-row { display: flex; align-items: flex-start; gap: 10px; color: var(--cnd-accent); }
+.cnd-side-info-lbl { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--cnd-ink-soft); }
+.cnd-side-info-val { font-size: 13.5px; font-weight: 700; color: var(--cnd-ink); margin-top: 1px; }
+.cnd-side-hint { font-size: 11.5px; color: var(--cnd-ink-soft); text-align: center; }
+.cnd-side-hint--warn {
+  display: flex; align-items: center; justify-content: center; gap: 5px;
+  color: var(--cnd-warn); font-weight: 600;
+}
+
+/* ---- status banner ---- */
+.cnd-banner {
+  display: flex; align-items: center; gap: 9px; border-radius: 12px; padding: 12px 16px;
+  font-size: 13.5px; font-weight: 600; margin-bottom: 18px; border: 1px solid transparent;
+}
+.cnd-banner--submitted { background: var(--cnd-accent-tint); color: var(--cnd-accent); border-color: color-mix(in srgb, var(--cnd-accent) 30%, transparent); }
+.cnd-banner--approved { background: var(--cnd-good-tint); color: var(--cnd-good); border-color: color-mix(in srgb, var(--cnd-good) 30%, transparent); }
+.cnd-banner--rejected { background: var(--cnd-bad-tint); color: var(--cnd-bad); border-color: color-mix(in srgb, var(--cnd-bad) 30%, transparent); }
+
+/* ---- task list ---- */
+.cnd-list { display: flex; flex-direction: column; gap: 12px; }
+.cnd-task {
+  background: var(--cnd-surface); border: 1px solid var(--cnd-line); border-radius: 16px;
+  overflow: hidden; transition: border-color .15s;
+}
+.cnd-task--done { border-color: color-mix(in srgb, var(--cnd-good) 35%, var(--cnd-line)); }
+.cnd-task--proof-missing { border-color: color-mix(in srgb, var(--cnd-warn) 40%, var(--cnd-line)); }
+
+.cnd-task-top { display: flex; align-items: flex-start; gap: 12px; padding: 15px 16px 12px; }
+.cnd-task-num {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px; display: grid; place-items: center;
+  font-weight: 800; font-size: 12px; background: var(--cnd-accent-tint); color: var(--cnd-accent); margin-top: 1px;
+}
+.cnd-task--done .cnd-task-num { background: var(--cnd-good-tint); color: var(--cnd-good); }
+.cnd-task-body { flex: 1; min-width: 0; }
+.cnd-task-title { font-weight: 700; font-size: 14.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cnd-task-title--done { text-decoration: line-through; color: var(--cnd-ink-soft); }
+.cnd-task-required {
+  font-size: 9.5px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em;
+  padding: 2px 7px; border-radius: 20px; background: var(--cnd-good-tint); color: var(--cnd-good);
+}
+.cnd-task-required--missing { background: var(--cnd-warn-tint); color: var(--cnd-warn); }
+.cnd-task-desc { font-size: 13px; color: var(--cnd-ink-soft); margin-top: 6px; white-space: pre-wrap; line-height: 1.6; }
+
+.cnd-task-toggle {
+  flex-shrink: 0; width: 25px; height: 25px; border-radius: 50%; border: 2px solid var(--cnd-line-strong);
+  background: none; cursor: pointer; display: grid; place-items: center; color: transparent;
+  transition: background .15s, border-color .15s;
+}
+.cnd-task-toggle:disabled { cursor: default; opacity: .6; }
+.cnd-task--done .cnd-task-toggle { background: var(--cnd-good); border-color: var(--cnd-good); color: #fff; }
+
+.cnd-task-extra { padding: 0 16px 15px 54px; display: flex; flex-direction: column; gap: 10px; }
+
+.cnd-task-note-label {
+  font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--cnd-ink-soft);
+}
+.cnd-task-note {
+  width: 100%; border: 1px solid var(--cnd-line-strong); border-radius: 9px; background: var(--cnd-wash);
+  color: var(--cnd-ink); font-family: inherit; font-size: 13px; padding: 9px 11px; resize: vertical; line-height: 1.5;
+}
+.cnd-task-note:focus { outline: none; border-color: var(--cnd-accent); box-shadow: 0 0 0 3px var(--cnd-accent-tint); }
+.cnd-task-note-row { display: flex; align-items: flex-start; gap: 8px; }
+.cnd-task-note-save {
+  flex-shrink: 0; margin-top: 1px; width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--cnd-line-strong);
+  background: var(--cnd-surface); color: var(--cnd-ink-soft); display: grid; place-items: center; cursor: pointer;
+}
+.cnd-task-note-save:hover:not(:disabled) { color: var(--cnd-accent); border-color: var(--cnd-accent); }
+.cnd-task-note-save:disabled { opacity: .5; cursor: default; }
+
+.cnd-attachments { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.cnd-attachment-chip {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; font-weight: 600;
+  background: var(--cnd-accent-tint); color: var(--cnd-accent); border: 1px solid color-mix(in srgb, var(--cnd-accent) 25%, transparent);
+  padding: 4px 6px 4px 10px; border-radius: 20px; max-width: 220px;
+}
+.cnd-attachment-chip a { color: inherit; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cnd-attachment-chip a:hover { text-decoration: underline; }
+.cnd-attachment-remove {
+  flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%; border: none; background: rgba(0,0,0,.08);
+  color: inherit; display: grid; place-items: center; cursor: pointer; padding: 0;
+}
+.cnd-attachment-add {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; font-weight: 700;
+  padding: 5px 11px; border-radius: 20px; border: 1px dashed var(--cnd-line-strong); background: none;
+  color: var(--cnd-ink-soft); cursor: pointer;
+}
+.cnd-attachment-add:hover:not(:disabled) { border-color: var(--cnd-accent); color: var(--cnd-accent); }
+.cnd-attachment-add:disabled { opacity: .5; cursor: default; }
+
+/* ---- submit button (sidebar) ---- */
+.cnd-submit-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px; border: none; border-radius: 12px;
+  background: linear-gradient(135deg, var(--cnd-accent), var(--cnd-accent-2)); color: #fff;
+  font-weight: 700; font-size: 13.5px; padding: 13px 20px; cursor: pointer; transition: filter .15s;
+  box-shadow: 0 12px 24px -12px color-mix(in srgb, var(--cnd-accent) 60%, transparent);
+}
+.cnd-submit-btn:hover:not(:disabled) { filter: brightness(1.08); }
+.cnd-submit-btn:disabled { opacity: .5; cursor: default; box-shadow: none; }

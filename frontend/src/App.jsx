@@ -20,14 +20,22 @@ import AdminCourses from './pages/admin/AdminCourses.jsx'
 import AdminCourseBuilder from './pages/admin/AdminCourseBuilder.jsx'
 import AdminCourseCertificate from './pages/admin/AdminCourseCertificate.jsx'
 import AdminCourseManagement from './pages/admin/AdminCourseManagement.jsx'
-import AdminOrientationProgram from './pages/admin/AdminOrientationProgram.jsx'
+import AdminOrientationManagement from './pages/admin/AdminOrientationManagement.jsx'
+import AdminOrientationPrograms from './pages/admin/AdminOrientationPrograms.jsx'
+import AdminOrientationBuilder from './pages/admin/AdminOrientationBuilder.jsx'
+import AdminOrientationPreview from './pages/admin/AdminOrientationPreview.jsx'
+import AdminOrientationCandidates from './pages/admin/AdminOrientationCandidates.jsx'
+import AdminOrientationEnrollments from './pages/admin/AdminOrientationEnrollments.jsx'
+import AdminOrientationResults from './pages/admin/AdminOrientationResults.jsx'
+import Orientation from './pages/Orientation.jsx'
+import ApproverDashboard from './pages/ApproverDashboard.jsx'
 import AdminScreening from './pages/admin/AdminScreening.jsx'
 import AdminCoursePreview from './pages/admin/AdminCoursePreview.jsx'
 import AdminUserManagement from './pages/admin/AdminUserManagement.jsx'
 import TestWelcome from './pages/test/TestWelcome.jsx'
 import TestExam from './pages/test/TestExam.jsx'
 import TestResult from './pages/test/TestResult.jsx'
-import { AuthProvider, useAuth, ProtectedRoute, AdminRoute, TestRoute } from './auth.jsx'
+import { AuthProvider, useAuth, ProtectedRoute, AdminRoute, TestRoute, ApproverRoute, OrientationRoute } from './auth.jsx'
 
 /* ---- theme ---- */
 const ThemeCtx = createContext()
@@ -116,6 +124,7 @@ export default function App() {
         <Route path="/verify/:id" element={<Verify />} />
         <Route path="/upload-photo" element={P(<UploadPhoto />)} />
         <Route path="/my-courses" element={P(<MyCourses />)} />
+        <Route path="/orientation" element={<OrientationRoute><Orientation /></OrientationRoute>} />
         <Route path="/certificates" element={P(<Certificates />)} />
         <Route path="/help" element={P(<Help />)} />
         <Route path="/course/:slug" element={P(<CourseReader />)} />
@@ -127,10 +136,14 @@ export default function App() {
         <Route path="/test/exam" element={T(<TestExam />)} />
         <Route path="/test/result" element={T(<TestResult />)} />
 
+        {/* Orientation Program approver (vessel Master / Chief Engineer) */}
+        <Route path="/approvals" element={<ApproverRoute><ApproverDashboard /></ApproverRoute>} />
+
         <Route path="/admin/courses/:id/preview" element={<AdminRoute><AdminCoursePreview /></AdminRoute>} />
+        <Route path="/admin/orientation/:id/preview" element={<AdminRoute><AdminOrientationPreview /></AdminRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route index element={<AdminDashboard />} />
-          
+
           <Route path="course-management" element={<AdminCourseManagement />}>
             <Route path="courses" element={<AdminCourses />} />
             <Route path="assignments" element={<AdminAssignments />} />
@@ -141,7 +154,16 @@ export default function App() {
           {/* Keep builder at /admin/courses/:id so navigation from inside courses works properly */}
           <Route path="courses/:id" element={<AdminCourseBuilder />} />
           <Route path="courses/:id/certificate" element={<AdminCourseCertificate />} />
-          <Route path="orientation-program" element={<AdminOrientationProgram />} />
+
+          <Route path="orientation-program" element={<AdminOrientationManagement />}>
+            <Route path="programs" element={<AdminOrientationPrograms />} />
+            <Route path="enrollments" element={<AdminOrientationEnrollments />} />
+            <Route path="results" element={<AdminOrientationResults />} />
+            <Route path="candidates" element={<AdminOrientationCandidates />} />
+          </Route>
+          {/* Keep builder at /admin/orientation/:id, same reasoning as the course builder */}
+          <Route path="orientation/:id" element={<AdminOrientationBuilder />} />
+
           <Route path="screening" element={<AdminScreening />} />
           <Route path="user-management" element={<AdminUserManagement />} />
         </Route>

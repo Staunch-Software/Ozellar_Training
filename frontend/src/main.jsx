@@ -7,6 +7,7 @@ import '@fontsource/inter/600.css'
 import App from './App.jsx'
 import { AuthProvider } from './auth.jsx'
 import './styles.css'
+import './orientation.css'
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

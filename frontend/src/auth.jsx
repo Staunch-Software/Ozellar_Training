@@ -72,6 +72,30 @@ export function TestRoute({ children }) {
   return children
 }
 
+// Orientation Program approver-only routes (vessel Master / Chief Engineer).
+// No separate account — any crew (learner) row currently qualifies if the
+// backend says so (rank + on-sail + assigned vessel, recomputed fresh on
+// every /api/auth/me, so this is never stale even on a direct/refresh visit).
+export function ApproverRoute({ children }) {
+  const { user, loading } = useAuth()
+  if (loading) return <div className="spinner">Loading…</div>
+  if (!user) return <Navigate to="/" replace />
+  if (!user.isVesselApprover) return <Navigate to={homeFor(user)} replace />
+  return children
+}
+
+// Orientation Program candidate routes — same crew credentials as ProtectedRoute,
+// but deliberately skips the passport-photo gate (that's for certificates,
+// unrelated to the promotion checklist) so the dedicated Orientation login
+// tab lands straight on the checklist, nothing else.
+export function OrientationRoute({ children }) {
+  const { user, loading } = useAuth()
+  if (loading) return <div className="spinner">Loading…</div>
+  if (!user) return <Navigate to="/" replace />
+  if (user.role !== 'learner') return <Navigate to={homeFor(user)} replace />
+  return children
+}
+
 // where a signed-in user belongs by role
 export const homeFor = (u) => {
   if (u?.role === 'admin' || u?.role === 'super_admin') return '/admin'

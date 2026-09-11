@@ -36,7 +36,8 @@ async function req(path, opts = {}) {
 // auth
 export const login = (body) => req('/auth/login', { method: 'POST', body: JSON.stringify(body) })
 export const getMe = () => req('/auth/me')
-export const searchCrewNames = (q) => req(`/auth/crew-search?q=${encodeURIComponent(q)}`)
+export const searchCrewNames = (q, scope) =>
+  req(`/auth/crew-search?q=${encodeURIComponent(q)}${scope ? `&scope=${encodeURIComponent(scope)}` : ''}`)
 
 export const uploadCrewPhoto = (file) => {
   const fd = new FormData()
@@ -345,6 +346,114 @@ export async function adminDownloadScreeningResultsXlsx(testId) {
   const a = document.createElement('a')
   a.href = objUrl
   a.download = 'screening-results.xlsx'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(objUrl)
+}
+
+
+// ============================================================
+// ORIENTATION PROGRAM
+// ============================================================
+
+// Candidate-facing (existing crew login)
+export const getMyOrientationEnrollment = () => req('/orientation/my-enrollment')
+export const submitOrientation = () => req('/orientation/submit', { method: 'POST' })
+export const completeOrientationTask = (taskId, completed, note, files) => {
+  const fd = new FormData()
+  fd.append('completed', completed ? 'true' : 'false')
+  if (note !== undefined && note !== null) fd.append('note', note)
+  for (const file of (files || [])) fd.append('files', file)
+  return uploadReq(`/orientation/tasks/${taskId}/complete`, fd)
+}
+export const deleteOrientationTaskAttachment = (taskId, url) =>
+  req(`/orientation/tasks/${taskId}/attachments?url=${encodeURIComponent(url)}`, { method: 'DELETE' })
+
+// Approver-facing (vessel Master / Chief Engineer)
+export const getApproverSubmissions = () => req('/approver/submissions')
+export const approveOrientationSubmission = (id) =>
+  req(`/approver/submissions/${id}/approve`, { method: 'POST' })
+export const rejectOrientationSubmission = (id) =>
+  req(`/approver/submissions/${id}/reject`, { method: 'POST' })
+export const verifyOrientationTask = (submissionId, taskId, verified) =>
+  req(`/approver/submissions/${submissionId}/tasks/${taskId}/verify`, {
+    method: 'POST', body: JSON.stringify({ verified }),
+  })
+
+// Admin — programs / tasks
+export const adminListOrientationPrograms = () => req('/admin/orientation/programs')
+export const adminCreateOrientationProgram = (body) =>
+  req('/admin/orientation/programs', { method: 'POST', body: JSON.stringify(body) })
+export const adminGetOrientationProgram = (id) => req(`/admin/orientation/programs/${id}`)
+export const adminUpdateOrientationProgram = (id, body) =>
+  req(`/admin/orientation/programs/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+export const adminToggleOrientationProgram = (id) =>
+  req(`/admin/orientation/programs/${id}/toggle`, { method: 'PATCH' })
+export const adminDeleteOrientationProgram = (id) =>
+  req(`/admin/orientation/programs/${id}`, { method: 'DELETE' })
+
+export const adminAddOrientationTask = (programId, body) =>
+  req(`/admin/orientation/programs/${programId}/tasks`, { method: 'POST', body: JSON.stringify(body) })
+export const adminUpdateOrientationTask = (programId, taskId, body) =>
+  req(`/admin/orientation/programs/${programId}/tasks/${taskId}`, { method: 'PUT', body: JSON.stringify(body) })
+export const adminDeleteOrientationTask = (programId, taskId) =>
+  req(`/admin/orientation/programs/${programId}/tasks/${taskId}`, { method: 'DELETE' })
+export const adminReorderOrientationTasks = (programId, order) =>
+  req(`/admin/orientation/programs/${programId}/reorder`, { method: 'PUT', body: JSON.stringify({ order }) })
+
+export async function adminDownloadOrientationProgramsXlsx() {
+  const url = '/api/admin/orientation/programs.xlsx'
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${getToken()}` } })
+  if (!res.ok) throw new Error('Could not download programs')
+  const blob = await res.blob()
+  const objUrl = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = objUrl
+  a.download = 'orientation-programs.xlsx'
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(objUrl)
+}
+
+// Admin — candidates / enrollments
+export const adminListOrientationVessels = () => req('/admin/orientation/vessels')
+export const adminListOrientationCandidates = (q = '', programId, rank = '', vessel = '', onSail = false) => {
+  const qs = new URLSearchParams()
+  if (q) qs.set('q', q)
+  if (programId) qs.set('program_id', programId)
+  if (rank) qs.set('rank', rank)
+  if (vessel) qs.set('vessel', vessel)
+  if (onSail) qs.set('on_sail', 'true')
+  const s = qs.toString()
+  return req(`/admin/orientation/candidates${s ? `?${s}` : ''}`)
+}
+export const adminListOrientationEnrollments = (programId, status) => {
+  const qs = new URLSearchParams()
+  if (programId) qs.set('program_id', programId)
+  if (status) qs.set('status', status)
+  const s = qs.toString()
+  return req(`/admin/orientation/enrollments${s ? `?${s}` : ''}`)
+}
+export const adminCreateOrientationEnrollment = (learnerId, programId, vesselName, masterName) =>
+  req('/admin/orientation/enrollments', { method: 'POST', body: JSON.stringify({ learnerId, programId, vesselName, masterName }) })
+export const adminDeleteOrientationEnrollment = (id) =>
+  req(`/admin/orientation/enrollments/${id}`, { method: 'DELETE' })
+
+// Admin — results / monitoring
+export const adminGetOrientationResults = (programId) =>
+  req(`/admin/orientation/results${programId ? `?program_id=${programId}` : ''}`)
+
+export async function adminDownloadOrientationResultsXlsx(programId) {
+  const url = `/api/admin/orientation/results.xlsx${programId ? `?program_id=${programId}` : ''}`
+  const res = await fetch(url, { headers: { Authorization: `Bearer ${getToken()}` } })
+  if (!res.ok) throw new Error('Could not download results')
+  const blob = await res.blob()
+  const objUrl = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = objUrl
+  a.download = 'orientation-results.xlsx'
   document.body.appendChild(a)
   a.click()
   a.remove()

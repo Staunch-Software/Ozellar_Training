@@ -5,6 +5,10 @@ import { ThemeToggle } from '../App.jsx'
 import { useAuth, homeFor } from '../auth.jsx'
 import { searchCrewNames } from '../api.js'
 
+// Where a crew member who used the "Orientation" tab lands: the approvals
+// queue if they currently qualify as a vessel approver, else the checklist.
+const orientationHome = (u) => (u?.isVesselApprover ? '/approvals' : '/orientation')
+
 export default function Login() {
   const navigate = useNavigate()
   const { user, login, screeningLogin } = useAuth()
@@ -29,16 +33,22 @@ export default function Login() {
   const searchTimer = useRef(null)
   const skipNextSearch = useRef(false)
 
-  useEffect(() => { if (user) navigate(homeFor(user), { replace: true }) }, [user])
+  // Orientation is a dedicated entry point for the same crew credentials —
+  // land on the checklist, unless this crew member is currently a vessel
+  // Master/Chief Engineer (rank + on-sail, no separate approver account),
+  // in which case they land on the approvals queue instead.
+  useEffect(() => {
+    if (user) navigate(mode === 'orientation' ? orientationHome(user) : homeFor(user), { replace: true })
+  }, [user])
 
-  // debounced name search for crew mode
+  // debounced name search for crew / orientation mode
   useEffect(() => {
     clearTimeout(searchTimer.current)
     if (skipNextSearch.current) { skipNextSearch.current = false; return }
     const q = name.trim()
-    if (mode !== 'crew' || q.length < 1) { setSuggestions([]); return }
+    if ((mode !== 'crew' && mode !== 'orientation') || q.length < 1) { setSuggestions([]); return }
     searchTimer.current = setTimeout(() => {
-      searchCrewNames(q).then((results) => {
+      searchCrewNames(q, mode === 'orientation' ? 'orientation' : undefined).then((results) => {
         setSuggestions(results)
         setShowSuggestions(true)
         setActiveIndex(-1)
@@ -81,12 +91,12 @@ export default function Login() {
         const u = await screeningLogin({ name: testName.trim(), password: testPassword })
         navigate(homeFor(u), { replace: true })
       } else {
-        const body = mode === 'crew'
+        const body = (mode === 'crew' || mode === 'orientation')
           ? { mode: 'crew', name: name.trim(), dob: dob.trim(),
               ...(needCrewId ? { crewId: crewId.trim() } : {}) }
           : { mode: 'admin', email: email.trim(), password }
         const u = await login(body)
-        navigate(homeFor(u), { replace: true })
+        navigate(mode === 'orientation' ? orientationHome(u) : homeFor(u), { replace: true })
       }
     } catch (err) {
       if (err.status === 409) setNeedCrewId(true)
@@ -115,7 +125,7 @@ export default function Login() {
             <span className="logo"><GraduationCap size={21} /></span> Ozellar Marine
           </div>
 
-          {/* crew / admin / test toggle */}
+          {/* crew / admin / test / orientation toggle */}
           <div className="segmented" role="tablist">
             <button type="button" role="tab" className={mode === 'crew' ? 'on' : ''}
               onClick={() => switchMode('crew')}>Crew</button>
@@ -126,9 +136,21 @@ export default function Login() {
               style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
               <ClipboardList size={13} />Test
             </button>
+            <button type="button" role="tab" className={mode === 'orientation' ? 'on' : ''}
+              onClick={() => switchMode('orientation')}
+              style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
+              <GraduationCap size={13} />Orientation
+            </button>
           </div>
 
-          {mode === 'crew' ? (
+          {mode === 'orientation' && (
+            <div className="hint" style={{ margin: '-4px 0 8px', display: 'flex', alignItems: 'center', gap: 6, background: 'rgba(124,58,237,0.07)', border: '1px solid rgba(124,58,237,0.2)', borderRadius: 8, padding: '8px 12px' }}>
+              <GraduationCap size={14} color="#7c3aed" />
+              <span><strong style={{ color: '#7c3aed' }}>Officer Promotion Login</strong> — for officers working through a promotion checklist (e.g. 3rd→2nd Officer). Signs you straight into your task list.</span>
+            </div>
+          )}
+
+          {(mode === 'crew' || mode === 'orientation') ? (
             <>
               <div className="field">
                 <label htmlFor="name">Full name</label>

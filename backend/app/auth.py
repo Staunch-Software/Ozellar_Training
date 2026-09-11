@@ -15,7 +15,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 
 from .database import get_db
-from . import models
+from . import models, orientation_ranks
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev-insecure-change-me-in-production")
 ALGORITHM = "HS256"
@@ -97,16 +97,29 @@ def require_super_admin(user: "models.User" = Depends(get_current_user)) -> "mod
     return user
 
 
+def require_vessel_approver(user: "models.User" = Depends(get_current_user)) -> "models.User":
+    """Vessel Master / Chief Engineer — same crew login as every other
+    learner, no separate account. Eligibility (rank + on-sail + assigned
+    vessel) is computed live; see orientation_ranks.vessel_approver_info."""
+    if user.role != "learner" or not orientation_ranks.vessel_approver_info(user):
+        raise HTTPException(403, "Vessel approver access required")
+    return user
+
+
 UPLOAD_DIR = os.getenv("UPLOAD_DIR", os.path.join(os.path.dirname(__file__), "..", "uploads"))
 
 def user_public(u: "models.User") -> dict:
     parts = (u.full_name or "").split()
     initials = "".join(p[0] for p in parts[:2]).upper() or "?"
     photo_path = os.path.join(UPLOAD_DIR, "photos", f"{u.id}.jpg")
+    approver_info = orientation_ranks.vessel_approver_info(u)
     return {
         "id": u.id, "role": u.role, "name": u.full_name, "rank": u.rank,
         "crewId": u.crew_id, "email": u.email, "ppNo": u.pp_no, "initials": initials,
         "hasPhoto": os.path.exists(photo_path),
+        "isVesselApprover": approver_info is not None,
+        "approverVessel": approver_info["vessel"] if approver_info else None,
+        "approverDepartment": approver_info["department"] if approver_info else None,
     }
 
 

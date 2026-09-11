@@ -1,0 +1,251 @@
+/* ============================================================
+   Orientation Builder — standalone page design
+   Scoped to AdminOrientationBuilder.jsx only. Does not share
+   classes with orientation.css (used by the rest of the
+   Orientation Program admin section).
+   ============================================================ */
+
+.ob-page {
+  --ob-ink: #0f172a;
+  --ob-ink-soft: #64748b;
+  --ob-line: #e5e9f0;
+  --ob-line-strong: #d3d9e3;
+  --ob-surface: #ffffff;
+  --ob-wash: #f8fafc;
+  --ob-accent: #2563eb;
+  --ob-accent-tint: rgba(37, 99, 235, .1);
+  --ob-danger: #dc2626;
+  --ob-proof: #7c3aed;
+  --ob-proof-tint: rgba(124, 58, 237, .1);
+
+  /* the shared admin layout gives Orientation routes a fixed-height,
+     overflow:hidden parent (.page-cm) — become the scroll container */
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 22px 24px 40px;
+
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  color: var(--ob-ink);
+}
+@media (prefers-color-scheme: dark) {
+  .ob-page {
+    --ob-ink: #e8eaef;
+    --ob-ink-soft: #97a1b0;
+    --ob-line: #262c37;
+    --ob-line-strong: #333b48;
+    --ob-surface: #161b23;
+    --ob-wash: #10141b;
+    --ob-accent: #5b8cff;
+    --ob-accent-tint: rgba(91, 140, 255, .14);
+    --ob-proof-tint: rgba(167, 139, 250, .14);
+  }
+}
+:root[data-theme="dark"] .ob-page {
+  --ob-ink: #e8eaef; --ob-ink-soft: #97a1b0; --ob-line: #262c37; --ob-line-strong: #333b48;
+  --ob-surface: #161b23; --ob-wash: #10141b; --ob-accent: #5b8cff;
+  --ob-accent-tint: rgba(91, 140, 255, .14); --ob-proof-tint: rgba(167, 139, 250, .14);
+}
+:root[data-theme="light"] .ob-page {
+  --ob-ink: #0f172a; --ob-ink-soft: #64748b; --ob-line: #e5e9f0; --ob-line-strong: #d3d9e3;
+  --ob-surface: #ffffff; --ob-wash: #f8fafc; --ob-accent: #2563eb;
+  --ob-accent-tint: rgba(37, 99, 235, .1); --ob-proof-tint: rgba(124, 58, 237, .1);
+}
+.ob-page--engine { --ob-accent: #b45309; --ob-accent-tint: rgba(180, 83, 9, .1); }
+@media (prefers-color-scheme: dark) { .ob-page--engine { --ob-accent: #e0a94f; --ob-accent-tint: rgba(224, 169, 79, .14); } }
+:root[data-theme="dark"] .ob-page--engine { --ob-accent: #e0a94f; --ob-accent-tint: rgba(224, 169, 79, .14); }
+
+/* ---------------------------------------------------------
+   Header
+   --------------------------------------------------------- */
+.ob-hero {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  background: var(--ob-surface); border: 1px solid var(--ob-line);
+  border-left: 4px solid var(--ob-accent);
+  border-radius: 14px; padding: 16px 20px;
+}
+.ob-hero-back {
+  flex-shrink: 0; width: 34px; height: 34px; border-radius: 9px;
+  display: grid; place-items: center; color: var(--ob-ink-soft);
+  background: var(--ob-wash); border: 1px solid var(--ob-line);
+  transition: color .15s, border-color .15s;
+}
+.ob-hero-back:hover { color: var(--ob-accent); border-color: var(--ob-accent); }
+
+.ob-hero-icon {
+  flex-shrink: 0; width: 38px; height: 38px; border-radius: 10px;
+  display: grid; place-items: center; background: var(--ob-accent-tint); color: var(--ob-accent);
+}
+
+.ob-hero-info { flex: 1; min-width: 200px; }
+.ob-hero-title { font-size: 17px; font-weight: 700; letter-spacing: -.01em; line-height: 1.3; }
+.ob-hero-path { display: flex; align-items: center; gap: 6px; margin-top: 3px; font-size: 12.5px; color: var(--ob-ink-soft); }
+.ob-hero-path-sep { opacity: .7; }
+.ob-hero-dot { opacity: .6; margin: 0 2px; }
+
+.ob-hero-count {
+  display: flex; flex-direction: column; align-items: center; line-height: 1.15;
+  padding: 4px 14px; border-radius: 10px; background: var(--ob-wash); border: 1px solid var(--ob-line);
+  flex-shrink: 0;
+}
+.ob-hero-count-num { font-size: 17px; font-weight: 800; color: var(--ob-accent); }
+.ob-hero-count-lbl { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--ob-ink-soft); }
+
+.ob-hero-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+/* ---------------------------------------------------------
+   Buttons
+   --------------------------------------------------------- */
+.ob-btn {
+  display: inline-flex; align-items: center; gap: 6px; border-radius: 9px;
+  font-size: 13px; font-weight: 600; padding: 8px 14px; cursor: pointer;
+  border: 1px solid var(--ob-line-strong); background: var(--ob-surface); color: var(--ob-ink);
+  transition: border-color .15s, color .15s, background .15s;
+  white-space: nowrap;
+}
+.ob-btn:hover:not(:disabled) { border-color: var(--ob-accent); color: var(--ob-accent); }
+.ob-btn:disabled { opacity: .45; cursor: default; }
+.ob-btn-primary {
+  background: var(--ob-accent); border-color: var(--ob-accent); color: #fff;
+}
+.ob-btn-primary:hover:not(:disabled) { filter: brightness(1.08); color: #fff; }
+.ob-btn-danger:hover:not(:disabled) { border-color: var(--ob-danger); color: var(--ob-danger); }
+.ob-btn-icon { padding: 7px; }
+.ob-btn-ghost { border-color: transparent; background: transparent; }
+.ob-btn-ghost:hover:not(:disabled) { background: var(--ob-wash); border-color: var(--ob-line); color: var(--ob-ink); }
+
+/* ---------------------------------------------------------
+   Alert
+   --------------------------------------------------------- */
+.ob-alert {
+  flex-shrink: 0;
+  display: flex; align-items: center; gap: 9px; font-size: 13.5px; font-weight: 600;
+  background: color-mix(in srgb, var(--ob-danger) 10%, transparent);
+  color: var(--ob-danger); border: 1px solid color-mix(in srgb, var(--ob-danger) 30%, transparent);
+  border-radius: 10px; padding: 11px 16px;
+}
+
+/* ---------------------------------------------------------
+   Editor card (task form / settings) — inline, not a modal.
+   A colored top bar + ringed icon give it its own identity,
+   distinct from the plain task-list cards below it.
+   --------------------------------------------------------- */
+.ob-editor {
+  flex-shrink: 0;
+  background: var(--ob-surface); border: 1px solid var(--ob-line); border-radius: 16px;
+  overflow: hidden; box-shadow: 0 12px 32px -18px rgba(15, 23, 42, .3);
+  animation: ob-editor-in .16s ease;
+}
+@keyframes ob-editor-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+.ob-editor-bar { height: 4px; background: linear-gradient(90deg, var(--ob-accent), transparent 140%); }
+
+.ob-editor-head { display: flex; align-items: center; gap: 13px; padding: 18px 20px 16px; }
+.ob-editor-ring {
+  flex-shrink: 0; width: 38px; height: 38px; border-radius: 50%;
+  display: grid; place-items: center; color: var(--ob-accent);
+  background: var(--ob-surface); border: 2px solid var(--ob-accent-tint);
+  box-shadow: 0 0 0 3px var(--ob-accent-tint);
+}
+.ob-editor-head-text { flex: 1; min-width: 0; }
+.ob-editor-title { font-weight: 800; font-size: 15.5px; letter-spacing: -.01em; }
+.ob-editor-sub { font-size: 12px; color: var(--ob-ink-soft); margin-top: 1px; }
+.ob-editor-close {
+  flex-shrink: 0; width: 28px; height: 28px; border-radius: 8px; border: none;
+  background: transparent; color: var(--ob-ink-soft); display: grid; place-items: center;
+  cursor: pointer; transition: background .15s, color .15s;
+}
+.ob-editor-close:hover { background: var(--ob-wash); color: var(--ob-ink); }
+
+.ob-editor-body { padding: 4px 20px 20px; display: flex; flex-direction: column; gap: 15px; }
+.ob-editor-foot {
+  display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px;
+  border-top: 1px solid var(--ob-line); background: var(--ob-wash);
+}
+
+.ob-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.ob-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+@media (max-width: 640px) { .ob-grid-2, .ob-grid-3 { grid-template-columns: 1fr; } }
+
+.ob-field { display: flex; flex-direction: column; gap: 6px; }
+.ob-label { font-size: 12px; font-weight: 600; color: var(--ob-ink-soft); }
+.ob-input, .ob-textarea, .ob-select {
+  width: 100%; border: 1px solid var(--ob-line-strong); border-radius: 9px;
+  background: var(--ob-wash); color: var(--ob-ink); font-family: inherit; font-size: 13.5px;
+  padding: 9px 12px; transition: border-color .15s, box-shadow .15s;
+}
+.ob-input:focus, .ob-textarea:focus, .ob-select:focus {
+  outline: none; border-color: var(--ob-accent);
+  box-shadow: 0 0 0 3px var(--ob-accent-tint);
+}
+.ob-textarea { resize: vertical; line-height: 1.6; }
+
+.ob-toggle-row {
+  display: flex; align-items: flex-start; gap: 12px; cursor: pointer; user-select: none;
+  background: var(--ob-wash); border: 1px solid var(--ob-line); border-radius: 10px; padding: 12px 14px;
+}
+.ob-switch {
+  flex-shrink: 0; width: 36px; height: 21px; border-radius: 20px; position: relative;
+  background: var(--ob-line-strong); transition: background .2s; margin-top: 1px;
+}
+.ob-switch--on { background: var(--ob-accent); }
+.ob-switch-dot {
+  position: absolute; top: 2.5px; left: 3px; width: 16px; height: 16px; border-radius: 50%;
+  background: #fff; box-shadow: 0 1px 2px rgba(0,0,0,.25); transition: transform .2s;
+}
+.ob-switch--on .ob-switch-dot { transform: translateX(15px); }
+.ob-toggle-label { font-weight: 600; font-size: 13px; display: flex; align-items: center; gap: 6px; }
+.ob-toggle-sub { font-size: 12px; color: var(--ob-ink-soft); margin-top: 2px; }
+
+/* ---------------------------------------------------------
+   Empty state
+   --------------------------------------------------------- */
+.ob-empty {
+  text-align: center; padding: 56px 24px; border-radius: 14px;
+  background: var(--ob-surface); border: 1px dashed var(--ob-line-strong);
+}
+.ob-empty-icon {
+  width: 46px; height: 46px; margin: 0 auto 14px; border-radius: 12px; display: grid; place-items: center;
+  color: var(--ob-accent); background: var(--ob-accent-tint);
+}
+.ob-empty-title { font-weight: 700; font-size: 15px; margin-bottom: 6px; }
+.ob-empty-desc { font-size: 13px; color: var(--ob-ink-soft); max-width: 300px; margin: 0 auto; line-height: 1.6; }
+
+/* ---------------------------------------------------------
+   Task list
+   --------------------------------------------------------- */
+.ob-list { display: flex; flex-direction: column; gap: 10px; }
+
+.ob-item {
+  display: flex; gap: 14px; align-items: flex-start;
+  background: var(--ob-surface); border: 1px solid var(--ob-line); border-radius: 12px;
+  padding: 14px 16px; transition: border-color .15s, box-shadow .15s;
+}
+.ob-item:hover { border-color: var(--ob-line-strong); box-shadow: 0 2px 10px -4px rgba(15, 23, 42, .12); }
+.ob-item--proof { border-left: 3px solid var(--ob-proof); }
+
+.ob-item-num {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px; margin-top: 1px;
+  display: grid; place-items: center; font-weight: 700; font-size: 12px;
+  background: var(--ob-accent-tint); color: var(--ob-accent);
+}
+.ob-item--proof .ob-item-num { background: var(--ob-proof-tint); color: var(--ob-proof); }
+
+.ob-item-body { flex: 1; min-width: 0; }
+.ob-item-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ob-item-title { font-weight: 600; font-size: 14px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ob-item-badge {
+  display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 700;
+  padding: 2px 8px; border-radius: 20px; background: var(--ob-proof-tint); color: var(--ob-proof);
+}
+.ob-item-desc {
+  margin-top: 7px; font-size: 12.5px; color: var(--ob-ink-soft); white-space: pre-wrap; line-height: 1.6;
+}
+
+.ob-item-actions { display: flex; align-items: center; gap: 4px; flex-shrink: 0; }
+.ob-item-actions .ob-btn-icon { width: 27px; height: 27px; display: grid; place-items: center; padding: 0; border-color: transparent; background: transparent; }
+.ob-item-actions .ob-btn-icon:hover:not(:disabled) { background: var(--ob-wash); border-color: var(--ob-line); }
+.ob-item-move { display: flex; gap: 1px; margin-right: 4px; }

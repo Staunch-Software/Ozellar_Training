@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
-import { Shield, LayoutDashboard, LogOut, BookOpen, ClipboardList, ChevronDown, Users } from 'lucide-react'
+import { Shield, LayoutDashboard, LogOut, BookOpen, ClipboardList, ChevronDown, Users, GraduationCap } from 'lucide-react'
 import { ThemeToggle } from '../../App.jsx'
 import { useAuth } from '../../auth.jsx'
 import AdminNotificationBell from '../../AdminNotificationBell.jsx'
@@ -180,8 +180,11 @@ export default function AdminLayout() {
 
   // Custom isActive check for Course Management to stay highlighted when child routes are active
   const isCourseManagementActive = () => location.pathname.startsWith('/admin/course-management')
+  const isOrientationActive = () => location.pathname.startsWith('/admin/orientation-program') || location.pathname.startsWith('/admin/orientation/')
 
   const isCourseManagementRoute = location.pathname.startsWith('/admin/course-management')
+  const isOrientationRoute = location.pathname.startsWith('/admin/orientation-program') || location.pathname.startsWith('/admin/orientation/')
+  const isFlushRoute = isCourseManagementRoute || isOrientationRoute
   const isLockedPage = !isCourseManagementRoute && ['/admin/course-management/users', '/admin/course-management/assignments', '/admin/course-management/report'].includes(location.pathname)
 
   return (
@@ -193,7 +196,7 @@ export default function AdminLayout() {
         <div className="navlinks">
           <NavLink to="/admin" end className={tab}><LayoutDashboard size={16} /> Dashboard</NavLink>
           <NavLink to="/admin/course-management/courses" className={isCourseManagementActive() ? 'admin-tab on' : 'admin-tab'}><BookOpen size={16} /> Course management</NavLink>
-          {/* Orientation Program: hidden until it's wired to real data — coming in a later update */}
+          <NavLink to="/admin/orientation-program/programs" className={isOrientationActive() ? 'admin-tab on' : 'admin-tab'}><GraduationCap size={16} /> Orientation Program</NavLink>
           <NavLink to="/admin/screening" className={tab}><ClipboardList size={16} /> Assessment</NavLink>
         </div>
         <div className="nav-right">
@@ -202,7 +205,7 @@ export default function AdminLayout() {
           <AdminProfileCard user={user} onSignOut={signOut} />
         </div>
       </nav>
-      <div className={`page ${isLockedPage ? 'page-locked' : ''} ${isCourseManagementRoute ? 'page-cm' : ''}`}>
+      <div className={`page ${isLockedPage ? 'page-locked' : ''} ${isFlushRoute ? 'page-cm' : ''}`}>
         <Outlet />
       </div>
     </div>

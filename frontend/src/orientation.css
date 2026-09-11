@@ -1,0 +1,652 @@
+/* ============================================================
+   Orientation Program — shared styles
+   Used by: pages/admin/AdminOrientation*.jsx, pages/Orientation.jsx,
+   pages/ApproverDashboard.jsx
+   ============================================================ */
+
+/* ---- department / status color tokens ---- */
+:root {
+  --orn-deck: #0284c7;
+  --orn-deck-bg: rgba(2, 132, 199, 0.1);
+  --orn-engine: #d97706;
+  --orn-engine-bg: rgba(217, 119, 6, 0.1);
+  --orn-accent: #7c3aed;
+  --orn-accent-2: #a78bfa;
+  --orn-accent-bg: rgba(124, 58, 237, 0.1);
+  --orn-status-in_progress: #d97706;
+  --orn-status-in_progress-bg: rgba(217, 119, 6, 0.1);
+  --orn-status-pending: #d97706;
+  --orn-status-pending-bg: rgba(217, 119, 6, 0.1);
+  --orn-status-submitted: #0284c7;
+  --orn-status-submitted-bg: rgba(2, 132, 199, 0.1);
+  --orn-status-approved: #059669;
+  --orn-status-approved-bg: rgba(5, 150, 105, 0.1);
+  --orn-status-rejected: #dc2626;
+  --orn-status-rejected-bg: rgba(220, 38, 38, 0.1);
+}
+
+/* ---- layout ---- */
+.orn-page { display: flex; flex-direction: column; gap: 20px; }
+.orn-toolbar { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+.orn-toolbar-actions { display: flex; gap: 10px; align-items: center; }
+.orn-title { margin: 0; font-size: 17px; font-weight: 800; }
+.orn-subtitle { margin: 4px 0 0; color: var(--text-mut); font-size: 13px; }
+
+/* ---- form card (create/edit) ---- */
+.orn-form-card {
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px;
+  padding: 20px; display: flex; flex-direction: column; gap: 14px;
+  box-shadow: 0 2px 12px rgba(0,0,0,.06);
+}
+.orn-form-heading { font-weight: 700; font-size: 14px; display: flex; align-items: center; gap: 7px; }
+.orn-form-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.orn-form-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+.orn-form-actions { display: flex; gap: 10px; }
+
+/* ---- panel (create / edit / settings) — shared visual language for
+   Programs, Approvers and the Enroll modal ---- */
+.orn-panel {
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 16px;
+  box-shadow: 0 4px 20px -8px rgba(15, 23, 42, .1);
+  animation: orn-panel-in .15s ease;
+}
+@keyframes orn-panel-in { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+.orn-panel-head {
+  display: flex; align-items: center; gap: 11px; padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  border-radius: 16px 16px 0 0;
+}
+.orn-panel-head-icon {
+  width: 32px; height: 32px; border-radius: 10px; flex-shrink: 0;
+  display: grid; place-items: center; background: var(--orn-accent-bg); color: var(--orn-accent);
+}
+.orn-panel-head-title { font-weight: 800; font-size: 15px; }
+.orn-panel-head-sub { font-size: 12px; color: var(--text-mut); margin-top: 1px; }
+.orn-panel-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.orn-panel-foot {
+  display: flex; gap: 10px; padding: 14px 20px;
+  border-top: 1px solid var(--border); background: var(--surface-2);
+  border-radius: 0 0 16px 16px;
+}
+.orn-select,
+.orn-textarea {
+  width: 100%; border: 1px solid var(--border-strong); border-radius: 9px;
+  padding: 10px 12px; background: var(--surface); color: var(--text); font-family: inherit;
+  font-size: 13.5px;
+}
+.orn-textarea { font-size: 13.5px; resize: vertical; }
+.orn-select-sm { border: 1px solid var(--border-strong); border-radius: 8px; padding: 7px 10px; background: var(--surface); color: var(--text); font-size: 12.5px; }
+
+/* standalone inputwrap (also works without .field parent) */
+.inputwrap { position: relative; display: flex; align-items: center; }
+.inputwrap svg { position: absolute; left: 11px; color: var(--text-faint); width: 15px; height: 15px; flex: none; pointer-events: none; }
+/* input WITHOUT an icon — full padding */
+.inputwrap input {
+  width: 100%; border: 1px solid var(--border-strong); border-radius: 9px;
+  background: var(--bg); padding: 10px 13px; font-size: 13.5px;
+  color: var(--text); font-family: inherit;
+}
+/* input WITH an icon sibling — add left room */
+.inputwrap svg ~ input,
+.inputwrap svg + input {
+  padding-left: 34px;
+}
+.inputwrap input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47,111,237,.12); }
+
+/* ---- empty state ---- */
+.orn-empty {
+  text-align: center; padding: 60px 20px; color: var(--text-mut);
+  background: var(--surface); border: 1px dashed var(--border-strong);
+  border-radius: 16px;
+}
+.orn-empty-icon { color: var(--text-faint); margin-bottom: 12px; display: block; margin-left: auto; margin-right: auto; }
+.orn-empty-title { font-weight: 700; font-size: 15px; color: var(--text); margin-bottom: 4px; }
+.orn-empty-desc { font-size: 13px; color: var(--text-mut); line-height: 1.6; max-width: 340px; margin: 0 auto; }
+
+/* ---- list ---- */
+.orn-list-lg { display: flex; flex-direction: column; gap: 14px; }
+.orn-list-sm { display: flex; flex-direction: column; gap: 6px; }
+
+.orn-row-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 12px 16px; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  transition: box-shadow .15s;
+}
+.orn-row-card--hoverable:hover { box-shadow: 0 4px 16px rgba(0, 0, 0, .06); }
+.orn-row-card--inactive { opacity: .6; }
+.orn-row-info { flex: 1; min-width: 160px; }
+.orn-row-name-line { display: flex; align-items: center; gap: 8px; }
+.orn-row-name { font-weight: 700; font-size: 14px; }
+.orn-row-sub { font-size: 12px; color: var(--text-mut); margin-top: 2px; }
+.orn-row-note { font-size: 12px; color: var(--text-mut); }
+.orn-row-note--muted { font-size: 12px; color: var(--text-faint); font-style: italic; }
+
+/* ---- avatars ---- */
+.orn-avatar {
+  width: 38px; height: 38px; border-radius: 50%; flex-shrink: 0; color: #fff;
+  display: grid; place-items: center; font-size: 13.5px; font-weight: 700;
+  background: linear-gradient(135deg, var(--orn-accent), #a78bfa);
+}
+.orn-avatar-sm { width: 30px; height: 30px; font-size: 11.5px; }
+.orn-avatar-dept-deck { background: linear-gradient(135deg, var(--orn-deck), #38bdf8); }
+.orn-avatar-dept-engine { background: linear-gradient(135deg, var(--orn-engine), #fbbf24); }
+
+/* ---- badges (status / department) ---- */
+.orn-badge {
+  font-size: 11.5px; font-weight: 700; padding: 3px 10px; border-radius: 20px;
+  white-space: nowrap; display: inline-flex; align-items: center; gap: 4px;
+  text-transform: capitalize;
+}
+.orn-badge-sm { font-size: 10.5px; padding: 2px 8px; }
+.orn-badge-status-in_progress,
+.orn-badge-status-pending { color: var(--orn-status-pending); background: var(--orn-status-pending-bg); }
+.orn-badge-status-submitted { color: var(--orn-status-submitted); background: var(--orn-status-submitted-bg); }
+.orn-badge-status-approved { color: var(--orn-status-approved); background: var(--orn-status-approved-bg); }
+.orn-badge-status-rejected { color: var(--orn-status-rejected); background: var(--orn-status-rejected-bg); }
+.orn-badge-dept-deck { color: var(--orn-deck); background: var(--orn-deck-bg); }
+.orn-badge-dept-engine { color: var(--orn-engine); background: var(--orn-engine-bg); }
+
+/* ---- filter chips ---- */
+.orn-filter-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.orn-filter-row .inputwrap { max-width: 340px; flex: 1; }
+.orn-filter-chips { display: flex; gap: 6px; }
+.orn-filter-chip.orn-filter-chip--active.orn-filter-chip--all { background: var(--accent); border-color: var(--accent); color: #fff; }
+.orn-filter-chip.orn-filter-chip--active.orn-filter-chip--deck { background: var(--orn-deck); border-color: var(--orn-deck); color: #fff; }
+.orn-filter-chip.orn-filter-chip--active.orn-filter-chip--engine { background: var(--orn-engine); border-color: var(--orn-engine); color: #fff; }
+
+/* ---- stat pills ---- */
+.orn-stats { display: flex; gap: 12px; flex-wrap: wrap; }
+.orn-stat-pill { border-radius: 12px; padding: 10px 16px; flex: 1; min-width: 100px; border: 1px solid transparent; }
+.orn-stat-value { font-size: 20px; font-weight: 800; letter-spacing: -.02em; }
+.orn-stat-label { font-size: 11.5px; color: var(--text-mut); font-weight: 600; margin-top: 2px; }
+.orn-stat-pill--total { background: rgba(99, 102, 241, .08); border-color: rgba(99, 102, 241, .3); }
+.orn-stat-pill--total .orn-stat-value { color: #6366f1; }
+.orn-stat-pill--approved { background: var(--orn-status-approved-bg); border-color: rgba(5, 150, 105, .3); }
+.orn-stat-pill--approved .orn-stat-value { color: var(--orn-status-approved); }
+.orn-stat-pill--pending { background: var(--orn-status-submitted-bg); border-color: rgba(2, 132, 199, .3); }
+.orn-stat-pill--pending .orn-stat-value { color: var(--orn-status-submitted); }
+.orn-stat-pill--progress { background: var(--orn-status-in_progress-bg); border-color: rgba(217, 119, 6, .3); }
+.orn-stat-pill--progress .orn-stat-value { color: var(--orn-status-in_progress); }
+
+/* ---- results table ---- */
+.orn-table-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+.orn-table-scroll { overflow-x: auto; }
+.orn-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.orn-table thead tr {
+  text-align: left; color: var(--text-mut); font-size: 11px; text-transform: uppercase;
+  letter-spacing: .05em; background: var(--surface-2);
+}
+.orn-table th { padding: 12px 16px; font-weight: 700; }
+.orn-table td { padding: 11px 16px; }
+.orn-table tbody tr { border-top: 1px solid var(--border); transition: background .1s; }
+.orn-table tbody tr:nth-child(even) { background: var(--surface-2); }
+.orn-table tbody tr:hover { background: var(--orn-accent-bg); }
+.orn-table-name { display: flex; align-items: center; gap: 10px; }
+.orn-table-name-text { font-weight: 700; white-space: nowrap; }
+.orn-table-name-sub { font-size: 11.5px; color: var(--text-mut); }
+.orn-table-muted { color: var(--text-mut); }
+.orn-table-nowrap { white-space: nowrap; }
+.orn-table-vessel { display: flex; align-items: center; gap: 5px; white-space: nowrap; color: var(--text-mut); }
+
+.orn-progress { display: flex; align-items: center; gap: 8px; min-width: 110px; }
+.orn-progress-track { flex: 1; height: 6px; border-radius: 20px; background: var(--surface-2); overflow: hidden; }
+.orn-progress-fill { height: 100%; border-radius: 20px; }
+.orn-progress-fill--low { background: var(--orn-status-in_progress); }
+.orn-progress-fill--mid { background: var(--orn-status-submitted); }
+.orn-progress-fill--full { background: var(--orn-status-approved); }
+.orn-progress-pct { font-size: 12px; color: var(--text-mut); font-weight: 600; width: 34px; text-align: right; }
+
+/* ---- program cards ---- */
+.orn-program-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 18px 22px; display: flex; align-items: center; gap: 18px; cursor: pointer;
+  border-left: 4px solid var(--orn-accent-color, var(--orn-accent));
+  transition: box-shadow .15s, transform .15s;
+}
+.orn-program-card:hover { box-shadow: 0 8px 24px rgba(0, 0, 0, .08); transform: translateY(-1px); }
+.orn-program-card--deck { --orn-accent-color: var(--orn-deck); }
+.orn-program-card--engine { --orn-accent-color: var(--orn-engine); }
+.orn-program-icon {
+  width: 46px; height: 46px; border-radius: 13px; display: grid; place-items: center; flex-shrink: 0;
+  color: var(--orn-accent-color, var(--orn-accent));
+}
+.orn-program-card--deck .orn-program-icon { background: var(--orn-deck-bg); }
+.orn-program-card--engine .orn-program-icon { background: var(--orn-engine-bg); }
+.orn-program-body { flex: 1; min-width: 0; }
+.orn-program-title-line { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.orn-program-title { font-weight: 700; font-size: 15px; }
+.orn-program-subtitle { font-size: 12.5px; color: var(--text-mut); margin-top: 2px; }
+.orn-program-ranks {
+  display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 12px; font-weight: 600;
+  color: var(--orn-accent-color, var(--orn-accent));
+}
+
+/* ---- task builder (legacy, kept for compat) ---- */
+.orn-task-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.orn-task-head { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+.orn-task-toggle { background: none; border: none; padding: 0; flex-shrink: 0; }
+.orn-task-toggle:not(:disabled) { cursor: pointer; }
+.orn-task-chevron { transition: transform .15s; }
+.orn-task-chevron--open { transform: rotate(90deg); }
+.orn-task-number {
+  width: 28px; height: 28px; border-radius: 8px; background: var(--orn-accent-bg); color: var(--orn-accent);
+  display: grid; place-items: center; font-weight: 700; font-size: 12.5px; flex-shrink: 0;
+}
+.orn-task-title { flex: 1; min-width: 0; font-weight: 700; font-size: 14px; }
+.orn-task-title--clickable { cursor: pointer; }
+.orn-task-move { display: flex; flex-direction: column; gap: 3px; flex-shrink: 0; }
+.orn-task-desc { padding: 0 16px 14px 58px; font-size: 12.5px; color: var(--text-mut); white-space: pre-wrap; line-height: 1.6; }
+.orn-task-list-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ============================================================
+   Programs page — header / stats / card list
+   ============================================================ */
+.orn-prog-header {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 14px;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+  padding: 20px 24px;
+}
+.orn-prog-header-left { display: flex; align-items: center; gap: 14px; }
+.orn-prog-header-icon {
+  width: 46px; height: 46px; border-radius: 14px; flex-shrink: 0; color: var(--orn-accent);
+  background: var(--orn-accent-bg); display: grid; place-items: center;
+}
+.orn-prog-header-actions { display: flex; align-items: center; gap: 10px; }
+
+/* stats strip — carries the search + department filter on its right side */
+.orn-prog-stats {
+  display: flex; align-items: center; justify-content: space-between;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+  padding: 14px 24px; flex-wrap: wrap; gap: 14px;
+}
+.orn-prog-stats-group { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 0; }
+/* flex:1 so this claims whatever room the stat counters don't use (the
+   counters rarely fill the card on their own) instead of shrink-wrapping
+   to its own content width and leaving that space empty; justify-content
+   pins the controls to the right edge once it grows. */
+.orn-prog-stats-filters { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; flex: 1 1 380px; }
+.orn-prog-stats-filters .orn-filter-search { width: 220px; }
+.orn-prog-stat { display: flex; flex-direction: column; align-items: center; padding: 0 20px; }
+.orn-prog-stat-val { font-size: 22px; font-weight: 800; letter-spacing: -.02em; }
+.orn-prog-stat-lbl { font-size: 11px; color: var(--text-mut); font-weight: 600; margin-top: 1px; }
+.orn-prog-stat-sep { width: 1px; height: 36px; background: var(--border); margin: 0 4px; }
+
+/* program card list */
+.orn-prog-list { display: flex; flex-direction: column; gap: 10px; }
+.orn-prog-card {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px 20px; display: flex; align-items: center; gap: 16px; cursor: pointer;
+  border-left: 4px solid var(--orn-accent-color, var(--orn-accent));
+  transition: box-shadow .15s, transform .12s;
+}
+.orn-prog-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.08); transform: translateY(-1px); }
+.orn-prog-card--deck  { --orn-accent-color: var(--orn-deck); }
+.orn-prog-card--engine { --orn-accent-color: var(--orn-engine); }
+.orn-prog-card--inactive { opacity: .65; }
+
+.orn-prog-card-icon {
+  width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; flex-shrink: 0;
+  color: var(--orn-accent-color, var(--orn-accent));
+}
+.orn-prog-card--deck .orn-prog-card-icon { background: var(--orn-deck-bg); }
+.orn-prog-card--engine .orn-prog-card-icon { background: var(--orn-engine-bg); }
+.orn-prog-card-body { flex: 1; min-width: 0; }
+.orn-prog-card-title-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.orn-prog-card-title { font-weight: 700; font-size: 15px; }
+.orn-prog-card-subtitle { font-size: 12.5px; color: var(--text-mut); margin-top: 2px; }
+.orn-prog-card-ranks {
+  display: flex; align-items: center; gap: 6px; margin-top: 5px; font-size: 12px; font-weight: 600;
+  color: var(--orn-accent-color, var(--orn-accent));
+}
+.orn-prog-card-meta { display: flex; flex-direction: column; gap: 4px; align-items: flex-end; }
+.orn-prog-meta-chip { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-mut); }
+.orn-prog-meta-num { font-weight: 700; color: var(--text); }
+.orn-prog-meta-lbl { font-weight: 500; }
+.orn-prog-card-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ============================================================
+   Builder page — header / task2 cards / proof toggle
+   ============================================================ */
+.orn-builder-header {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 16px;
+  padding: 16px 20px; box-shadow: var(--shadow-sm, 0 1px 6px rgba(0,0,0,.05));
+}
+.orn-builder-back { flex-shrink: 0; }
+.orn-builder-dept-badge {
+  width: 40px; height: 40px; border-radius: 12px; flex-shrink: 0;
+  display: grid; place-items: center;
+}
+.orn-builder-dept-badge--deck { background: var(--orn-deck-bg); color: var(--orn-deck); }
+.orn-builder-dept-badge--engine { background: var(--orn-engine-bg); color: var(--orn-engine); }
+.orn-builder-header-info { flex: 1; min-width: 0; }
+.orn-builder-title { font-weight: 800; font-size: 16.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.orn-builder-meta { font-size: 12.5px; color: var(--text-mut); display: flex; align-items: center; gap: 4px; margin-top: 2px; }
+
+/* task2 card — always shows description */
+.orn-task2-card {
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 14px;
+  display: flex; align-items: stretch; gap: 0; overflow: hidden;
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(16,24,40,.05));
+  transition: box-shadow .15s, transform .15s, border-color .15s;
+}
+.orn-task2-card:hover {
+  box-shadow: var(--shadow, 0 8px 20px rgba(16,24,40,.09));
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+.orn-task2-card--proof { border-color: rgba(124,58,237,.4); }
+.orn-task2-card--proof .orn-task2-left { background: var(--orn-accent-bg); }
+.orn-task2-card--proof .orn-task2-num { background: var(--orn-accent); color: #fff; }
+
+.orn-task2-left {
+  padding: 18px 14px; display: flex; flex-direction: column; align-items: center; gap: 6px;
+  background: var(--surface-2); border-right: 1px solid var(--border); min-width: 56px; flex-shrink: 0;
+}
+.orn-task2-num {
+  width: 30px; height: 30px; border-radius: 9px; background: var(--orn-accent-bg); color: var(--orn-accent);
+  display: grid; place-items: center; font-weight: 800; font-size: 13px; flex-shrink: 0;
+}
+.orn-task2-body { flex: 1; padding: 16px 18px; min-width: 0; }
+.orn-task2-title {
+  font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  color: var(--text);
+}
+.orn-task2-proof-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px; font-weight: 700; padding: 2px 8px; border-radius: 20px;
+  background: var(--orn-accent-bg); color: var(--orn-accent); border: 1px solid rgba(124,58,237,.25);
+}
+.orn-task2-desc {
+  margin-top: 10px; font-size: 13px; color: var(--text-mut) !important;
+  white-space: pre-wrap; line-height: 1.7;
+  border-top: 1px dashed var(--border); padding-top: 10px;
+}
+.orn-task2-actions {
+  display: flex; flex-direction: column; gap: 8px; padding: 14px; flex-shrink: 0; align-self: stretch;
+  justify-content: center; background: var(--surface-2); border-left: 1px solid var(--border);
+}
+.orn-task2-actions .btn.sm {
+  width: 30px; height: 30px; padding: 0; justify-content: center;
+  border-radius: 8px; background: var(--surface);
+}
+.orn-task2-actions .btn.sm:hover:not(:disabled) { background: var(--orn-accent-bg); color: var(--orn-accent); border-color: rgba(124,58,237,.3); }
+.orn-task2-move {
+  display: flex; flex-direction: row; gap: 4px;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 8px; padding: 2px;
+}
+.orn-task2-move .btn.sm { border: none; width: 24px; height: 24px; }
+
+/* proof toggle */
+.orn-proof-toggle {
+  display: flex; align-items: flex-start; gap: 12px; cursor: pointer;
+  background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px;
+  user-select: none; transition: border-color .15s;
+}
+.orn-proof-toggle:hover { border-color: var(--orn-accent); }
+.orn-proof-toggle-label { display: flex; align-items: center; gap: 6px; font-weight: 700; font-size: 13px; }
+.orn-proof-toggle-sub { font-size: 11.5px; color: var(--text-mut); margin-top: 2px; }
+
+/* toggle switch */
+.orn-toggle {
+  flex-shrink: 0; width: 38px; height: 22px; border-radius: 20px;
+  background: var(--border-strong); position: relative; transition: background .2s;
+}
+.orn-toggle--on { background: var(--orn-accent); }
+.orn-toggle-thumb {
+  position: absolute; top: 3px; left: 3px;
+  width: 16px; height: 16px; border-radius: 50%; background: #fff;
+  transition: transform .2s; box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.orn-toggle--on .orn-toggle-thumb { transform: translateX(16px); }
+
+
+/* ---- preview page ---- */
+.orn-preview-page { min-height: 100vh; background: var(--bg); display: flex; flex-direction: column; }
+.orn-preview-nav { display: flex; align-items: center; gap: 14px; padding: 14px 24px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.orn-preview-brand { display: flex; align-items: center; gap: 8px; font-weight: 700; }
+.orn-preview-body { max-width: 760px; margin: 0 auto; padding: 32px 20px; width: 100%; }
+.orn-preview-intro { color: var(--text-mut); font-size: 13.5px; margin-bottom: 24px; }
+.orn-preview-task { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; display: flex; gap: 14px; }
+.orn-preview-task-icon { flex-shrink: 0; margin-top: 2px; }
+.orn-preview-task-title { font-weight: 700; font-size: 14.5px; }
+.orn-preview-task-desc { font-size: 13px; color: var(--text-mut); margin-top: 6px; white-space: pre-wrap; }
+
+/* Candidate checklist page and approver dashboard now have their own
+   scoped stylesheets: pages/Orientation.css and pages/ApproverDashboard.css. */
+
+/* ============================================================
+   Filter bar (shared across Crew + Enrollments pages)
+   ============================================================ */
+.orn-filter-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.orn-filter-search {
+  flex: 1 1 200px; min-width: 160px; max-width: 360px;
+}
+.orn-filter-select {
+  flex: 0 0 auto; min-width: 140px; max-width: 220px;
+  font-size: 13px; padding: 9px 12px;
+}
+
+/* Results page — search + filters sit inside .orn-prog-stats, sharing
+   the row with the stat counters (space-between) instead of a separate
+   full-width row underneath — the stats alone never fill the card, so
+   this reclaims that empty space. Compact, capped widths since it's now
+   competing for room with the stat counters. */
+.orn-results-filters { display: flex; align-items: center; justify-content: flex-end; gap: 8px; flex-wrap: wrap; flex: 1 1 480px; }
+.orn-results-filters .orn-filter-search { flex: 0 1 180px; min-width: 130px; max-width: 200px; }
+.orn-results-filters .orn-filter-select { flex: 0 1 130px; min-width: 100px; max-width: 150px; }
+@media (max-width: 900px) {
+  .orn-results-filters .orn-filter-search,
+  .orn-results-filters .orn-filter-select { flex: 1 1 45%; max-width: none; }
+}
+
+/* dept pill buttons */
+.orn-dept-pills { display: flex; gap: 6px; align-items: center; }
+.orn-dept-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 7px 13px; border-radius: 20px; font-size: 12.5px; font-weight: 600;
+  border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-mut);
+  cursor: pointer; transition: all .15s;
+}
+.orn-dept-pill:hover { background: var(--surface-2); color: var(--text); }
+.orn-dept-pill-count { background: var(--surface-2); border-radius: 20px; padding: 1px 7px; font-size: 11px; margin-left: 2px; }
+.orn-dept-pill--active.orn-dept-pill--all  { background: var(--accent); border-color: var(--accent); color: #fff; }
+.orn-dept-pill--active.orn-dept-pill--all .orn-dept-pill-count { background: rgba(255,255,255,.25); color: #fff; }
+.orn-dept-pill--active.orn-dept-pill--deck  { background: var(--orn-deck); border-color: var(--orn-deck); color: #fff; }
+.orn-dept-pill--active.orn-dept-pill--deck .orn-dept-pill-count { background: rgba(255,255,255,.25); color: #fff; }
+.orn-dept-pill--active.orn-dept-pill--engine { background: var(--orn-engine); border-color: var(--orn-engine); color: #fff; }
+.orn-dept-pill--active.orn-dept-pill--engine .orn-dept-pill-count { background: rgba(255,255,255,.25); color: #fff; }
+
+/* ============================================================
+   Crew grid cards (AdminOrientationCandidates)
+   ============================================================ */
+.orn-crew-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+}
+.orn-crew-card {
+  position: relative;
+  background: var(--surface); border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px; display: flex; flex-direction: column; gap: 10px;
+  transition: box-shadow .15s, transform .1s;
+}
+.orn-crew-card:hover { box-shadow: 0 6px 20px rgba(0,0,0,.07); transform: translateY(-1px); }
+.orn-crew-card--enrolled { border-color: var(--orn-status-approved); background: rgba(5,150,105,.03); }
+
+/* Master / Chief Engineer — same crew who can sign in as a vessel approver
+   (see orientation_ranks.vessel_approver_info); flagged here for visibility,
+   not a separate account. */
+.orn-crew-card--approver {
+  border-color: var(--orn-accent);
+  padding-top: 22px;
+  background: linear-gradient(180deg, var(--orn-accent-bg), transparent 65%);
+}
+.orn-crew-approver-flag {
+  position: absolute; top: 0; right: 14px;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 9.5px; font-weight: 800; letter-spacing: .03em; text-transform: uppercase;
+  padding: 3px 9px; border-radius: 0 0 8px 8px;
+  background: var(--orn-accent); color: #fff;
+}
+.orn-crew-card-top { display: flex; align-items: center; gap: 10px; }
+.orn-crew-card-info { flex: 1; min-width: 0; }
+.orn-crew-name { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.orn-crew-rank { font-size: 12px; color: var(--text-mut); margin-top: 1px; }
+.orn-crew-card-details { display: flex; flex-direction: column; gap: 4px; }
+.orn-crew-detail-row {
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; color: var(--text-mut);
+}
+.orn-crew-detail-row--faint { opacity: 0.6; }
+.orn-crew-card-footer {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 6px;
+  padding-top: 8px; border-top: 1px solid var(--border);
+}
+.orn-crew-enrolled-label { font-size: 11.5px; color: var(--text-mut); font-weight: 600; }
+
+/* ============================================================
+   Enroll modal
+   ============================================================ */
+.orn-modal-overlay {
+  position: fixed; inset: 0; z-index: 1000;
+  background: rgba(0,0,0,.45); backdrop-filter: blur(4px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+}
+.orn-modal {
+  background: var(--surface); border: 1px solid var(--border); border-radius: 20px;
+  width: 100%; max-width: 480px; max-height: 88vh; display: flex; flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 24px 60px rgba(0,0,0,.2);
+  animation: orn-modal-in .18s ease;
+}
+.orn-modal--wide { max-width: 540px; }
+.orn-modal--split { max-width: 920px; }
+@keyframes orn-modal-in {
+  from { opacity: 0; transform: scale(.95) translateY(8px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+.orn-modal-header {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 18px 20px; border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--orn-accent-bg), transparent);
+}
+.orn-modal-header-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.orn-modal-header-icon {
+  width: 38px; height: 38px; border-radius: 11px; flex-shrink: 0;
+  display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, var(--orn-accent), var(--orn-accent-2));
+}
+.orn-modal-title { font-weight: 800; font-size: 16px; }
+.orn-modal-subtitle { font-size: 12px; color: var(--text-mut); margin-top: 1px; }
+.orn-modal-body { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+.orn-modal-footer {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 20px; border-top: 1px solid var(--border);
+}
+
+/* selected crew display inside modal */
+.orn-selected-crew {
+  display: flex; align-items: center; gap: 10px;
+  background: var(--surface-2); border: 1px solid var(--border-strong);
+  border-radius: 10px; padding: 10px 12px;
+}
+.orn-selected-crew--full { flex-direction: column; align-items: stretch; padding: 12px; gap: 10px; }
+.orn-selected-crew-top { display: flex; align-items: center; gap: 12px; }
+.orn-selected-crew-name { font-weight: 800; font-size: 17px; }
+.orn-selected-crew-rank { font-size: 13px; color: var(--text-mut); margin-top: 1px; }
+
+/* vessel + approver check, shown once a crew member is selected */
+.orn-selected-crew-check {
+  display: flex; flex-direction: column; gap: 9px;
+  border-top: 1px dashed var(--border-strong); margin-top: 18px; padding-top: 16px;
+}
+.orn-selected-crew-check-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-mut); }
+.orn-selected-crew-check-label { font-weight: 600; color: var(--text); flex-shrink: 0; }
+.orn-selected-crew-check-value { color: var(--text-mut); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.orn-selected-crew-check-value--warn { color: var(--orn-status-rejected); font-weight: 600; }
+
+/* fallback shown when a vessel briefly has 2+ people at the same top
+   rank (crew-sync handover overlap) — admin must pick which is current */
+.orn-approver-ambiguous {
+  display: flex; flex-direction: column; gap: 7px;
+  background: var(--orn-status-pending-bg); border: 1px solid rgba(217, 119, 6, .3);
+  border-radius: 10px; padding: 10px 12px; margin-top: 2px;
+}
+.orn-approver-ambiguous-note {
+  display: flex; align-items: flex-start; gap: 6px; font-size: 11.5px; line-height: 1.45;
+  color: var(--orn-status-in_progress); font-weight: 600;
+}
+.orn-approver-ambiguous-note svg { flex-shrink: 0; margin-top: 1px; }
+
+/* crew search row (search box + dept pills) inside the enroll modal */
+.orn-crew-search-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.orn-crew-search-row .inputwrap { flex: 1; min-width: 160px; }
+.orn-dept-pills--sm { flex-shrink: 0; }
+.orn-dept-pills--sm .orn-dept-pill { padding: 6px 10px; font-size: 11.5px; }
+
+/* ---- Enroll modal: two-column layout (crew browser | detail) ---- */
+.orn-enroll-layout {
+  display: grid; grid-template-columns: 360px 1fr;
+  flex: 1; min-height: 480px; overflow: hidden;
+}
+.orn-enroll-col { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.orn-enroll-col--crew { border-right: 1px solid var(--border); background: var(--surface-2); }
+.orn-enroll-col--detail { padding: 26px 32px; overflow-y: auto; }
+
+.orn-enroll-col-head {
+  display: flex; align-items: center; gap: 8px; flex-shrink: 0;
+  margin: 14px 14px 0; padding: 8px 11px;
+  border: 1px solid var(--border-strong); border-radius: 9px; background: var(--surface);
+}
+.orn-enroll-col-head svg { color: var(--text-faint); flex-shrink: 0; }
+.orn-enroll-col-head input { border: none; background: none; outline: none; font-size: 13px; width: 100%; color: var(--text); }
+.orn-enroll-col-pills { margin: 10px 14px 0; }
+
+/* rank/vessel filters — side by side now the crew column has room */
+.orn-enroll-col-filters { display: flex; gap: 8px; margin: 8px 14px 0; }
+.orn-enroll-col-filters .orn-filter-select { flex: 1; width: auto; min-width: 0; max-width: none; }
+
+.orn-enroll-crew-list { flex: 1; min-height: 0; overflow-y: auto; padding: 10px; display: flex; flex-direction: column; gap: 5px; }
+.orn-enroll-hint { font-size: 12px; color: var(--text-mut); padding: 14px 8px; text-align: center; }
+.orn-enroll-crew-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 10px; border-radius: 10px; border: 1px solid transparent; background: none;
+  text-align: left; cursor: pointer; transition: background .1s, border-color .1s;
+}
+.orn-enroll-crew-item:hover { background: var(--surface); }
+.orn-enroll-crew-item--active { background: var(--orn-accent-bg); border-color: rgba(124,58,237,.3); }
+.orn-enroll-crew-check { color: var(--orn-accent); flex-shrink: 0; }
+
+.orn-enroll-empty { margin: auto; text-align: center; padding: 20px; max-width: 240px; }
+.orn-enroll-empty-icon { color: var(--text-faint); margin-bottom: 10px; }
+.orn-enroll-empty-title { font-weight: 700; font-size: 14px; margin-bottom: 4px; }
+.orn-enroll-empty-desc { font-size: 12.5px; color: var(--text-mut); line-height: 1.5; }
+
+/* crew dropdown inside modal */
+.orn-crew-dropdown {
+  margin-top: 6px; background: var(--surface); border: 1px solid var(--border-strong);
+  border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,.1);
+}
+.orn-crew-dropdown-item {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 10px 14px; background: none; border: none; text-align: left;
+  cursor: pointer; transition: background .1s; border-bottom: 1px solid var(--border);
+}
+.orn-crew-dropdown-item:last-child { border-bottom: none; }
+.orn-crew-dropdown-item:hover { background: var(--surface-2); }
+.orn-crew-dropdown-info { flex: 1; min-width: 0; }
+.orn-crew-dropdown-name-row { display: flex; align-items: center; gap: 6px; }
+.orn-crew-dropdown-name { font-weight: 600; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.orn-crew-dropdown-approver {
+  flex-shrink: 0; font-size: 9px; font-weight: 800; text-transform: uppercase; letter-spacing: .02em;
+  padding: 1px 6px; border-radius: 20px; background: var(--orn-accent-bg); color: var(--orn-accent);
+}
+.orn-crew-dropdown-sub {
+  display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text-mut);
+  margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.orn-crew-dropdown-sub .chip { font-size: 9px; padding: 1px 6px; flex-shrink: 0; }

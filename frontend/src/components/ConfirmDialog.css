@@ -1,0 +1,38 @@
+/* In-app replacement for window.confirm() — uses the app's global design
+   tokens (styles.css :root vars) so it looks right on any page/theme. */
+.cfm-overlay {
+  position: fixed; inset: 0; z-index: 2000;
+  background: rgba(15, 23, 42, .45); backdrop-filter: blur(3px);
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+  animation: cfm-fade .15s ease;
+}
+@keyframes cfm-fade { from { opacity: 0; } to { opacity: 1; } }
+
+.cfm-card {
+  width: 100%; max-width: 380px; background: var(--surface); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: 18px; padding: 24px;
+  box-shadow: 0 24px 60px rgba(0,0,0,.25);
+  animation: cfm-pop .16s cubic-bezier(.16,1,.3,1);
+}
+@keyframes cfm-pop { from { opacity: 0; transform: scale(.94) translateY(6px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+.cfm-icon {
+  width: 42px; height: 42px; border-radius: 12px; display: grid; place-items: center; margin-bottom: 14px;
+  background: var(--accent-weak); color: var(--accent);
+}
+.cfm-icon--danger { background: var(--danger-weak); color: var(--danger); }
+
+.cfm-title { font-size: 15.5px; font-weight: 800; color: var(--text); }
+.cfm-message { font-size: 13.5px; color: var(--text-mut); margin-top: 6px; line-height: 1.55; }
+
+.cfm-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+.cfm-btn {
+  display: inline-flex; align-items: center; gap: 6px; border-radius: 10px; font-weight: 700; font-size: 13px;
+  padding: 9px 16px; cursor: pointer; border: 1px solid var(--border-strong); background: var(--surface); color: var(--text);
+  transition: background .12s, border-color .12s;
+}
+.cfm-btn:hover { background: var(--surface-2); }
+.cfm-btn--primary { background: var(--accent); border-color: var(--accent); color: var(--on-accent, #fff); }
+.cfm-btn--primary:hover { background: var(--accent-hover, var(--accent)); }
+.cfm-btn--danger { background: var(--danger); border-color: var(--danger); color: #fff; }
+.cfm-btn--danger:hover { filter: brightness(1.08); }

@@ -1,0 +1,51 @@
+/* Card-style dropdown — replaces native <select> across the admin UI */
+.cardselect { position: relative; width: 100%; }
+.cardselect--disabled { opacity: .6; }
+
+.cardselect-trigger {
+  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  border: 1px solid var(--border-strong); border-radius: 9px;
+  background: var(--surface); color: var(--text); font-family: inherit; font-size: 13.5px;
+  padding: 9px 12px; cursor: pointer; transition: border-color .15s, box-shadow .15s;
+}
+.cardselect-trigger:hover:not(:disabled) { border-color: var(--text-faint); }
+.cardselect-trigger--open { border-color: var(--orn-accent, var(--accent)); box-shadow: 0 0 0 3px rgba(124,58,237,.12); }
+.cardselect-trigger:disabled { cursor: default; }
+
+.cardselect-trigger-content { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.cardselect-trigger-icon { color: var(--text-mut); flex-shrink: 0; }
+.cardselect-placeholder { color: var(--text-faint); }
+.cardselect-chevron { color: var(--text-faint); flex-shrink: 0; transition: transform .15s; }
+.cardselect-trigger--open .cardselect-chevron { transform: rotate(180deg); }
+
+.cardselect-panel {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 60;
+  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px;
+  box-shadow: 0 16px 36px -12px rgba(15, 23, 42, .25);
+  padding: 6px; max-height: 280px; overflow-y: auto;
+  display: flex; flex-direction: column; gap: 2px;
+  animation: cardselect-in .12s ease;
+}
+@keyframes cardselect-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+.cardselect-option {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 9px 10px; border-radius: 8px; border: none; background: none;
+  text-align: left; cursor: pointer; color: var(--text); font-family: inherit;
+  transition: background .1s;
+}
+.cardselect-option:hover { background: var(--surface-2); }
+.cardselect-option--active { background: var(--orn-accent-bg, rgba(124,58,237,.08)); }
+.cardselect-option-icon { display: grid; place-items: center; color: var(--text-mut); flex-shrink: 0; }
+.cardselect-option--active .cardselect-option-icon { color: var(--orn-accent, var(--accent)); }
+.cardselect-option-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.cardselect-option-label { font-size: 13px; font-weight: 600; }
+.cardselect-option--active .cardselect-option-label { color: var(--orn-accent, var(--accent)); }
+.cardselect-option-desc { font-size: 11px; color: var(--text-mut); margin-top: 1px; }
+.cardselect-option-check { color: var(--orn-accent, var(--accent)); flex-shrink: 0; }
+
+/* neutralize padding/font-size meant for native <select> elements when
+   those utility classes (orn-filter-select, orn-select-sm) are applied
+   to this wrapper div instead */
+.cardselect.orn-filter-select,
+.cardselect.orn-select-sm { padding: 0; font-size: inherit; }

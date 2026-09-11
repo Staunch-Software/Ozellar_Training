@@ -36,8 +36,11 @@ from .auth import (
     check_rate_limit, clear_rate_limit,
     # screening test auth
     create_screening_token, get_current_candidate, candidate_public,
+    # orientation program approver auth
+    require_vessel_approver,
     bearer, SECRET_KEY, ALGORITHM,
 )
+from . import orientation_ranks
 
 # public origin used in the certificate's verification line / verify links
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://training.ozellar.com")
@@ -273,13 +276,22 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
 
 
 @app.get("/api/auth/crew-search")
-def crew_search(q: str, request: Request, db: Session = Depends(get_db)):
+def crew_search(q: str, request: Request, scope: str | None = None, db: Session = Depends(get_db)):
     """Public (pre-login) name autocomplete for the crew sign-in form.
     Deliberately minimal: only name + rank (never crew_id/DOB/passport/etc.),
     active learners only, capped result count, and a per-IP rate limit
     separate from the stricter login-attempt limiter — this endpoint has no
     credential to check, just a lookup, so it needs its own looser budget
-    that still blocks bulk roster scraping."""
+    that still blocks bulk roster scraping.
+
+    ?scope=orientation (used by the Login page's "Orientation" tab) narrows
+    suggestions to who that tab is actually for: on-sail deck/engine
+    officers (who can be working through a promotion checklist — this also
+    covers Master/Chief Engineer, the top rank in each ladder, so they show
+    up as approvers) plus anyone with an orientation enrollment already on
+    record even if no longer on sail. Everyone else (ratings, cadets,
+    office staff, crew never touched by Orientation Program) is excluded —
+    the plain Crew tab search is unfiltered."""
     check_rate_limit(db, f"crew-search:{request.client.host if request.client else 'unknown'}",
                      max_attempts=40, window_seconds=60)
     query = normalize_name(q)
@@ -288,6 +300,10 @@ def crew_search(q: str, request: Request, db: Session = Depends(get_db)):
     candidates = (db.query(models.User)
                   .filter_by(role="learner", is_active=True).all())
     matches = [u for u in candidates if query in normalize_name(u.full_name)]
+    if scope == "orientation":
+        enrolled_ids = {e.learner_id for e in db.query(models.OrientationEnrollment.learner_id).all()}
+        matches = [u for u in matches if u.id in enrolled_ids
+                  or (orientation_ranks.is_eligible_crew(u.rank) and (u.emp_status or "").strip().upper() == "SAIL")]
     matches.sort(key=lambda u: (not normalize_name(u.full_name).startswith(query), u.full_name))
     return [{"name": u.full_name, "rank": u.rank} for u in matches[:8]]
 
@@ -3789,3 +3805,939 @@ def admin_screening_results_xlsx(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": "attachment; filename=screening-results.xlsx"},
     )
+
+
+# ============================================================
+# ORIENTATION PROGRAM
+# ============================================================
+# Candidates are existing crew (User rows, role='learner') — no separate
+# login. Approvers (vessel Master / Chief Engineer) are the SAME crew User
+# rows — no separate account either. Eligibility is computed live on every
+# request from rank + emp_status + current_vessel (see
+# orientation_ranks.vessel_approver_info); a Master/Chief Engineer signs in
+# with the same crew_id + DOB as any other crew member. Approval is 100%
+# in-app — no emails anywhere in this flow.
+
+def orientation_program_summary(program):
+    return {
+        "id": program.id, "title": program.title, "subtitle": program.subtitle,
+        "department": program.department, "fromRank": program.from_rank,
+        "toRank": program.to_rank, "isActive": bool(program.is_active),
+        "order": program.order, "taskCount": len(program.tasks),
+        "enrollmentCount": len(program.enrollments),
+    }
+
+
+def orientation_task_detail(t):
+    return {
+        "id": t.id, "title": t.title, "description": t.description,
+        "order": t.order, "requiresProof": bool(t.requires_proof),
+    }
+
+
+def _next_orientation_task_order(program) -> int:
+    return (max((t.order for t in program.tasks), default=-1)) + 1
+
+
+class OrientationProgramRequest(BaseModel):
+    title: str
+    subtitle: str | None = None
+    department: str            # 'deck' | 'engine'
+    fromRank: str | None = None
+    toRank: str | None = None
+
+
+@app.get("/api/admin/orientation/programs")
+def admin_list_orientation_programs(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    programs = db.query(models.OrientationProgram).order_by(models.OrientationProgram.order).all()
+    return [orientation_program_summary(p) for p in programs]
+
+
+@app.post("/api/admin/orientation/programs")
+def admin_create_orientation_program(req: OrientationProgramRequest,
+                                     admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    title = (req.title or "").strip()
+    if not title:
+        raise HTTPException(400, "Title is required")
+    if req.department not in ("deck", "engine"):
+        raise HTTPException(400, "Department must be 'deck' or 'engine'")
+    max_order = db.query(func.max(models.OrientationProgram.order)).scalar()
+    program = models.OrientationProgram(
+        title=title, subtitle=(req.subtitle or "").strip() or None,
+        department=req.department, from_rank=(req.fromRank or "").strip() or None,
+        to_rank=(req.toRank or "").strip() or None,
+        order=(max_order + 1) if max_order is not None else 0,
+    )
+    db.add(program)
+    db.commit()
+    db.refresh(program)
+    return orientation_program_summary(program)
+
+
+@app.get("/api/admin/orientation/programs/{program_id}")
+def admin_get_orientation_program(program_id: str, admin: models.User = Depends(require_admin),
+                                  db: Session = Depends(get_db)):
+    program = db.get(models.OrientationProgram, program_id)
+    if not program:
+        raise HTTPException(404, "Program not found")
+    return {
+        **orientation_program_summary(program),
+        "tasks": [orientation_task_detail(t) for t in sorted(program.tasks, key=lambda t: t.order)],
+    }
+
+
+@app.put("/api/admin/orientation/programs/{program_id}")
+def admin_update_orientation_program(program_id: str, req: OrientationProgramRequest,
+                                     admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    program = db.get(models.OrientationProgram, program_id)
+    if not program:
+        raise HTTPException(404, "Program not found")
+    title = (req.title or "").strip()
+    if not title:
+        raise HTTPException(400, "Title is required")
+    if req.department not in ("deck", "engine"):
+        raise HTTPException(400, "Department must be 'deck' or 'engine'")
+    program.title = title
+    program.subtitle = (req.subtitle or "").strip() or None
+    program.department = req.department
+    program.from_rank = (req.fromRank or "").strip() or None
+    program.to_rank = (req.toRank or "").strip() or None
+    db.commit()
+    return orientation_program_summary(program)
+
+
+@app.patch("/api/admin/orientation/programs/{program_id}/toggle")
+def admin_toggle_orientation_program(program_id: str, admin: models.User = Depends(require_admin),
+                                     db: Session = Depends(get_db)):
+    program = db.get(models.OrientationProgram, program_id)
+    if not program:
+        raise HTTPException(404, "Program not found")
+    program.is_active = not program.is_active
+    db.commit()
+    return {"isActive": program.is_active}
+
+
+@app.delete("/api/admin/orientation/programs/{program_id}")
+def admin_delete_orientation_program(program_id: str, admin: models.User = Depends(require_admin),
+                                     db: Session = Depends(get_db)):
+    program = db.get(models.OrientationProgram, program_id)
+    if not program:
+        raise HTTPException(404, "Program not found")
+    db.delete(program)
+    db.commit()
+    return {"ok": True}
+
+
+@app.get("/api/admin/orientation/programs.xlsx")
+def admin_orientation_programs_xlsx(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Export all orientation programs as an Excel workbook — one sheet per program.
+    Format mirrors the reference: program title header, officer name/ID/rank row,
+    then each task as Task Name + Description + Master's Initials line."""
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    programs = db.query(models.OrientationProgram).order_by(models.OrientationProgram.order).all()
+    wb = Workbook()
+    wb.remove(wb.active)  # remove default sheet
+
+    thin = Side(style="thin")
+    border_bottom = Border(bottom=thin)
+
+    for prog in programs:
+        # Sheet name: max 31 chars, no special chars
+        sheet_name = (prog.title or "Program")[:31].replace("/", "-").replace("\\", "-").replace("?", "").replace("*", "").replace("[", "").replace("]", "")
+        ws = wb.create_sheet(title=sheet_name)
+
+        # Column widths
+        ws.column_dimensions["A"].width = 120
+
+        dept_label = "Engine" if prog.department == "engine" else "Deck"
+        approver_role = "Chief Engineer" if prog.department == "engine" else "Master"
+
+        # ---- Row 1: Program title header ----
+        ws.append([prog.title or ""])
+        title_cell = ws["A1"]
+        title_cell.font = Font(bold=True, size=14)
+        title_cell.alignment = Alignment(wrap_text=True)
+
+        # ---- Row 2: Subtitle / dept ----
+        subtitle = prog.subtitle or f"{dept_label} Mentoring Program"
+        ws.append([subtitle])
+        ws["A2"].font = Font(bold=True, size=11)
+
+        ws.append([""])  # spacer
+
+        # ---- Officer name/ID/rank row ----
+        rank_from = prog.from_rank or ""
+        rank_to = prog.to_rank or ""
+        rank_label = f"{rank_from} to {rank_to}" if rank_from and rank_to else (rank_from or rank_to or dept_label)
+        ws.append([f"{'Name':<54}{'ID':<40}{'Rank':<20}"])
+        ws["A4"].font = Font(bold=True)
+        ws["A4"].border = border_bottom
+
+        ws.append([""])  # spacer after header
+
+        row_num = 6
+        tasks = sorted(prog.tasks, key=lambda t: t.order)
+        for task in tasks:
+            # Task block: Name line
+            task_name_line = f"Task Name                           {task.title}"
+            ws.append([task_name_line])
+            tc = ws.cell(row=row_num, column=1)
+            tc.font = Font(bold=True)
+            tc.alignment = Alignment(wrap_text=True)
+            row_num += 1
+
+            # Description line
+            desc_text = (task.description or "").strip()
+            proof_note = "\n(Relevant task supporting documents to be presented during Mentoring Review at FMTI/office)" if task.requires_proof else ""
+            full_desc = f"Task Description                 {desc_text}{proof_note}"
+            ws.append([full_desc])
+            dc = ws.cell(row=row_num, column=1)
+            dc.alignment = Alignment(wrap_text=True, vertical="top")
+            dc.font = Font(size=10)
+            # Approximate row height based on line count
+            line_count = max(1, full_desc.count("\n") + 1)
+            ws.row_dimensions[row_num].height = max(15, line_count * 14)
+            row_num += 1
+
+            # Initials line
+            ws.append([f"{approver_role}'s Initials:                                             Date :"])
+            init_cell = ws.cell(row=row_num, column=1)
+            init_cell.font = Font(bold=True, size=10)
+            init_cell.border = border_bottom
+            row_num += 1
+
+            ws.append([""])  # spacer between tasks
+            row_num += 1
+
+        # Row height for title
+        ws.row_dimensions[1].height = 22
+        ws.row_dimensions[2].height = 18
+
+    if not wb.sheetnames:
+        # Fallback empty sheet
+        wb.create_sheet("No Programs")
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        buf,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=orientation-programs.xlsx"},
+    )
+
+
+
+class OrientationTaskRequest(BaseModel):
+    title: str
+    description: str | None = None
+    requiresProof: bool = False
+
+
+@app.post("/api/admin/orientation/programs/{program_id}/tasks")
+def admin_add_orientation_task(program_id: str, req: OrientationTaskRequest,
+                               admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    program = db.get(models.OrientationProgram, program_id)
+    if not program:
+        raise HTTPException(404, "Program not found")
+    title = (req.title or "").strip()
+    if not title:
+        raise HTTPException(400, "Title is required")
+    task = models.OrientationTask(
+        program_id=program_id, title=title, description=(req.description or "").strip() or None,
+        order=_next_orientation_task_order(program),
+        requires_proof=bool(req.requiresProof),
+    )
+    db.add(task)
+    db.commit()
+    db.refresh(task)
+    return orientation_task_detail(task)
+
+
+@app.put("/api/admin/orientation/programs/{program_id}/tasks/{task_id}")
+def admin_update_orientation_task(program_id: str, task_id: str, req: OrientationTaskRequest,
+                                  admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    task = db.get(models.OrientationTask, task_id)
+    if not task or task.program_id != program_id:
+        raise HTTPException(404, "Task not found")
+    title = (req.title or "").strip()
+    if not title:
+        raise HTTPException(400, "Title is required")
+    task.title = title
+    task.description = (req.description or "").strip() or None
+    task.requires_proof = bool(req.requiresProof)
+    db.commit()
+    return orientation_task_detail(task)
+
+
+@app.delete("/api/admin/orientation/programs/{program_id}/tasks/{task_id}")
+def admin_delete_orientation_task(program_id: str, task_id: str,
+                                  admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    task = db.get(models.OrientationTask, task_id)
+    if not task or task.program_id != program_id:
+        raise HTTPException(404, "Task not found")
+    db.delete(task)
+    db.flush()
+    program = db.get(models.OrientationProgram, program_id)
+    if program:
+        remaining = sorted(program.tasks, key=lambda t: t.order)
+        for i, r in enumerate(remaining):
+            r.order = i
+    db.commit()
+    return {"ok": True}
+
+
+class OrientationReorderRequest(BaseModel):
+    order: list[str]
+
+
+@app.put("/api/admin/orientation/programs/{program_id}/reorder")
+def admin_reorder_orientation_tasks(program_id: str, req: OrientationReorderRequest,
+                                    admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    program = db.get(models.OrientationProgram, program_id)
+    if not program:
+        raise HTTPException(404, "Program not found")
+    if set(req.order) != {t.id for t in program.tasks}:
+        raise HTTPException(400, "Order must include exactly the program's current tasks")
+    by_id = {t.id: t for t in program.tasks}
+    for i, tid in enumerate(req.order):
+        by_id[tid].order = i
+    db.commit()
+    return {"ok": True}
+
+
+# ---------------- Candidates (existing crew) + enrollments ----------------
+
+def orientation_candidate_view(db, u, program_id=None):
+    q = db.query(models.OrientationEnrollment).filter_by(learner_id=u.id)
+    if program_id:
+        q = q.filter_by(program_id=program_id)
+    enrollment = q.order_by(models.OrientationEnrollment.created_at.desc()).first()
+    return {
+        "id": u.id, "name": u.full_name, "rank": u.rank, "vessel": u.current_vessel,
+        "empStatus": u.emp_status, "nationality": u.nationality,
+        "department": orientation_ranks.department_for_rank(u.rank),
+        "enrollment": ({
+            "id": enrollment.id, "programId": enrollment.program_id,
+            "programTitle": enrollment.program.title if enrollment.program else None,
+            "status": enrollment.status,
+            "vesselName": enrollment.vessel_name,
+            "masterName": enrollment.master_name,
+        } if enrollment else None),
+    }
+
+
+@app.get("/api/admin/orientation/vessels")
+def admin_list_orientation_vessels(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Returns distinct vessels from crew data along with everyone currently
+    on sail on that vessel with rank MASTER (deck) or CHIEF ENGINEER
+    (engine). Crew data is refreshed by the daily Crew List scrape
+    (crewlist_sync.py — run as an external cronjob; upserts into the same
+    User rows via the shared upsert_crew_record from smartpal_sync.py), so
+    a vessel can briefly carry two people at the same top rank — e.g.
+    during a handover, both the outgoing and incoming Master show SAIL
+    until the next day's sync catches up. We surface every match as
+    a list (masters/chiefEngineers) rather than silently picking one, so
+    the frontend can fall back to an admin-facing select when there's more
+    than one candidate. `master`/`chiefEngineer` are kept as a single
+    name for backward compatibility — populated only when exactly one
+    candidate exists, null otherwise (including the ambiguous case).
+
+    When a vessel is ambiguous, each candidate carries the real
+    `signOnDate`/`reliefDate` synced from SmartPAL (confirmed present on
+    both the QueryActivity and Crewlist reports — see crewlist_sync.py)
+    plus a `defaultPick` flag: the candidate with the EARLIEST relief date
+    is flagged `signingOffSoon` (their relief is the reason the vessel is
+    ambiguous in the first place — a live handover), and `defaultPick` is
+    set on the other candidate, so a picker can pre-select "whoever is
+    staying" while still listing both. If relief dates are missing or
+    tied, no default is guessed — the frontend falls back to requiring an
+    explicit choice."""
+    from .orientation_ranks import _norm
+    learners = db.query(models.User).filter(
+        models.User.role == "learner",
+        models.User.is_active == True,
+        models.User.current_vessel != None,
+        models.User.emp_status == "SAIL",
+    ).all()
+    vessels: dict[str, dict] = {}
+    for u in learners:
+        v = (u.current_vessel or "").strip()
+        if not v:
+            continue
+        if v not in vessels:
+            vessels[v] = {"vessel": v, "masters": [], "chiefEngineers": [], "crewCount": 0}
+        vessels[v]["crewCount"] += 1
+        r = _norm(u.rank)
+        candidate = {
+            "id": u.id, "name": u.full_name,
+            "signOnDate": u.sign_on_date.isoformat() if u.sign_on_date else None,
+            "reliefDate": u.relief_date.isoformat() if u.relief_date else None,
+        }
+        if r == "MASTER":
+            vessels[v]["masters"].append(candidate)
+        elif r == "CHIEF ENGINEER":
+            vessels[v]["chiefEngineers"].append(candidate)
+
+    def annotate(candidates: list) -> list:
+        if len(candidates) < 2:
+            return candidates
+        dated = [c for c in candidates if c["reliefDate"]]
+        if len(dated) < 2 or len({c["reliefDate"] for c in dated}) < 2:
+            return candidates  # missing/tied relief dates — no guess to make
+        soonest = min(dated, key=lambda c: c["reliefDate"])
+        soonest["signingOffSoon"] = True
+        # default pick = whoever's relief is furthest out (most likely staying)
+        latest = max(dated, key=lambda c: c["reliefDate"])
+        latest["defaultPick"] = True
+        return candidates
+
+    result = []
+    for v in sorted(vessels.values(), key=lambda x: x["vessel"]):
+        v["masters"] = annotate(v["masters"])
+        v["chiefEngineers"] = annotate(v["chiefEngineers"])
+        v["master"] = v["masters"][0]["name"] if len(v["masters"]) == 1 else None
+        v["chiefEngineer"] = v["chiefEngineers"][0]["name"] if len(v["chiefEngineers"]) == 1 else None
+        result.append(v)
+    return result
+
+
+@app.get("/api/admin/orientation/candidates")
+def admin_list_orientation_candidates(
+    q: str = "",
+    program_id: str | None = None,
+    rank: str | None = None,
+    vessel: str | None = None,
+    on_sail: bool = False,
+    admin: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Existing crew eligible for Orientation Program — excludes office
+    staff and any rank outside the deck/engine hierarchy (orientation_ranks.py).
+    Supports filtering by ?rank=, ?vessel= and ?on_sail=true. Results are
+    capped at 50 — on_sail (and every other filter) is applied BEFORE that
+    cap so callers that only want onboard crew don't get an under-filled
+    page just because non-matching rows ate the first 50 alphabetically."""
+    users = db.query(models.User).filter_by(role="learner", is_active=True).all()
+    eligible = [u for u in users if orientation_ranks.is_eligible_crew(u.rank)]
+    if q:
+        query = normalize_name(q)
+        eligible = [u for u in eligible if query in normalize_name(u.full_name)]
+    if rank:
+        rank_upper = rank.strip().upper()
+        eligible = [u for u in eligible if (u.rank or "").strip().upper() == rank_upper]
+    if vessel:
+        vessel_upper = vessel.strip().upper()
+        eligible = [u for u in eligible if (u.current_vessel or "").strip().upper() == vessel_upper]
+    if on_sail:
+        eligible = [u for u in eligible if (u.emp_status or "").strip().upper() == "SAIL"]
+    eligible.sort(key=lambda u: u.full_name)
+    return [orientation_candidate_view(db, u, program_id) for u in eligible[:50]]
+
+
+@app.get("/api/admin/orientation/enrollments")
+def admin_list_orientation_enrollments(
+    program_id: str | None = None,
+    status: str | None = None,
+    admin: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """List all orientation enrollments (enrolled crew only) with progress details."""
+    q = db.query(models.OrientationEnrollment)
+    if program_id:
+        q = q.filter_by(program_id=program_id)
+    if status:
+        q = q.filter_by(status=status)
+    enrollments = q.order_by(models.OrientationEnrollment.created_at.desc()).all()
+    result = []
+    for e in enrollments:
+        learner = db.get(models.User, e.learner_id)
+        total = len(e.completions)
+        done = sum(1 for c in e.completions if c.is_completed)
+        pct = round(done / total * 100) if total else 0
+        result.append({
+            "id": e.id,
+            "learnerId": e.learner_id,
+            "learnerName": learner.full_name if learner else None,
+            "rank": learner.rank if learner else None,
+            "vessel": e.vessel_name or (learner.current_vessel if learner else None),
+            "empStatus": learner.emp_status if learner else None,
+            "department": orientation_ranks.department_for_rank(learner.rank) if learner else None,
+            "programId": e.program_id,
+            "programTitle": e.program.title if e.program else None,
+            "status": e.status,
+            "vesselName": e.vessel_name,
+            "masterName": e.master_name,
+            "completedCount": done,
+            "totalCount": total,
+            "progressPct": pct,
+            "createdAt": e.created_at.isoformat() if e.created_at else None,
+        })
+    return result
+
+
+class OrientationEnrollRequest(BaseModel):
+    learnerId: str
+    programId: str
+    vesselName: str | None = None   # defaults to learner's current_vessel if omitted
+    masterName: str | None = None   # Master/CE name snapshotted at enrollment time
+
+
+@app.post("/api/admin/orientation/enrollments")
+def admin_create_orientation_enrollment(req: OrientationEnrollRequest,
+                                        admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    learner = db.get(models.User, req.learnerId)
+    if not learner or learner.role != "learner":
+        raise HTTPException(404, "Crew member not found")
+    if not orientation_ranks.is_eligible_crew(learner.rank):
+        raise HTTPException(400, "This crew member's rank is not eligible for Orientation Program")
+    program = db.get(models.OrientationProgram, req.programId)
+    if not program:
+        raise HTTPException(404, "Program not found")
+    existing = db.query(models.OrientationEnrollment).filter_by(
+        learner_id=learner.id, program_id=program.id).first()
+    if existing and existing.status in ("in_progress", "submitted"):
+        raise HTTPException(400, "This crew member is already enrolled in this program")
+    # Default vessel to the crew's current SmartPAL vessel if not explicitly supplied
+    vessel_name = (req.vesselName or "").strip() or learner.current_vessel
+    enrollment = models.OrientationEnrollment(
+        program_id=program.id, learner_id=learner.id, assigned_by=admin.id, status="in_progress",
+        vessel_name=vessel_name,
+        master_name=(req.masterName or "").strip() or None,
+    )
+    db.add(enrollment)
+    db.flush()
+    for task in program.tasks:
+        db.add(models.OrientationTaskCompletion(enrollment_id=enrollment.id, task_id=task.id))
+    db.commit()
+    return {"ok": True, "enrollmentId": enrollment.id}
+
+
+@app.delete("/api/admin/orientation/enrollments/{enrollment_id}")
+def admin_delete_orientation_enrollment(enrollment_id: str,
+                                        admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    enrollment = db.get(models.OrientationEnrollment, enrollment_id)
+    if not enrollment:
+        raise HTTPException(404, "Enrollment not found")
+    db.delete(enrollment)
+    db.commit()
+    return {"ok": True}
+
+
+# ---------------- Results / monitoring ----------------
+
+def orientation_enrollment_result(db, e):
+    learner = db.get(models.User, e.learner_id)
+    total = len(e.completions)
+    done = sum(1 for c in e.completions if c.is_completed)
+    pct = round(done / total * 100) if total else 0
+    submission = (db.query(models.OrientationSubmission)
+                  .filter_by(enrollment_id=e.id)
+                  .order_by(models.OrientationSubmission.submitted_at.desc()).first())
+    decided_by = db.get(models.User, submission.decided_by) if submission and submission.decided_by else None
+    department = e.program.department if e.program else None
+    master_label = "Chief Engineer" if department == "engine" else "Master"
+    return {
+        "enrollmentId": e.id,
+        "learnerName": learner.full_name if learner else None,
+        "rank": learner.rank if learner else None,
+        "vessel": (e.vessel_name or (learner.current_vessel if learner else None)),
+        "programId": e.program_id,
+        "programTitle": e.program.title if e.program else None,
+        "status": e.status,
+        "completedCount": done, "totalCount": total, "progressPct": pct,
+        "submittedAt": submission.submitted_at.isoformat() if submission and submission.submitted_at else None,
+        "decidedAt": submission.decided_at.isoformat() if submission and submission.decided_at else None,
+        "masterLabel": master_label,
+        "masterName": e.master_name,
+        "approvedByName": decided_by.full_name if decided_by else None,
+    }
+
+
+@app.get("/api/admin/orientation/results")
+def admin_orientation_results(program_id: str | None = None,
+                              admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    q = db.query(models.OrientationEnrollment)
+    if program_id:
+        q = q.filter_by(program_id=program_id)
+    enrollments = q.order_by(models.OrientationEnrollment.created_at.desc()).all()
+    return [orientation_enrollment_result(db, e) for e in enrollments]
+
+
+@app.get("/api/admin/orientation/results.xlsx")
+def admin_orientation_results_xlsx(program_id: str | None = None,
+                                   admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    from openpyxl import Workbook
+    from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+    from openpyxl.utils import get_column_letter
+
+    rows = admin_orientation_results(program_id=program_id, admin=admin, db=db)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = "Orientation Results"
+
+    columns = [
+        ("Crew Name", 26), ("Rank", 18), ("Vessel", 22), ("Program", 30),
+        ("Status", 14), ("Completed", 11), ("Total", 9), ("Progress %", 12),
+        ("Master / CE", 22), ("Approved By", 22), ("Submitted", 18), ("Decided", 18),
+    ]
+    headers = [c[0] for c in columns]
+    ws.append(headers)
+
+    # ---- header styling: navy fill, white bold text, thin borders ----
+    header_fill = PatternFill(start_color="1E3A5F", end_color="1E3A5F", fill_type="solid")
+    header_font = Font(color="FFFFFF", bold=True, size=11)
+    thin = Side(style="thin", color="D9D9D9")
+    for col_idx, _ in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col_idx)
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = Alignment(horizontal="center", vertical="center")
+        cell.border = Border(bottom=thin)
+    ws.row_dimensions[1].height = 22
+
+    status_fill = {
+        "approved": PatternFill(start_color="DCFCE7", end_color="DCFCE7", fill_type="solid"),
+        "submitted": PatternFill(start_color="DBEAFE", end_color="DBEAFE", fill_type="solid"),
+        "rejected": PatternFill(start_color="FEE2E2", end_color="FEE2E2", fill_type="solid"),
+        "in_progress": PatternFill(start_color="FEF3C7", end_color="FEF3C7", fill_type="solid"),
+    }
+    status_label = {
+        "approved": "Approved", "submitted": "Awaiting review",
+        "rejected": "Rejected", "in_progress": "In progress",
+    }
+    band_fill = PatternFill(start_color="F7F9FC", end_color="F7F9FC", fill_type="solid")
+
+    for i, r in enumerate(rows):
+        row_idx = i + 2
+        ws.append([
+            r["learnerName"], r["rank"], r["vessel"], r["programTitle"],
+            status_label.get(r["status"], r["status"]), r["completedCount"], r["totalCount"],
+            r["progressPct"] / 100,
+            f'{r["masterLabel"]}: {r["masterName"]}' if r["masterName"] else "—",
+            r["approvedByName"] or "—",
+            r["submittedAt"][:10] if r["submittedAt"] else "",
+            r["decidedAt"][:10] if r["decidedAt"] else "",
+        ])
+        if i % 2 == 1:
+            for col_idx in range(1, len(headers) + 1):
+                ws.cell(row=row_idx, column=col_idx).fill = band_fill
+        status_cell = ws.cell(row=row_idx, column=5)
+        fill = status_fill.get(r["status"])
+        if fill:
+            status_cell.fill = fill
+        status_cell.alignment = Alignment(horizontal="center")
+        ws.cell(row=row_idx, column=8).number_format = "0%"
+        for col_idx in (6, 7, 8):
+            ws.cell(row=row_idx, column=col_idx).alignment = Alignment(horizontal="center")
+
+    for i, (_, w) in enumerate(columns, 1):
+        ws.column_dimensions[get_column_letter(i)].width = w
+
+    ws.freeze_panes = "A2"
+    last_row = max(len(rows) + 1, 2)
+    ws.auto_filter.ref = f"A1:{get_column_letter(len(headers))}{last_row}"
+
+    buf = io.BytesIO()
+    wb.save(buf)
+    buf.seek(0)
+    return StreamingResponse(
+        buf, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": "attachment; filename=orientation-results.xlsx"},
+    )
+
+
+# ---------------- Candidate-facing (existing crew login) ----------------
+
+def orientation_enrollment_detail(e):
+    completions = {c.task_id: c for c in e.completions}
+    tasks = sorted(e.program.tasks, key=lambda t: t.order) if e.program else []
+    total = len(tasks)
+    done = sum(1 for t in tasks if completions.get(t.id) and completions[t.id].is_completed)
+    department = e.program.department if e.program else None
+    return {
+        "id": e.id, "programId": e.program_id,
+        "programTitle": e.program.title if e.program else None,
+        "programSubtitle": e.program.subtitle if e.program else None,
+        "status": e.status,
+        "vessel": e.vessel_name,
+        "masterName": e.master_name,
+        "masterLabel": "Chief Engineer" if department == "engine" else "Master",
+        "progressPct": round(done / total * 100) if total else 0,
+        "completedCount": done, "totalCount": total,
+        "tasks": [{
+            "id": t.id, "title": t.title, "description": t.description, "order": t.order,
+            "requiresProof": bool(t.requires_proof),
+            "isCompleted": bool(completions.get(t.id) and completions[t.id].is_completed),
+            "note": completions[t.id].note if completions.get(t.id) else None,
+            "proofUrls": (completions[t.id].proof_paths or []) if completions.get(t.id) else [],
+            "completedAt": (completions[t.id].completed_at.isoformat()
+                           if completions.get(t.id) and completions[t.id].completed_at else None),
+        } for t in tasks],
+    }
+
+
+@app.get("/api/orientation/my-enrollment")
+def get_my_orientation_enrollment(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    enrollment = (db.query(models.OrientationEnrollment)
+                  .filter(models.OrientationEnrollment.learner_id == user.id,
+                         models.OrientationEnrollment.status.in_(["in_progress", "submitted", "rejected", "approved"]))
+                  .order_by(models.OrientationEnrollment.created_at.desc()).first())
+    if not enrollment:
+        return None
+    return orientation_enrollment_detail(enrollment)
+
+
+@app.post("/api/orientation/tasks/{task_id}/complete")
+async def complete_orientation_task(task_id: str, completed: bool = Form(...),
+                                    note: str | None = Form(None),
+                                    files: list[UploadFile] = File(default=[]),
+                                    user: models.User = Depends(get_current_user),
+                                    db: Session = Depends(get_db)):
+    task = db.get(models.OrientationTask, task_id)
+    if not task:
+        raise HTTPException(404, "Task not found")
+    enrollment = (db.query(models.OrientationEnrollment)
+                  .filter_by(learner_id=user.id, program_id=task.program_id).first())
+    if not enrollment or enrollment.status not in ("in_progress", "rejected"):
+        raise HTTPException(403, "You are not actively enrolled in this program")
+    completion = db.query(models.OrientationTaskCompletion).filter_by(
+        enrollment_id=enrollment.id, task_id=task_id).first()
+    if not completion:
+        completion = models.OrientationTaskCompletion(enrollment_id=enrollment.id, task_id=task_id, proof_paths=[])
+        db.add(completion)
+        db.flush()
+    completion.is_completed = completed
+    completion.completed_at = datetime.now(timezone.utc) if completed else None
+    if note is not None:
+        completion.note = note
+    new_urls = []
+    for file in files:
+        if not file or not file.filename:
+            continue
+        ext = os.path.splitext(file.filename)[1] or ".bin"
+        filename = f"{completion.id}-{uuid.uuid4().hex[:8]}{ext}"
+        tmp_path = os.path.join(tempfile.gettempdir(), f"orientation-{filename}")
+        with open(tmp_path, "wb") as f:
+            f.write(await file.read())
+        storage.save("orientation_proofs", filename, tmp_path)
+        new_urls.append(f"/api/uploads/orientation_proofs/{filename}")
+    if new_urls:
+        completion.proof_paths = [*(completion.proof_paths or []), *new_urls]
+    db.commit()
+    return {"ok": True, "isCompleted": completion.is_completed, "proofUrls": completion.proof_paths or []}
+
+
+@app.delete("/api/orientation/tasks/{task_id}/attachments")
+def delete_orientation_task_attachment(task_id: str, url: str,
+                                       user: models.User = Depends(get_current_user),
+                                       db: Session = Depends(get_db)):
+    """Remove one attachment (by its URL) from a task's proof list. Only the
+    reference is dropped — the underlying blob/file is left in place."""
+    task = db.get(models.OrientationTask, task_id)
+    if not task:
+        raise HTTPException(404, "Task not found")
+    enrollment = (db.query(models.OrientationEnrollment)
+                  .filter_by(learner_id=user.id, program_id=task.program_id).first())
+    if not enrollment or enrollment.status not in ("in_progress", "rejected"):
+        raise HTTPException(403, "You are not actively enrolled in this program")
+    completion = db.query(models.OrientationTaskCompletion).filter_by(
+        enrollment_id=enrollment.id, task_id=task_id).first()
+    if not completion:
+        raise HTTPException(404, "Nothing recorded for this task yet")
+    completion.proof_paths = [u for u in (completion.proof_paths or []) if u != url]
+    db.commit()
+    return {"ok": True, "proofUrls": completion.proof_paths or []}
+
+
+def find_vessel_approvers(db, vessel: str, department: str):
+    """Learner rows who currently qualify as the vessel's approver for this
+    department (see orientation_ranks.vessel_approver_info) — usually the one
+    onboard Master/Chief Engineer, but returns every match in case of a data
+    hiccup (two people flagged SAIL at once, etc.)."""
+    if not vessel:
+        return []
+    candidates = db.query(models.User).filter_by(
+        role="learner", is_active=True, current_vessel=vessel).all()
+    return [u for u in candidates
+            if (info := orientation_ranks.vessel_approver_info(u)) and info["department"] == department]
+
+
+@app.post("/api/orientation/submit")
+def submit_orientation(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    enrollment = (db.query(models.OrientationEnrollment)
+                  .filter(models.OrientationEnrollment.learner_id == user.id,
+                         models.OrientationEnrollment.status.in_(["in_progress", "rejected"]))
+                  .first())
+    if not enrollment:
+        raise HTTPException(404, "No active enrollment to submit")
+    completions = {c.task_id: c for c in enrollment.completions}
+    tasks = enrollment.program.tasks
+    if not tasks or not all(completions.get(t.id) and completions[t.id].is_completed for t in tasks):
+        raise HTTPException(400, "All tasks must be completed before submitting")
+    missing_proof = [t.title for t in tasks if t.requires_proof
+                     and not (completions.get(t.id) and completions[t.id].proof_paths)]
+    if missing_proof:
+        names = ", ".join(missing_proof[:3])
+        more = f" and {len(missing_proof) - 3} more" if len(missing_proof) > 3 else ""
+        raise HTTPException(400, f"Attach a document/photo for: {names}{more} before submitting")
+    department = enrollment.program.department
+    submission = models.OrientationSubmission(
+        enrollment_id=enrollment.id,
+        vessel_name=user.current_vessel,
+        department=department,
+        status="pending",
+    )
+    db.add(submission)
+    db.flush()  # assigns submission.id (its default is evaluated on flush) — needed below for the notification deep link
+    enrollment.status = "submitted"
+    # A fresh review cycle starts clean — any per-task verification left
+    # over from a previous rejected round shouldn't count toward this one.
+    for c in completions.values():
+        c.verified = False
+        c.verified_at = None
+        c.verified_by = None
+    program_title = enrollment.program.title if enrollment.program else "Orientation Program"
+    for appr in find_vessel_approvers(db, user.current_vessel, department):
+        notify(db, appr.id, "orientation_submitted", "New submission awaiting your review",
+              body=f"{user.full_name} submitted their {program_title} checklist for review.",
+              link=f"/approvals?submission={submission.id}")
+    db.commit()
+    return {"ok": True, "submissionId": submission.id}
+
+
+# ---------------- Approver-facing (vessel Master / Chief Engineer) ----------------
+
+def orientation_submission_detail(db, s):
+    enrollment = s.enrollment
+    learner = db.get(models.User, enrollment.learner_id) if enrollment else None
+    tasks = sorted(enrollment.program.tasks, key=lambda t: t.order) if enrollment and enrollment.program else []
+    completions = {c.task_id: c for c in enrollment.completions} if enrollment else {}
+    verified_count = sum(1 for c in completions.values() if c.verified)
+    return {
+        "id": s.id, "enrollmentId": s.enrollment_id,
+        "candidateName": learner.full_name if learner else None,
+        "candidateRank": learner.rank if learner else None,
+        "vessel": s.vessel_name, "department": s.department,
+        "programTitle": enrollment.program.title if enrollment and enrollment.program else None,
+        "status": s.status,
+        "submittedAt": s.submitted_at.isoformat() if s.submitted_at else None,
+        "decidedAt": s.decided_at.isoformat() if s.decided_at else None,
+        "verifiedCount": verified_count,
+        "totalCount": len(tasks),
+        "allVerified": len(tasks) > 0 and verified_count == len(tasks),
+        "tasks": [{
+            "id": t.id, "title": t.title, "description": t.description,
+            "completedAt": (completions[t.id].completed_at.isoformat()
+                           if completions.get(t.id) and completions[t.id].completed_at else None),
+            "note": completions[t.id].note if completions.get(t.id) else None,
+            "proofUrls": (completions[t.id].proof_paths or []) if completions.get(t.id) else [],
+            "verified": bool(completions[t.id].verified) if completions.get(t.id) else False,
+            "verifiedAt": (completions[t.id].verified_at.isoformat()
+                          if completions.get(t.id) and completions[t.id].verified_at else None),
+        } for t in tasks],
+    }
+
+
+@app.get("/api/approver/submissions")
+def approver_list_submissions(approver: models.User = Depends(require_vessel_approver), db: Session = Depends(get_db)):
+    info = orientation_ranks.vessel_approver_info(approver)
+    submissions = (db.query(models.OrientationSubmission)
+                  .filter_by(vessel_name=info["vessel"], department=info["department"])
+                  .order_by(models.OrientationSubmission.submitted_at.desc()).all())
+    return [orientation_submission_detail(db, s) for s in submissions]
+
+
+def _get_approver_submission(db, approver, submission_id):
+    """Shared lookup + ownership check for the three approver-on-submission
+    actions below (verify-task, approve, reject)."""
+    info = orientation_ranks.vessel_approver_info(approver)
+    submission = db.get(models.OrientationSubmission, submission_id)
+    if (not submission or submission.vessel_name != info["vessel"]
+            or submission.department != info["department"]):
+        raise HTTPException(404, "Submission not found")
+    return submission
+
+
+class OrientationVerifyTaskRequest(BaseModel):
+    verified: bool
+
+
+@app.post("/api/approver/submissions/{submission_id}/tasks/{task_id}/verify")
+def approver_verify_task(submission_id: str, task_id: str, req: OrientationVerifyTaskRequest,
+                         approver: models.User = Depends(require_vessel_approver), db: Session = Depends(get_db)):
+    """Per-task sign-off, separate from the final Approve/Reject — lets the
+    Master/Chief Engineer work through the stepper and mark each task
+    individually seen+verified, so there's a real record they reviewed
+    every task rather than skimming and approving the whole thing at
+    once."""
+    submission = _get_approver_submission(db, approver, submission_id)
+    if submission.status != "pending":
+        raise HTTPException(400, "This submission has already been decided")
+    completion = (db.query(models.OrientationTaskCompletion)
+                  .filter_by(enrollment_id=submission.enrollment_id, task_id=task_id).first())
+    if not completion:
+        raise HTTPException(404, "Task not found on this submission")
+    completion.verified = req.verified
+    completion.verified_at = datetime.now(timezone.utc) if req.verified else None
+    completion.verified_by = approver.id if req.verified else None
+    db.commit()
+    return orientation_submission_detail(db, submission)
+
+
+@app.post("/api/approver/submissions/{submission_id}/approve")
+def approver_approve_submission(submission_id: str, approver: models.User = Depends(require_vessel_approver),
+                                db: Session = Depends(get_db)):
+    submission = _get_approver_submission(db, approver, submission_id)
+    if submission.status != "pending":
+        raise HTTPException(400, "Already decided")
+    total = len(submission.enrollment.program.tasks) if submission.enrollment and submission.enrollment.program else 0
+    verified = sum(1 for c in submission.enrollment.completions if c.verified) if submission.enrollment else 0
+    if total and verified < total:
+        raise HTTPException(400, f"Verify all {total} tasks before approving ({verified} of {total} done)")
+    submission.status = "approved"
+    submission.decided_at = datetime.now(timezone.utc)
+    submission.decided_by = approver.id
+    submission.enrollment.status = "approved"
+    learner = db.get(models.User, submission.enrollment.learner_id)
+    program_title = submission.enrollment.program.title if submission.enrollment.program else "Orientation Program"
+    if learner:
+        notify(db, learner.id, "orientation_approved", "Orientation Program approved",
+              body=f"{approver.full_name} approved your {program_title} submission.",
+              link="/orientation")
+    for adm in db.query(models.User).filter(models.User.role.in_(["admin", "super_admin"])).all():
+        notify(db, adm.id, "orientation_approved", "Orientation Program approved",
+              body=f"{learner.full_name if learner else 'A candidate'}'s {program_title} submission "
+                   f"was approved by {approver.full_name}.",
+              link="/admin/orientation-program/results")
+    db.commit()
+    return {"ok": True}
+
+
+@app.post("/api/approver/submissions/{submission_id}/reject")
+def approver_reject_submission(submission_id: str, approver: models.User = Depends(require_vessel_approver),
+                               db: Session = Depends(get_db)):
+    submission = _get_approver_submission(db, approver, submission_id)
+    if submission.status != "pending":
+        raise HTTPException(400, "Already decided")
+    submission.status = "rejected"
+    submission.decided_at = datetime.now(timezone.utc)
+    submission.decided_by = approver.id
+    submission.enrollment.status = "rejected"
+    learner = db.get(models.User, submission.enrollment.learner_id)
+    program_title = submission.enrollment.program.title if submission.enrollment.program else "Orientation Program"
+    if learner:
+        notify(db, learner.id, "orientation_rejected", "Orientation Program submission rejected",
+              body=f"{approver.full_name} sent back your {program_title} submission — review and resubmit.",
+              link="/orientation")
+    for adm in db.query(models.User).filter(models.User.role.in_(["admin", "super_admin"])).all():
+        notify(db, adm.id, "orientation_rejected", "Orientation Program submission rejected",
+              body=f"{learner.full_name if learner else 'A candidate'}'s {program_title} submission "
+                   f"was rejected by {approver.full_name}.",
+              link="/admin/orientation-program/results")
+    db.commit()
+    return {"ok": True}

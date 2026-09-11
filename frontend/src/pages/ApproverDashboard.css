@@ -1,0 +1,283 @@
+/* ============================================================
+   Orientation Program — vessel approver dashboard
+   Scoped to ApproverDashboard.jsx only.
+   ============================================================ */
+.apr-page {
+  --apr-ink: #0f172a; --apr-ink-soft: #64748b; --apr-line: #e5e9f0;
+  --apr-line-strong: #d3d9e3; --apr-surface: #ffffff; --apr-wash: #f7f8fb;
+  --apr-accent: #4338ca; --apr-accent-2: #6366f1; --apr-accent-tint: rgba(67,56,202,.1);
+  --apr-good: #15803d; --apr-good-tint: rgba(21,128,61,.1);
+  --apr-bad: #dc2626; --apr-bad-tint: rgba(220,38,38,.1);
+  --apr-pending: #b45309; --apr-pending-tint: rgba(180,83,9,.1);
+  min-height: 100vh; background: var(--apr-wash); color: var(--apr-ink);
+}
+@media (prefers-color-scheme: dark) {
+  .apr-page {
+    --apr-ink: #e8eaef; --apr-ink-soft: #96a1b0; --apr-line: #262b38; --apr-line-strong: #363d4c;
+    --apr-surface: #141822; --apr-wash: #0c0f17; --apr-accent: #818cf8; --apr-accent-2: #a5b4fc;
+    --apr-accent-tint: rgba(129,140,248,.16); --apr-good-tint: rgba(52,211,153,.14);
+    --apr-bad-tint: rgba(248,113,113,.14); --apr-pending-tint: rgba(224,169,79,.14);
+  }
+}
+:root[data-theme="dark"] .apr-page {
+  --apr-ink: #e8eaef; --apr-ink-soft: #96a1b0; --apr-line: #262b38; --apr-line-strong: #363d4c;
+  --apr-surface: #141822; --apr-wash: #0c0f17; --apr-accent: #818cf8; --apr-accent-2: #a5b4fc;
+  --apr-accent-tint: rgba(129,140,248,.16); --apr-good-tint: rgba(52,211,153,.14);
+  --apr-bad-tint: rgba(248,113,113,.14); --apr-pending-tint: rgba(224,169,79,.14);
+}
+:root[data-theme="light"] .apr-page {
+  --apr-ink: #0f172a; --apr-ink-soft: #64748b; --apr-line: #e5e9f0; --apr-line-strong: #d3d9e3;
+  --apr-surface: #ffffff; --apr-wash: #f7f8fb; --apr-accent: #4338ca; --apr-accent-2: #6366f1;
+  --apr-accent-tint: rgba(67,56,202,.1);
+}
+
+/* ---- nav ---- */
+.apr-nav {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 24px; background: var(--apr-surface); border-bottom: 1px solid var(--apr-line);
+  position: sticky; top: 0; z-index: 20;
+}
+.apr-brand { display: flex; align-items: center; gap: 9px; font-weight: 800; font-size: 15px; }
+.apr-brand-icon {
+  width: 30px; height: 30px; border-radius: 9px; display: grid; place-items: center; color: #fff;
+  background: linear-gradient(135deg, var(--apr-accent), var(--apr-accent-2));
+}
+.apr-nav-right { display: flex; align-items: center; gap: 12px; }
+.apr-nav-tag {
+  font-size: 12px; font-weight: 700; color: var(--apr-accent); background: var(--apr-accent-tint);
+  padding: 5px 11px; border-radius: 20px;
+}
+
+/* ---- body / layout ---- */
+.apr-body { max-width: 1320px; margin: 0 auto; padding: 20px 24px 40px; }
+.apr-layout { display: grid; grid-template-columns: 340px 1fr; gap: 20px; align-items: start; }
+@media (max-width: 900px) { .apr-layout { grid-template-columns: 1fr; } }
+
+/* ---- left: submission list ---- */
+.apr-list-col {
+  background: var(--apr-surface); border: 1px solid var(--apr-line); border-radius: 16px;
+  overflow: hidden; position: sticky; top: 72px; max-height: calc(100vh - 92px); display: flex; flex-direction: column;
+}
+@media (max-width: 900px) { .apr-list-col { position: static; max-height: none; } }
+
+.apr-list-tabs { display: flex; border-bottom: 1px solid var(--apr-line); flex-shrink: 0; }
+.apr-list-tab {
+  flex: 1; text-align: center; padding: 12px 8px; font-size: 12.5px; font-weight: 700;
+  color: var(--apr-ink-soft); background: none; border: none; cursor: pointer; position: relative;
+}
+.apr-list-tab--active { color: var(--apr-accent); }
+.apr-list-tab--active::after {
+  content: ''; position: absolute; left: 14px; right: 14px; bottom: -1px; height: 2px; background: var(--apr-accent);
+}
+.apr-list-tab-count {
+  display: inline-block; margin-left: 5px; font-size: 10.5px; font-weight: 800;
+  background: var(--apr-accent-tint); color: var(--apr-accent); padding: 1px 6px; border-radius: 20px;
+}
+
+.apr-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
+.apr-list-empty { padding: 40px 20px; text-align: center; font-size: 13px; color: var(--apr-ink-soft); }
+.apr-list-item {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px;
+  background: none; border: none; border-bottom: 1px solid var(--apr-line); text-align: left; cursor: pointer;
+  transition: background .1s;
+}
+.apr-list-item:hover { background: var(--apr-wash); }
+.apr-list-item--active { background: var(--apr-accent-tint); }
+.apr-list-item-info { flex: 1; min-width: 0; }
+.apr-list-item-name { font-weight: 700; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.apr-list-item-sub { font-size: 11.5px; color: var(--apr-ink-soft); margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.apr-list-item-date { font-size: 10.5px; color: var(--apr-ink-soft); flex-shrink: 0; }
+
+.apr-status-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.apr-status-dot--pending { background: var(--apr-pending); }
+.apr-status-dot--approved { background: var(--apr-good); }
+.apr-status-dot--rejected { background: var(--apr-bad); }
+
+/* ---- right: detail panel ---- */
+.apr-detail {
+  background: var(--apr-surface); border: 1px solid var(--apr-line); border-radius: 16px;
+  overflow: hidden; min-height: 500px; max-height: calc(100vh - 92px);
+  display: flex; flex-direction: column;
+}
+@media (max-width: 900px) { .apr-detail { max-height: none; } }
+.apr-detail-empty {
+  flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+  text-align: center; padding: 40px; color: var(--apr-ink-soft);
+}
+.apr-detail-empty-icon { color: var(--apr-ink-soft); opacity: .5; margin-bottom: 12px; }
+.apr-detail-empty-title { font-weight: 700; font-size: 15px; color: var(--apr-ink); margin-bottom: 4px; }
+
+.apr-detail-head {
+  display: flex; align-items: center; gap: 14px; padding: 18px 22px; border-bottom: 1px solid var(--apr-line);
+  flex-wrap: wrap;
+}
+.apr-detail-head-info { flex: 1; min-width: 200px; }
+.apr-detail-name { font-size: 17px; font-weight: 800; }
+.apr-detail-sub { font-size: 13px; color: var(--apr-ink-soft); margin-top: 2px; }
+.apr-status-pill {
+  font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .03em;
+  padding: 4px 12px; border-radius: 20px;
+}
+.apr-status-pill--pending { background: var(--apr-pending-tint); color: var(--apr-pending); }
+.apr-status-pill--approved { background: var(--apr-good-tint); color: var(--apr-good); }
+.apr-status-pill--rejected { background: var(--apr-bad-tint); color: var(--apr-bad); }
+.apr-detail-date { font-size: 11.5px; color: var(--apr-ink-soft); }
+
+.apr-detail-body { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 22px; display: flex; flex-direction: column; gap: 18px; }
+.apr-detail-body--review { gap: 14px; }
+
+/* ---- task stepper: pip strip lets the reviewer jump straight to any task ---- */
+.apr-stepper { border-bottom: 1px solid var(--apr-line); padding: 10px 22px; flex-shrink: 0; }
+.apr-stepper-track { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; }
+.apr-stepper-pip {
+  flex-shrink: 0; width: 26px; height: 26px; border-radius: 8px; border: 1px solid var(--apr-line-strong);
+  background: var(--apr-surface); color: var(--apr-ink-soft); font-size: 11px; font-weight: 700;
+  display: grid; place-items: center; cursor: pointer; transition: border-color .12s, background .12s, color .12s;
+}
+.apr-stepper-pip:hover { border-color: var(--apr-accent); color: var(--apr-accent); }
+.apr-stepper-pip--flagged { border-color: var(--apr-accent); color: var(--apr-accent); background: var(--apr-accent-tint); }
+.apr-stepper-pip--active { background: var(--apr-accent); border-color: var(--apr-accent); color: #fff; }
+.apr-stepper-pip--verified { border-color: var(--apr-good); color: var(--apr-good); background: var(--apr-good-tint); }
+.apr-stepper-pip--verified.apr-stepper-pip--active { background: var(--apr-good); border-color: var(--apr-good); color: #fff; }
+.apr-stepper-progress {
+  display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 700; color: var(--apr-ink-soft);
+  margin-top: 8px;
+}
+
+/* ---- prev/next nav row above the single-task card ---- */
+.apr-review-nav { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.apr-nav-btn {
+  width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--apr-line-strong);
+  background: var(--apr-surface); color: var(--apr-ink); display: grid; place-items: center; cursor: pointer;
+}
+.apr-nav-btn:hover:not(:disabled) { border-color: var(--apr-accent); color: var(--apr-accent); }
+.apr-nav-btn:disabled { opacity: .35; cursor: default; }
+.apr-review-position { font-size: 12.5px; font-weight: 700; color: var(--apr-ink-soft); min-width: 110px; text-align: center; }
+
+/* ---- single-task review card ---- */
+.apr-review-card {
+  border: 1px solid var(--apr-line); border-radius: 14px; padding: 20px 22px; background: var(--apr-wash);
+  display: flex; flex-direction: column; gap: 14px;
+}
+.apr-review-top { display: flex; align-items: center; gap: 12px; }
+.apr-review-num {
+  width: 28px; height: 28px; border-radius: 9px; background: var(--apr-accent-tint); color: var(--apr-accent);
+  font-size: 12.5px; font-weight: 800; display: grid; place-items: center; flex-shrink: 0;
+}
+.apr-review-title { flex: 1; font-size: 16px; font-weight: 800; }
+.apr-review-check { color: var(--apr-good); flex-shrink: 0; }
+.apr-review-desc { font-size: 13.5px; color: var(--apr-ink-soft); line-height: 1.6; }
+
+.apr-review-block-label {
+  display: flex; align-items: center; gap: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--apr-ink-soft); margin-bottom: 8px;
+}
+.apr-review-note {
+  background: var(--apr-surface); border: 1px solid var(--apr-line); border-radius: 10px; padding: 12px 14px;
+}
+.apr-review-note-text { font-size: 13px; color: var(--apr-ink); white-space: pre-wrap; line-height: 1.55; }
+.apr-review-evidence { background: var(--apr-surface); border: 1px solid var(--apr-line); border-radius: 10px; padding: 12px 14px; }
+.apr-review-empty { text-align: center; padding: 22px 16px; color: var(--apr-ink-soft); font-size: 13px; line-height: 1.6; }
+
+.apr-review-footer-nav { display: flex; justify-content: space-between; gap: 10px; }
+.apr-review-navbtn {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700;
+  padding: 9px 16px; border-radius: 9px; border: 1px solid var(--apr-line-strong); background: var(--apr-surface);
+  color: var(--apr-ink); cursor: pointer;
+}
+.apr-review-navbtn:hover:not(:disabled) { border-color: var(--apr-accent); color: var(--apr-accent); }
+.apr-review-navbtn:disabled { opacity: .4; cursor: default; }
+.apr-review-navbtn--next { margin-left: auto; }
+
+/* per-task "I have reviewed this" sign-off, separate from the candidate's
+   own completion check — the whole point being a real record that the
+   approver looked at every task, not just the submission as a whole */
+.apr-verify-btn {
+  display: inline-flex; align-items: center; gap: 7px; align-self: flex-start; font-size: 12.5px; font-weight: 700;
+  padding: 9px 14px; border-radius: 9px; border: 1px dashed var(--apr-line-strong); background: var(--apr-surface);
+  color: var(--apr-ink-soft); cursor: pointer; transition: border-color .12s, background .12s, color .12s;
+}
+.apr-verify-btn:hover:not(:disabled) { border-color: var(--apr-accent); color: var(--apr-accent); }
+.apr-verify-btn:disabled { opacity: .6; cursor: default; }
+.apr-verify-btn--on {
+  border: 1px solid var(--apr-good); color: var(--apr-good); background: var(--apr-good-tint);
+}
+.apr-verify-btn--on:hover:not(:disabled) { border-color: var(--apr-bad); color: var(--apr-bad); }
+
+/* evidence grid — every attachment across the submission, at a glance */
+.apr-evidence-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 12px; }
+.apr-evidence-card {
+  display: flex; flex-direction: column; align-items: center; gap: 6px; background: none; border: none; cursor: pointer; padding: 0;
+}
+.apr-evidence-thumb {
+  width: 100%; aspect-ratio: 1; border-radius: 12px; border: 1px solid var(--apr-line-strong);
+  display: grid; place-items: center; overflow: hidden; color: var(--apr-ink-soft); background: var(--apr-surface);
+  transition: border-color .12s, transform .12s;
+}
+.apr-evidence-card:hover .apr-evidence-thumb { border-color: var(--apr-accent); transform: translateY(-2px); }
+.apr-evidence-thumb--image img { width: 100%; height: 100%; object-fit: cover; }
+.apr-evidence-thumb--pdf { color: #dc2626; background: rgba(220,38,38,.08); border-color: rgba(220,38,38,.25); }
+.apr-evidence-thumb--file { color: var(--apr-accent); background: var(--apr-accent-tint); }
+.apr-evidence-caption {
+  font-size: 10.5px; color: var(--apr-ink-soft); text-align: center; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+
+/* notes list — only tasks that actually have something written */
+.apr-notes-list { display: flex; flex-direction: column; gap: 10px; }
+.apr-note-row { display: flex; gap: 10px; padding: 11px 13px; border-radius: 10px; background: var(--apr-wash); border: 1px solid var(--apr-line); }
+.apr-note-row-icon { color: var(--apr-accent); flex-shrink: 0; margin-top: 2px; }
+.apr-note-row-title { font-weight: 700; font-size: 12.5px; }
+.apr-note-row-text { font-size: 12.5px; color: var(--apr-ink-soft); margin-top: 3px; white-space: pre-wrap; line-height: 1.5; }
+
+/* compact reference checklist — every task, one line each */
+.apr-checklist { display: flex; flex-direction: column; }
+.apr-checklist-row {
+  display: flex; align-items: center; gap: 9px; padding: 8px 4px; font-size: 12.5px;
+  border-bottom: 1px solid var(--apr-line);
+}
+.apr-checklist-row:last-child { border-bottom: none; }
+.apr-checklist-check { color: var(--apr-good); flex-shrink: 0; }
+.apr-checklist-title { flex: 1; min-width: 0; }
+.apr-checklist-flag { color: var(--apr-ink-soft); flex-shrink: 0; }
+.apr-checklist-flag--count { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 700; }
+
+/* full-size attachment viewer */
+.apr-viewer-overlay {
+  position: fixed; inset: 0; z-index: 3000; background: rgba(0,0,0,.7);
+  display: flex; align-items: center; justify-content: center; padding: 24px;
+}
+.apr-viewer {
+  width: 100%; max-width: 900px; height: 85vh; background: var(--apr-surface);
+  border-radius: 14px; overflow: hidden; display: flex; flex-direction: column;
+  box-shadow: 0 24px 60px rgba(0,0,0,.4);
+}
+.apr-viewer-bar {
+  flex-shrink: 0; display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  border-bottom: 1px solid var(--apr-line); background: var(--apr-wash);
+}
+.apr-viewer-bar-icon { color: var(--apr-ink-soft); display: grid; place-items: center; }
+.apr-viewer-open {
+  display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 700;
+  color: var(--apr-accent); text-decoration: none;
+}
+.apr-viewer-open:hover { text-decoration: underline; }
+.apr-viewer-close {
+  margin-left: auto; width: 28px; height: 28px; border-radius: 8px; border: none;
+  background: none; color: var(--apr-ink-soft); display: grid; place-items: center; cursor: pointer;
+}
+.apr-viewer-close:hover { background: var(--apr-line); color: var(--apr-ink); }
+.apr-viewer-body { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; background: var(--apr-wash); }
+.apr-viewer-body img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.apr-viewer-body iframe { width: 100%; height: 100%; border: none; }
+
+.apr-detail-foot { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; padding: 16px 22px; border-top: 1px solid var(--apr-line); flex-shrink: 0; }
+.apr-verify-hint { font-size: 11.5px; color: var(--apr-pending); font-weight: 600; }
+.apr-btn {
+  display: inline-flex; align-items: center; gap: 7px; border-radius: 10px; font-weight: 700; font-size: 13px;
+  padding: 10px 18px; cursor: pointer; border: 1px solid var(--apr-line-strong); background: var(--apr-surface); color: var(--apr-ink);
+}
+.apr-btn:disabled { opacity: .5; cursor: default; }
+.apr-btn--approve { background: linear-gradient(135deg, var(--apr-good), #22c55e); border-color: transparent; color: #fff; }
+.apr-btn--reject:hover:not(:disabled) { border-color: var(--apr-bad); color: var(--apr-bad); }
+.apr-detail-decided { padding: 16px 22px; border-top: 1px solid var(--apr-line); font-size: 12.5px; color: var(--apr-ink-soft); }
