@@ -4205,6 +4205,9 @@ def admin_list_orientation_vessels(admin: models.User = Depends(require_admin), 
     return result
 
 
+CANDIDATES_CAP = 2000  # generous safety bound, not a real-world limit — see docstring below
+
+
 @app.get("/api/admin/orientation/candidates")
 def admin_list_orientation_candidates(
     q: str = "",
@@ -4218,9 +4221,14 @@ def admin_list_orientation_candidates(
     """Existing crew eligible for Orientation Program — excludes office
     staff and any rank outside the deck/engine hierarchy (orientation_ranks.py).
     Supports filtering by ?rank=, ?vessel= and ?on_sail=true. Results are
-    capped at 50 — on_sail (and every other filter) is applied BEFORE that
-    cap so callers that only want onboard crew don't get an under-filled
-    page just because non-matching rows ate the first 50 alphabetically."""
+    capped at CANDIDATES_CAP — on_sail (and every other filter) is applied
+    BEFORE that cap so callers that only want onboard crew don't get an
+    under-filled page just because non-matching rows ate the first N
+    alphabetically. The cap used to be 50, which silently hid real crew
+    once the eligible-officer count for a fleet this size (793 total crew)
+    passed it — raised well above any realistic fleet size instead of
+    removed outright, so a single malformed query can't return everything
+    unbounded."""
     users = db.query(models.User).filter_by(role="learner", is_active=True).all()
     eligible = [u for u in users if orientation_ranks.is_eligible_crew(u.rank)]
     if q:
@@ -4235,7 +4243,7 @@ def admin_list_orientation_candidates(
     if on_sail:
         eligible = [u for u in eligible if (u.emp_status or "").strip().upper() == "SAIL"]
     eligible.sort(key=lambda u: u.full_name)
-    return [orientation_candidate_view(db, u, program_id) for u in eligible[:50]]
+    return [orientation_candidate_view(db, u, program_id) for u in eligible[:CANDIDATES_CAP]]
 
 
 @app.get("/api/admin/orientation/enrollments")

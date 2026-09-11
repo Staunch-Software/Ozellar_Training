@@ -227,9 +227,6 @@ export default function AdminOrientationCandidates() {
               )
             })}
           </div>
-          {visible.length === 50 && (
-            <p className="orn-hint-note">Showing first 50 — refine your search to see more.</p>
-          )}
         </>
       )}
     </div>
