@@ -60,20 +60,14 @@ smartpal_scheduler = None
 email_scheduler = None
 
 def send_pending_digest_job():
-    # Job to scan for pending approvals and send the digest to all super admins
+    # Job to scan for pending approvals and send the digest to the configured admin mailbox
     from datetime import datetime, timezone, timedelta
 
     with SessionLocal() as db:
-        super_admin_emails = [
-            u.email for u in
-            db.query(models.User).filter_by(role="super_admin", is_active=True).all()
-            if u.email
-        ]
-        # fall back to a configured mailbox if no super admin accounts exist yet
-        admin_email_fallback = os.getenv("ADMIN_EMAIL")
-        recipients = super_admin_emails or ([admin_email_fallback] if admin_email_fallback else [])
+        admin_email = os.getenv("ADMIN_EMAIL")
+        recipients = [admin_email] if admin_email else []
         if not recipients:
-            print("[send_pending_digest] Skipped: no super admin accounts and ADMIN_EMAIL not set")
+            print("[send_pending_digest] Skipped: ADMIN_EMAIL not set")
             return
 
         pending = db.query(models.AssessmentApproval).filter_by(status="pending", digest_sent=False).all()
