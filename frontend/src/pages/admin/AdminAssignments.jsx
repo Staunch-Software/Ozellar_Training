@@ -1,7 +1,12 @@
 import { useEffect, useState, useRef } from 'react'
-import { Check, Award, Clock, Search, X, ChevronDown, Grid3x3 } from 'lucide-react'
+import { Check, Award, Clock, Search, X, ChevronDown, Grid3x3, Phone } from 'lucide-react'
 import { adminReport, adminAssign, adminUnassign } from '../../api.js'
 import Pagination from '../../components/Pagination.jsx'
+
+const formatMobile = (mobileNo) => {
+  if (!mobileNo || mobileNo.length !== 10) return mobileNo || null
+  return `${mobileNo.slice(0, 5)} ${mobileNo.slice(5)}`
+}
 
 export default function AdminAssignments() {
   const [data, setData] = useState(null)
@@ -183,9 +188,25 @@ export default function AdminAssignments() {
                     <div className="mut" style={{ width: 24, fontSize: 11 }}>{(currentPage - 1) * itemsPerPage + index + 1}.</div>
                     <div>
                       <b>{row.name}</b>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 2, flexWrap: 'wrap' }}>
                         <span className="mono mut">{row.crewId}</span>
                         {row.rank && <span className="pill learner sm">{row.rank}</span>}
+                        {row.mobileNo && (
+                          <a
+                            href={`tel:${row.mobileNo.replace(/[^\d+]/g, '')}`}
+                            title="Call"
+                            style={{
+                              display: 'inline-flex', alignItems: 'center', gap: 4,
+                              padding: '2px 8px 2px 6px', borderRadius: 999,
+                              background: 'rgba(16,185,129,0.1)', color: '#0d9488',
+                              fontSize: 11, fontWeight: 600, textDecoration: 'none',
+                              border: '1px solid rgba(16,185,129,0.25)', lineHeight: 1.6,
+                            }}
+                          >
+                            <Phone size={10} strokeWidth={2.5} />
+                            {formatMobile(row.mobileNo)}
+                          </a>
+                        )}
                       </div>
                     </div>
                   </div>

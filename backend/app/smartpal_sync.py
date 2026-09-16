@@ -32,6 +32,7 @@ alone (no deactivation).
 """
 import asyncio
 import os
+import re
 from datetime import datetime, date, timezone
 from zoneinfo import ZoneInfo
 
@@ -58,9 +59,17 @@ MAX_PAGES = 100   # safety cap — real crew lists are nowhere near 10,000 rows
 DEBUG = os.getenv("SMARTPAL_DEBUG", "").lower() in ("1", "true", "yes")
 
 
+def _log(msg: str):
+    """Every log line gets a timestamp prefix so a run can be dated/timed
+    just by reading console output — the DB's SyncLog only records
+    started_at/finished_at, not each line as it happens."""
+    ts = datetime.now(IST).strftime("%Y-%m-%d %H:%M:%S IST")
+    print(f"[{ts}] [smartpal_sync] {msg}")
+
+
 def _debug(msg: str):
     if DEBUG:
-        print(f"[smartpal_sync] {msg}")
+        _log(msg)
 
 
 def _int_list(env_name: str) -> list:
@@ -78,9 +87,9 @@ SDC_LIST = _int_list("SMARTPAL_SDC_LIST")
 # Same failure mode as the EmpStatus/ServiceStatus filters removed earlier.
 
 if not SDC_LIST:
-    print("[smartpal_sync] warning: SMARTPAL_SDC_LIST is empty — the request "
-          "will be sent with an empty list, which some SmartPAL endpoints "
-          "reject with a 500")
+    _log("warning: SMARTPAL_SDC_LIST is empty — the request "
+         "will be sent with an empty list, which some SmartPAL endpoints "
+         "reject with a 500")
 
 
 def _request_body(offset: int, page_num: int) -> dict:
@@ -204,6 +213,109 @@ _FETCH_JS = """async ({url, headers, body}) => {
 }"""
 
 
+# ======================= per-crew profile fetch (email/phones) =======================
+# Email and phone numbers are NOT in the bulk GetQueryActivitylist response
+# (confirmed by dumping every field of a real record — ~130 fields, none of
+# them contact info). They only live on the individual seafarer profile,
+# fetched via Crewing/SeafarerDetails/GetPersonalDetails, keyed by empId —
+# same ServiceRouter dispatcher as the bulk list, but GET instead of POST,
+# with pData as a query string. Confirmed against a real captured request
+# (2026-09-16): same custom headers as build_headers() produces for the bulk
+# POST (s_key/v_cmpid/etc.), just a different servicepath and no body — the
+# browser's own cookies ride along automatically since this also runs via
+# page.evaluate(fetch()) inside the authenticated page.
+PERSONAL_DETAILS_SERVICEPATH = "Crewing/SeafarerDetails/GetPersonalDetails"
+SERVICE_ROUTER_GET_URL = f"{BASE_URL}/CrewingPALApp/api/ServiceRouter/GET"
+
+_GET_FETCH_JS = """async ({url, headers, empId}) => {
+    const qs = `pData=pEmpId%3D${empId}%26showInfo%3Dtrue%26localLang%3DN&_=${Date.now()}`;
+    const res = await fetch(`${url}?${qs}`, { method: 'GET', headers });
+    const text = await res.text();
+    let json = null;
+    try { json = JSON.parse(text); } catch (e) {}
+    return { status: res.status, json, text: text.slice(0, 500) };
+}"""
+
+
+async def fetch_personal_details(page, headers: dict, emp_id) -> dict | None:
+    """Returns the `result` object of GetPersonalDetails for one empId, or
+    None on any failure — a single crew member's contact info failing to
+    load must not abort the whole sync (mirrors the per-record tolerance in
+    upsert_crew_record)."""
+    result = await page.evaluate(
+        _GET_FETCH_JS,
+        {"url": SERVICE_ROUTER_GET_URL, "headers": headers, "empId": emp_id},
+    )
+    status, data = result["status"], result.get("json")
+    if status != 200 or not data or data.get("isError"):
+        return None
+    return data.get("result")
+
+
+def _clean_10_digit_number(raw: str | None) -> str | None:
+    """SmartPAL's phone fields come in a mix of shapes — '91 - 9004330640',
+    '+91 - 8089889268', '7709 915 758', plain '9447143828', even malformed
+    entries like '-972196767' — with no fixed format. Strips to digits only
+    and keeps the last 10 (the actual subscriber number, regardless of a
+    91/+91 country-code prefix). Returns None if fewer than 10 digits are
+    left — not enough to safely call it a real mobile number."""
+    if not raw:
+        return None
+    digits = re.sub(r"\D", "", raw)
+    if len(digits) < 10:
+        return None
+    return digits[-10:]
+
+
+async def enrich_with_contact_details(page, session_info: dict, records: list) -> int:
+    """Mutates each record in place with smartpal_email/6 phone fields plus
+    a resolved `mobile_number`: Permanent Mobile, falling back in order
+    through Local Mobile, Perm Phone 1, Perm Phone 2, Local Phone 1, Local
+    Phone 2 — first candidate that cleans to a valid 10-digit number wins
+    (per instruction; many crew, e.g. Prithvi Kumar, have no mobile fields
+    set but do have a landline-style phone field filled in). The 6 raw
+    fields are stored as-is (for reference); only `mobile_number` is
+    normalized. Returns how many records failed to enrich (logged, not
+    raised)."""
+    headers = build_headers(session_info)
+    headers["servicepath"] = PERSONAL_DETAILS_SERVICEPATH
+    total = len(records)
+    failed = 0
+    for i, rec in enumerate(records):
+        emp_id = rec.get("empId")
+        if emp_id is None:
+            failed += 1
+            continue
+        details = await fetch_personal_details(page, headers, emp_id)
+        if details is None:
+            failed += 1
+            continue
+        permanent_mobile = details.get("permanentMobile") or None
+        local_mobile = details.get("localMobile") or None
+        permanent_phone_1 = details.get("permanentPhone1") or None
+        permanent_phone_2 = details.get("permanentPhone2") or None
+        local_phone_1 = details.get("localPhone1") or None
+        local_phone_2 = details.get("localPhone2") or None
+        rec["smartpal_email"] = details.get("email") or None
+        rec["permanent_phone_1"] = permanent_phone_1
+        rec["permanent_phone_2"] = permanent_phone_2
+        rec["local_phone_1"] = local_phone_1
+        rec["local_phone_2"] = local_phone_2
+        rec["permanent_mobile"] = permanent_mobile
+        rec["local_mobile"] = local_mobile
+        mobile_number = None
+        for candidate in (permanent_mobile, local_mobile, permanent_phone_1,
+                          permanent_phone_2, local_phone_1, local_phone_2):
+            mobile_number = _clean_10_digit_number(candidate)
+            if mobile_number:
+                break
+        rec["mobile_number"] = mobile_number
+        if (i + 1) % 50 == 0 or (i + 1) == total:
+            _log(f"contact details: {i + 1}/{total} "
+                 f"(failed so far: {failed})")
+    return failed
+
+
 async def fetch_crew_page(page, headers: dict, offset: int, page_num: int) -> dict:
     result = await page.evaluate(
         _FETCH_JS,
@@ -241,8 +353,8 @@ async def fetch_crew(page, session_info: dict) -> list:
         if total is not None and len(all_records) >= total:
             break
         if page_num >= MAX_PAGES:
-            print(f"[smartpal_sync] warning: hit MAX_PAGES={MAX_PAGES} — "
-                  f"stopping early with {len(all_records)} of {total} records")
+            _log(f"warning: hit MAX_PAGES={MAX_PAGES} — "
+                 f"stopping early with {len(all_records)} of {total} records")
             break
 
         offset += PAGE_SIZE
@@ -253,19 +365,28 @@ async def fetch_crew(page, session_info: dict) -> list:
 
 async def fetch_crew_with_retry() -> list:
     """Login, fetch; on an auth-shaped failure, log in once more and retry.
-    Browser stays open for the whole fetch (login + every paginated call)
-    and is only closed here, once, when we're completely done."""
+    Browser stays open for the whole fetch (login + every paginated call +
+    the per-crew contact-details enrichment) and is only closed here, once,
+    when we're completely done."""
     async with async_playwright() as pw:
         browser = await pw.chromium.launch(headless=True)
         try:
             page = await (await browser.new_context()).new_page()
             session_info = await _login_and_capture(page)
             try:
-                return await fetch_crew(page, session_info)
+                records = await fetch_crew(page, session_info)
             except PermissionError:
                 page = await (await browser.new_context()).new_page()
                 session_info = await _login_and_capture(page)
-                return await fetch_crew(page, session_info)
+                records = await fetch_crew(page, session_info)
+
+            _log(f"fetching contact details for {len(records)} crew...")
+            failed = await enrich_with_contact_details(page, session_info, records)
+            if failed:
+                _log(f"warning: contact-details fetch failed for "
+                     f"{failed}/{len(records)} crew — their email/phone fields "
+                     f"will be left unset for this run")
+            return records
         finally:
             await browser.close()
 
@@ -314,6 +435,16 @@ def upsert_crew_record(db, rec: dict, now: datetime) -> str:
         birth_place=rec.get("birth_place"),
         smartpal_synced_at=now,
     )
+    # Contact fields come from a separate per-crew GetPersonalDetails call
+    # (enrich_with_contact_details) that can fail independently of the bulk
+    # record — only set them here when that call actually succeeded for this
+    # empId, so a transient failure doesn't blank out a previously-synced
+    # phone/email on an existing row.
+    for key in ("smartpal_email", "permanent_phone_1", "permanent_phone_2",
+                "local_phone_1", "local_phone_2", "permanent_mobile",
+                "local_mobile", "mobile_number"):
+        if key in rec:
+            fields[key] = rec[key]
 
     # Each record gets its own SAVEPOINT. run_sync() only commits once, after
     # the whole loop, so a bare db.rollback() here would discard every crew
@@ -336,13 +467,14 @@ def upsert_crew_record(db, rec: dict, now: datetime) -> str:
                 outcome = "created"
         return outcome
     except IntegrityError as e:
-        print(f"[smartpal_sync] skipped empId={emp_id} empNo={rec.get('empNo')} "
-              f"name={full_name!r}: {e.orig}")
+        _log(f"skipped empId={emp_id} empNo={rec.get('empNo')} "
+             f"name={full_name!r}: {e.orig}")
         return "error"
 
 
 # ======================= run =======================
 async def run_sync():
+    _log("sync run started")
     db = SessionLocal()
     now = datetime.now(timezone.utc)
     log = models.SyncLog(status="failed")   # pessimistic default; upgraded below
@@ -368,10 +500,13 @@ async def run_sync():
         log.status = "partial" if errors else "success"
         if errors:
             log.error_message = f"{errors} record(s) failed to upsert — see server log"
+        _log(f"sync run finished: status={log.status} fetched={len(records)} "
+             f"created={created} updated={updated} errors={errors}")
     except Exception as e:
         db.rollback()
         log.status = "failed"
         log.error_message = str(e)[:2000]
+        _log(f"sync run finished: status=failed error={e}")
     finally:
         log.finished_at = datetime.now(timezone.utc)
         db.commit()

@@ -96,6 +96,7 @@ def send_pending_digest_job():
                 "learner_name": user.full_name,
                 "crew_id": user.crew_id,
                 "rank": user.rank,
+                "mobile_no": user.mobile_number,
                 "course_title": course.title,
                 "score": ap.score,
                 "token": token
@@ -1272,6 +1273,7 @@ def admin_user_view(db, u):
     v = {
         "id": u.id, "role": u.role, "name": u.full_name, "rank": u.rank,
         "crewId": u.crew_id, "email": u.email, "ppNo": u.pp_no,
+        "mobileNo": u.mobile_number,
         "dob": u.date_of_birth.strftime("%d%m%Y") if u.date_of_birth else None,
         "isActive": bool(u.is_active),
     }
@@ -1568,7 +1570,8 @@ def _report(db):
         
         rows.append({
             "learnerId": lr.id, "name": lr.full_name, "crewId": lr.crew_id,
-            "rank": lr.rank, "isActive": bool(lr.is_active), "cells": cells,
+            "rank": lr.rank, "mobileNo": lr.mobile_number,
+            "isActive": bool(lr.is_active), "cells": cells,
         })
     return courses, rows
 
@@ -1692,6 +1695,22 @@ def admin_dashboard_stats(admin: models.User = Depends(require_admin), db: Sessi
     total_attempts = db.query(models.Attempt).count()
     pass_attempts = db.query(models.Attempt).filter_by(passed=True).count()
 
+    # --- last crew-data sync run (cron-driven; see smartpal_sync.py) ---
+    last_sync_log = (db.query(models.SyncLog)
+                      .order_by(models.SyncLog.started_at.desc())
+                      .first())
+    last_sync = None
+    if last_sync_log:
+        last_sync = {
+            "startedAt": last_sync_log.started_at.isoformat() if last_sync_log.started_at else None,
+            "finishedAt": last_sync_log.finished_at.isoformat() if last_sync_log.finished_at else None,
+            "status": last_sync_log.status,
+            "recordsFetched": last_sync_log.records_fetched,
+            "recordsCreated": last_sync_log.records_created,
+            "recordsUpdated": last_sync_log.records_updated,
+            "errorMessage": last_sync_log.error_message,
+        }
+
     return {
         "kpis": {
             "totalCrew": total_crew,
@@ -1709,6 +1728,7 @@ def admin_dashboard_stats(admin: models.User = Depends(require_admin), db: Sessi
         "courseStats": course_stats,
         "enrollmentTrend": enrollment_trend,
         "recentCertificates": recent_cert_list,
+        "lastSync": last_sync,
     }
 
 

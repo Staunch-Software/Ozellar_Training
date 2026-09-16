@@ -5,6 +5,11 @@ import Pagination from '../../components/Pagination.jsx'
 
 const EMPTY = { role: 'learner', fullName: '', crewId: '', dob: '', rank: '', ppNo: '' }
 
+const formatMobile = (mobileNo) => {
+  if (!mobileNo || mobileNo.length !== 10) return mobileNo || null
+  return `${mobileNo.slice(0, 5)} ${mobileNo.slice(5)}`
+}
+
 const getInitials = (name) => {
   if (!name) return '?'
   const parts = name.trim().split(/\s+/)
@@ -225,7 +230,7 @@ export default function AdminUsers() {
             <thead>
               <tr>
                 <th style={{ width: 60 }}>SI No.</th><th>Name</th><th>Role</th><th>Login ID</th><th>Rank</th>
-                <th>Courses</th><th>Status</th><th></th>
+                <th>Mobile No</th><th>Courses</th><th>Status</th><th></th>
               </tr>
             </thead>
             <tbody>
@@ -254,6 +259,7 @@ export default function AdminUsers() {
                 <td><span className={`pill ${u.role}`}>{u.role === 'super_admin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : 'Crew'}</span></td>
                 <td className="mono">{u.role === 'admin' || u.role === 'super_admin' ? u.email : u.crewId}</td>
                 <td>{u.rank ? u.rank.toUpperCase() : '—'}</td>
+                <td className="mono">{formatMobile(u.mobileNo) || '—'}</td>
                 <td>{u.role === 'learner' ? `${u.passedCount}/${u.assignedCount} passed` : '—'}</td>
                 <td>
                   <span 

@@ -38,6 +38,22 @@ class User(Base):
     seamen_book_no = Column(String)
     birth_place = Column(String)
     smartpal_synced_at = Column(DateTime, nullable=True)
+    # Crewing/SeafarerDetails/GetPersonalDetails (per-crew profile call, not
+    # in the bulk QueryActivity response) — email/phones live on the
+    # seafarer's profile page, fetched one empId at a time after the bulk
+    # sync. Named smartpal_email (not `email` above) since `email` is the
+    # admin login credential and is unique-constrained; SmartPAL's crew
+    # email must never collide with or overwrite that.
+    smartpal_email = Column(String)
+    permanent_phone_1 = Column(String)
+    permanent_phone_2 = Column(String)
+    local_phone_1 = Column(String)
+    local_phone_2 = Column(String)
+    permanent_mobile = Column(String)
+    local_mobile = Column(String)
+    # Resolved single "the" mobile number: Permanent Mobile if set, else
+    # Local Mobile (the seafarer's present/current mobile) — per instruction.
+    mobile_number = Column(String)
 
 
 class Course(Base):

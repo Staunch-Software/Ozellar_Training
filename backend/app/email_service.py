@@ -84,6 +84,15 @@ def _send_email(to_email: str, subject: str, html_content: str, attachment=None)
         print(f"[email_service] Error sending email to {to_email}: {e}")
 
 
+def _format_mobile(mobile_no):
+    """Groups a clean 10-digit mobile_number as 'XXXXX XXXXX' for readability;
+    passes through anything else unchanged (e.g. None, or a legacy unformatted
+    value from before the smartpal_sync normalization)."""
+    if mobile_no and len(mobile_no) == 10 and mobile_no.isdigit():
+        return f"{mobile_no[:5]} {mobile_no[5:]}"
+    return mobile_no
+
+
 def send_digest_email(admin_email: str, approvals: list):
     """Sends a digest email with a table of pending approvals and Accept/Reject buttons."""
     if not approvals:
@@ -102,6 +111,7 @@ def send_digest_email(admin_email: str, approvals: list):
             <td style="padding: 8px; border: 1px solid #ddd;">{ap['learner_name']}</td>
             <td style="padding: 8px; border: 1px solid #ddd;">{ap['crew_id']}</td>
             <td style="padding: 8px; border: 1px solid #ddd;">{ap.get('rank') or '—'}</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{_format_mobile(ap.get('mobile_no')) or '—'}</td>
             <td style="padding: 8px; border: 1px solid #ddd;">{ap['course_title']}</td>
             <td style="padding: 8px; border: 1px solid #ddd;">{score_str}</td>
             <td style="padding: 8px; border: 1px solid #ddd; text-align: center;">
@@ -133,6 +143,7 @@ def send_digest_email(admin_email: str, approvals: list):
                     <th>Name</th>
                     <th>Crew ID</th>
                     <th>Rank</th>
+                    <th>Mobile No</th>
                     <th>Course</th>
                     <th>Score</th>
                     <th>Preview</th>
