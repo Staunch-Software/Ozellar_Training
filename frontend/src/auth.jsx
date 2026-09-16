@@ -48,7 +48,7 @@ export function ProtectedRoute({ children }) {
   if (!user) return <Navigate to="/" replace />
   // Test takers must use TestRoute, not ProtectedRoute — bounce them home
   if (user.role === 'test_taker') return <Navigate to={homeFor(user)} replace />
-  if (user.role === 'learner' && !user.hasPhoto && location.pathname !== '/upload-photo') {
+  if (user.role === 'learner' && !user.hasPhoto && location.pathname !== '/upload-photo' && location.pathname !== '/profile') {
     return <Navigate to="/upload-photo" replace />
   }
   return children

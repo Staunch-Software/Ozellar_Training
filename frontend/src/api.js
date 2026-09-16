@@ -45,6 +45,15 @@ export const uploadCrewPhoto = (file) => {
   return uploadReq('/crew/photo', fd)
 }
 
+export const getCrewPhoto = async () => {
+  const t = getToken()
+  const res = await fetch(`${API}/crew/photo?_t=${Date.now()}`, {
+    headers: t ? { Authorization: `Bearer ${t}` } : {}
+  })
+  if (!res.ok) throw new Error('No photo')
+  return URL.createObjectURL(await res.blob())
+}
+
 // courses / progress
 export const getCourses = () => req('/courses')
 export const getCourse = (slug) => req(`/courses/${slug}`)

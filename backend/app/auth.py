@@ -116,6 +116,11 @@ def user_public(u: "models.User") -> dict:
     return {
         "id": u.id, "role": u.role, "name": u.full_name, "rank": u.rank,
         "crewId": u.crew_id, "email": u.email, "ppNo": u.pp_no, "initials": initials,
+        "nationality": u.nationality, "empStatus": u.emp_status, 
+        "currentVessel": u.current_vessel, "seamenBookNo": u.seamen_book_no,
+        "dateOfBirth": u.date_of_birth.isoformat() if u.date_of_birth else None,
+        "signOnDate": u.sign_on_date.isoformat() if u.sign_on_date else None,
+        "reliefDate": u.relief_date.isoformat() if u.relief_date else None,
         "hasPhoto": os.path.exists(photo_path),
         "isVesselApprover": approver_info is not None,
         "approverVessel": approver_info["vessel"] if approver_info else None,

@@ -1023,6 +1023,17 @@ def reject_assessment(token: str, db: Session = Depends(get_db)):
         True
     )
 
+@app.get("/api/crew/photo")
+def get_crew_photo(user: models.User = Depends(get_current_user)):
+    if user.role != "learner":
+        raise HTTPException(403, "Only crew members have photos")
+    photo_path = os.path.join(UPLOAD_DIR, "photos", f"{user.id}.jpg")
+    if not os.path.exists(photo_path):
+        raise HTTPException(404, "No photo on record")
+    with open(photo_path, "rb") as fh:
+        return Response(fh.read(), media_type="image/jpeg",
+                        headers={"Cache-Control": "private, max-age=300"})
+
 @app.post("/api/crew/photo")
 async def upload_crew_photo(file: UploadFile = File(...), user: models.User = Depends(get_current_user)):
     from PIL import Image

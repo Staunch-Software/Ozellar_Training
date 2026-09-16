@@ -11,6 +11,7 @@ import Certificates from './pages/Certificates.jsx'
 import Help from './pages/Help.jsx'
 import Verify from './pages/Verify.jsx'
 import UploadPhoto from './pages/UploadPhoto.jsx'
+import Profile from './pages/Profile.jsx'
 import AdminLayout from './pages/admin/AdminLayout.jsx'
 import AdminDashboard from './pages/admin/AdminDashboard.jsx'
 import AdminUsers from './pages/admin/AdminUsers.jsx'
@@ -92,7 +93,9 @@ export function TopNav({ searchQuery, onSearch }) {
         <button className="iconbtn" aria-label="Sign out" title={`Sign out — ${user?.name || ''}`} onClick={signOut}>
           <LogOut size={18} />
         </button>
-        <div className="av" title={`${user?.name || ''}${user?.rank ? ' · ' + user.rank : ''}`}>{user?.initials || '?'}</div>
+        <Link to="/profile" className="av" title={`Profile — ${user?.name || ''}${user?.rank ? ' · ' + user.rank : ''}`} style={{ textDecoration: 'none' }}>
+          {user?.initials || '?'}
+        </Link>
       </div>
     </nav>
   )
@@ -122,6 +125,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Login />} />
         <Route path="/verify/:id" element={<Verify />} />
+        <Route path="/profile" element={P(<Profile />)} />
         <Route path="/upload-photo" element={P(<UploadPhoto />)} />
         <Route path="/my-courses" element={P(<MyCourses />)} />
         <Route path="/orientation" element={<OrientationRoute><Orientation /></OrientationRoute>} />
