@@ -662,7 +662,13 @@ def issue_certificate(db, user, course):
     db.flush() # flush to get seq_record.id
     
     seq = seq_record.id
-    cid = f"OZ-{_course_code(course.slug)}-{year}-{seq:04d}"
+    
+    c = course.cert or {}
+    course_code = c.get("certPrefix")
+    if not course_code:
+        course_code = _course_code(course.slug)
+        
+    cid = f"OZ-{course_code}-{year}-{seq:04d}"
     cert = models.Certificate(id=cid, learner_id=lid, course_id=course.id,
                               score=get_progress(db, lid, course.id).score)
     db.add(cert)
@@ -2299,6 +2305,7 @@ def admin_get_course_builder(course_id: str, admin: models.User = Depends(requir
 class SaveCertificateRequest(BaseModel):
     titleUpper: str | None = None
     topics: list[str] = []
+    certPrefix: str | None = None
 
 
 @app.put("/api/admin/courses/{course_id}/certificate")
@@ -2311,7 +2318,8 @@ def admin_save_course_certificate(course_id: str, req: SaveCertificateRequest,
         raise HTTPException(404, "Course not found")
     topics = [t.strip() for t in req.topics if t and t.strip()]
     title_upper = (req.titleUpper or "").strip() or None
-    course.cert = {"titleUpper": title_upper, "topics": topics}
+    cert_prefix = (req.certPrefix or "").strip() or None
+    course.cert = {"titleUpper": title_upper, "topics": topics, "certPrefix": cert_prefix}
     db.commit()
     return course.cert
 
@@ -2321,6 +2329,7 @@ def admin_preview_course_certificate(
     course_id: str, request: Request,
     token: Optional[str] = None,
     titleUpper: Optional[str] = None,
+    certPrefix: Optional[str] = None,
     topics: list[str] = Query([]),
     db: Session = Depends(get_db),
 ):
@@ -2365,8 +2374,16 @@ def admin_preview_course_certificate(
         pp_no = "PP-0000000"
         id = "preview"
 
+    preview_code = (certPrefix or "").strip()
+    if not preview_code:
+        preview_code = (course.cert or {}).get("certPrefix")
+    if not preview_code:
+        preview_code = _course_code(course.slug)
+
+    year = datetime.now(timezone.utc).year
+
     data = {
-        "id": "PREVIEW",
+        "id": f"OZ-{preview_code}-{year}-0001",
         "learner": MockUser.full_name,
         "ppNo": MockUser.pp_no,
         "titleUpper": (titleUpper or "").strip() or (course.cert or {}).get("titleUpper") or course.title.upper(),

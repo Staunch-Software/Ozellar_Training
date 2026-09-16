@@ -19,12 +19,20 @@ function suggestedTopics(chapters) {
     })
 }
 
+function defaultCertPrefix(title) {
+  if (!title) return ''
+  const words = title.trim().split(/[\s-]+/)
+  if (words.length < 2) return title.trim().substring(0, 3).toUpperCase()
+  return words.map(w => w[0]).join('').toUpperCase()
+}
+
 export default function AdminCourseCertificate() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [course, setCourse] = useState(null)
   const [titleUpper, setTitleUpper] = useState('')
   const [topics, setTopics] = useState([])
+  const [certPrefix, setCertPrefix] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [savedFlash, setSavedFlash] = useState(false)
@@ -37,6 +45,7 @@ export default function AdminCourseCertificate() {
       const cert = c.cert || {}
       setTitleUpper(cert.titleUpper || c.title.toUpperCase())
       setTopics(cert.topics && cert.topics.length ? cert.topics : suggestedTopics(c.chapters))
+      setCertPrefix(cert.certPrefix || defaultCertPrefix(c.title))
     })
   }, [id])
 
@@ -45,14 +54,14 @@ export default function AdminCourseCertificate() {
     setPreviewLoading(true)
     const t = setTimeout(() => setPreviewNonce(n => n + 1), 500)
     return () => clearTimeout(t)
-  }, [titleUpper, topics])
+  }, [titleUpper, topics, certPrefix])
 
   const previewUrl = useMemo(() => {
     if (!course) return null
-    return adminCourseCertificatePreviewUrl(id, { titleUpper, topics: topics.filter(t => t.trim()) })
+    return adminCourseCertificatePreviewUrl(id, { titleUpper, topics: topics.filter(t => t.trim()), certPrefix: certPrefix.trim() })
       + `&_=${previewNonce}`
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [course, id, previewNonce])
+  }, [course, id, previewNonce, titleUpper, topics, certPrefix])
 
   const setTopic = (i, v) => setTopics(ts => ts.map((t, idx) => idx === i ? v : t))
   const removeTopic = (i) => setTopics(ts => ts.filter((_, idx) => idx !== i))
@@ -99,6 +108,7 @@ export default function AdminCourseCertificate() {
       await adminSaveCourseCertificate(id, {
         titleUpper: titleUpper.trim(),
         topics: topics.map(t => t.trim()).filter(Boolean),
+        certPrefix: certPrefix.trim(),
       })
       if (andContinue) {
         navigate(`/admin/courses/${id}`)
@@ -166,15 +176,20 @@ export default function AdminCourseCertificate() {
       <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start', flexWrap: 'wrap' }}>
         {/* Editor */}
         <div className="admin-card" style={{ flex: '1 1 380px', minWidth: 320 }}>
-          <label className="admin-field" style={{ marginBottom: 20 }}>
-            <span>Certificate title</span>
-            <input
-              value={titleUpper}
-              onChange={e => setTitleUpper(e.target.value.toUpperCase())}
-              placeholder="e.g. CARGO OPERATIONS TRAINING"
-              style={{ fontWeight: 700, letterSpacing: '0.01em' }}
-            />
-          </label>
+          <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
+            <label className="admin-field" style={{ flex: 1 }}>
+              <span>Course Code (Cert No.)</span>
+              <input
+                value={certPrefix}
+                onChange={e => setCertPrefix(e.target.value.toUpperCase())}
+                placeholder="e.g. MH"
+                style={{ fontWeight: 700, letterSpacing: '0.01em', maxWidth: 300 }}
+              />
+              <span className="mut" style={{ fontSize: 11, marginTop: 4, display: 'block' }}>
+                e.g. OZ-<strong>{certPrefix || 'MH'}</strong>-{(new Date()).getFullYear()}-0001
+              </span>
+            </label>
+          </div>
 
           <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
             This course covered the following topics
