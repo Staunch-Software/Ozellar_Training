@@ -479,6 +479,45 @@ def get_course(slug: str, user: models.User = Depends(get_current_user), db: Ses
     return serialize_course(db, c, get_progress(db, user.id, c.id), detail=True)
 
 
+def _maybe_auto_complete_course(db, course, progress, learner_id):
+    """Courses with no final assessment pass automatically once every chapter
+    is done. This also has to run when a chapter is *deleted* out from under
+    a learner who had already finished everything else — otherwise their
+    progress bar reads 100% but nothing ever queues the certificate for
+    admin approval. Returns True if this call just flipped them to passed.
+    """
+    if course.questions or progress.passed:
+        return False
+    all_chapter_ids = {ch.id for ch in course.chapters}
+    done = set(progress.completed_chapters or [])
+    if not all_chapter_ids or not (done >= all_chapter_ids):
+        return False
+    progress.passed = True
+    db.flush()  # ensure progress.id is available
+
+    # Queue for admin approval (same flow as a passed assessment)
+    from .auth import SECRET_KEY, ALGORITHM
+    ap = models.AssessmentApproval(
+        learner_id=learner_id, course_id=course.id,
+        score=None, attempt_id=None,
+    )
+    db.add(ap)
+    db.flush()  # get ap.id
+    token_payload = {
+        "sub": f"approve:{ap.id}",
+        "type": "approval",
+        "exp": datetime.now(timezone.utc) + timedelta(days=7),
+    }
+    ap.approval_token = jwt.encode(token_payload, SECRET_KEY, algorithm=ALGORITHM)
+
+    notify(
+        db, learner_id, "passed", "Course completed",
+        f"You have completed all lessons in {course.title}. Your certificate is pending admin approval.",
+        f"/my-courses",
+    )
+    return True
+
+
 @app.post("/api/courses/{course_id}/chapters/{chapter_id}/complete")
 def complete_chapter(course_id: str, chapter_id: str,
                      user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -496,37 +535,7 @@ def complete_chapter(course_id: str, chapter_id: str,
         done.append(chapter_id)
     p.completed_chapters = done
 
-    # Auto-complete courses that have no final assessment once all chapters are done
-    auto_completed = False
-    if not course.questions:  # no assessment questions
-        all_chapter_ids = {ch.id for ch in course.chapters}
-        if all_chapter_ids and set(done) >= all_chapter_ids and not p.passed:
-            p.passed = True
-            db.flush()  # ensure p.id is available
-
-            # Queue for admin approval (same flow as a passed assessment)
-            from .auth import SECRET_KEY, ALGORITHM
-            from datetime import timedelta
-            ap = models.AssessmentApproval(
-                learner_id=user.id, course_id=course.id,
-                score=None, attempt_id=None,
-            )
-            db.add(ap)
-            db.flush()  # get ap.id
-            token_payload = {
-                "sub": f"approve:{ap.id}",
-                "type": "approval",
-                "exp": datetime.now(timezone.utc) + timedelta(days=7),
-            }
-            ap.approval_token = jwt.encode(token_payload, SECRET_KEY, algorithm=ALGORITHM)
-
-            # Notify the crew member
-            notify(
-                db, user.id, "passed", "Course completed",
-                f"You have completed all lessons in {course.title}. Your certificate is pending admin approval.",
-                f"/my-courses",
-            )
-            auto_completed = True
+    auto_completed = _maybe_auto_complete_course(db, course, p, lid)
 
     db.commit()
     return {"ok": True, "completed": done, "autoCompleted": auto_completed}
@@ -1530,8 +1539,12 @@ def _report(db):
         ap_map[(a.learner_id, a.course_id)] = a
     a_map = {(l, c): count for l, c, count in attempts_counts}
     
-    # Pre-compute total chapter count per course (avoids N+1 queries)
-    course_chapter_counts = {c.id: len(c.chapters) for c in courses}
+    # Pre-compute chapter ids per course (avoids N+1 queries). Progress rows
+    # keep every chapter id a learner ever completed, including ones an admin
+    # has since deleted — count only ids that still exist, and cap at the
+    # course's current chapter count, so a stale id can't read as e.g. "50/49".
+    course_chapter_ids = {c.id: {ch.id for ch in c.chapters} for c in courses}
+    course_chapter_counts = {cid: len(ids) for cid, ids in course_chapter_ids.items()}
     
     rows = []
     for lr in learners:
@@ -1552,7 +1565,8 @@ def _report(db):
                 status = "assigned"
             
             total_chs = course_chapter_counts.get(c.id, 0)
-            done_chs  = len(prog.completed_chapters or []) if prog else 0
+            valid_ids = course_chapter_ids.get(c.id, set())
+            done_chs  = len(valid_ids & set(prog.completed_chapters or [])) if prog else 0
             pct       = round(done_chs / total_chs * 100) if total_chs else 0
             
             if cert and cert.issued_at:
@@ -1587,6 +1601,27 @@ def _report(db):
 def admin_report(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
     courses, rows = _report(db)
     return {"courses": [{"id": c.id, "title": c.title} for c in courses], "rows": rows}
+
+
+@app.post("/api/admin/maintenance/reconcile-progress")
+def admin_reconcile_progress(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    """One-off heal for learners stuck from *past* chapter deletions (new
+    deletions self-heal via admin_delete_chapter). Re-runs the no-assessment
+    auto-complete check for every course/progress pair so anyone who'd
+    already finished everything that still exists on the course gets moved
+    to passed and queued for certificate approval."""
+    healed = []
+    for course in db.query(models.Course).all():
+        for p in db.query(models.Progress).filter_by(course_id=course.id).all():
+            if _maybe_auto_complete_course(db, course, p, p.learner_id):
+                learner = db.get(models.User, p.learner_id)
+                healed.append({
+                    "courseId": course.id, "courseTitle": course.title,
+                    "learnerId": p.learner_id,
+                    "learnerName": learner.full_name if learner else None,
+                })
+    db.commit()
+    return {"healedCount": len(healed), "healed": healed}
 
 
 @app.get("/api/admin/dashboard-stats")
@@ -1999,7 +2034,8 @@ def crew_my_report_xlsx(status: Optional[str] = None, user: models.User = Depend
         cert = (db.query(models.Certificate)
                 .filter_by(learner_id=user.id, course_id=c.id).first())
 
-        done_count  = len(prog.completed_chapters or []) if prog else 0
+        valid_ids   = {ch.id for ch in c.chapters}
+        done_count  = len(valid_ids & set(prog.completed_chapters or [])) if prog else 0
         total_ch    = len(c.chapters)
         pct         = round(done_count / total_ch * 100) if total_ch else 0
         score       = prog.score if prog else None
@@ -3067,6 +3103,14 @@ def admin_delete_chapter(course_id: str, chapter_id: str,
         for i, r in enumerate(remaining):
             r.order = i
             r.n = i + 1
+
+        # Heal anyone whose progress now covers 100% of what's left (e.g. they
+        # had finished every chapter except this deleted one) — without this
+        # their progress bar would read 100% but no certificate approval was
+        # ever queued, since that only used to fire on the completion click.
+        db.flush()
+        for p in db.query(models.Progress).filter_by(course_id=course_id).all():
+            _maybe_auto_complete_course(db, course, p, p.learner_id)
     db.commit()
     for p in files_to_remove:
         storage.delete(course_id, os.path.basename(p))
