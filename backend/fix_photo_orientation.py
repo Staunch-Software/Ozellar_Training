@@ -1,6 +1,7 @@
 """One-off maintenance: re-process every already-stored crew photo in
 uploads/photos with the same rules POST /api/crew/photo now enforces
-(EXIF-rotate upright, must end up portrait, must show one clear face).
+(EXIF-rotate upright, must not be landscape/sideways, must show one
+clear face).
 
 Photos uploaded before that validation existed may be sideways (EXIF
 rotation never applied) or otherwise invalid. This script:
@@ -50,10 +51,10 @@ def main():
 
         try:
             width, height = rotated.size
-            if width < 200 or height < 260:
+            if width < 200 or height < 200:
                 raise HTTPException(400, "too small")
-            if width >= height:
-                raise HTTPException(400, "landscape/square after rotation")
+            if width > height:
+                raise HTTPException(400, "landscape/rotated sideways")
             _assert_clear_passport_face(rotated)
         except HTTPException as e:
             invalid.append((label, path, e.detail))
