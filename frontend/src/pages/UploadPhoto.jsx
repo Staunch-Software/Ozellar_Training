@@ -38,9 +38,27 @@ export default function UploadPhoto() {
       setError('File is too large (max 5MB)')
       return
     }
-    setFile(f)
-    setPreview(URL.createObjectURL(f))
-    setError('')
+
+    // Reject only clearly sideways (landscape) photos — square and
+    // portrait are both fine, so a caught-upright ID-style photo isn't
+    // rejected just for not being taller than it is wide.
+    const url = URL.createObjectURL(f)
+    const img = new Image()
+    img.onload = () => {
+      if (img.width > img.height) {
+        setError('Please upload an upright passport-size photo (not landscape/rotated sideways)')
+        URL.revokeObjectURL(url)
+        return
+      }
+      setFile(f)
+      setPreview(url)
+      setError('')
+    }
+    img.onerror = () => {
+      setError('Please select a valid image file')
+      URL.revokeObjectURL(url)
+    }
+    img.src = url
   }
 
   return (

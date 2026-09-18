@@ -1051,31 +1051,97 @@ def get_crew_photo(user: models.User = Depends(get_current_user)):
         return Response(fh.read(), media_type="image/jpeg",
                         headers={"Cache-Control": "private, max-age=300"})
 
+_FACE_CASCADE = None
+
+def _get_face_cascade():
+    """Lazily load (and cache) the Haar cascade used to check that an
+    uploaded passport photo actually shows a clear face."""
+    global _FACE_CASCADE
+    if _FACE_CASCADE is None:
+        import cv2
+        _FACE_CASCADE = cv2.CascadeClassifier(
+            cv2.data.haarcascades + "haarcascade_frontalface_default.xml"
+        )
+    return _FACE_CASCADE
+
+
+def _assert_clear_passport_face(image):
+    """Reject photos that don't show exactly one clear, reasonably large face."""
+    import cv2
+    import numpy as np
+
+    width, height = image.size
+    gray = cv2.cvtColor(np.array(image.convert("RGB")), cv2.COLOR_RGB2GRAY)
+    faces = _get_face_cascade().detectMultiScale(
+        gray,
+        scaleFactor=1.1,
+        minNeighbors=6,
+        minSize=(int(width * 0.15), int(height * 0.15)),
+    )
+    if len(faces) == 0:
+        raise HTTPException(
+            400,
+            "No clear face detected — please reupload a passport-size photo showing your face clearly, facing the camera"
+        )
+    if len(faces) > 1:
+        raise HTTPException(
+            400,
+            "More than one face detected — please reupload a passport-size photo of yourself alone"
+        )
+
+    _, _, fw, fh = faces[0]
+    if (fw * fh) / (width * height) < 0.06:
+        raise HTTPException(
+            400,
+            "Your face is too small/unclear in this photo — please reupload a closer passport-size photo showing your face clearly"
+        )
+
+
 @app.post("/api/crew/photo")
 async def upload_crew_photo(file: UploadFile = File(...), user: models.User = Depends(get_current_user)):
-    from PIL import Image
+    from PIL import Image, ImageOps
     if user.role != "learner":
         raise HTTPException(403, "Only crew members can upload photos")
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(400, "File must be an image")
-    
+
     content = await file.read()
-    
+
     try:
         image = Image.open(io.BytesIO(content))
         image.verify() # verify it's an image
     except Exception:
         raise HTTPException(400, "Invalid image file")
-    
+
     # Need to reopen because verify() moves the file pointer
     image = Image.open(io.BytesIO(content))
-    
+
+    # Bake in the camera's EXIF rotation so the saved file is always the
+    # way-up the photo actually looked (phones often store sideways pixel
+    # data plus an orientation tag).
+    image = ImageOps.exif_transpose(image)
+
+    width, height = image.size
+    if width < 200 or height < 200:
+        raise HTTPException(400, "Photo is too small — please upload a clearer, higher-resolution photo")
+
+    # Reject only clearly-sideways (landscape) uploads. Square and
+    # portrait photos are both fine — what matters is the face being
+    # upright, not a strict taller-than-wide aspect ratio.
+    if width > height:
+        raise HTTPException(
+            400,
+            "Please upload an upright passport-size photo (not landscape/rotated sideways)"
+        )
+
+    _assert_clear_passport_face(image)
+
     photos_dir = os.path.join(UPLOAD_DIR, "photos")
     os.makedirs(photos_dir, exist_ok=True)
-    
+
     file_path = os.path.join(photos_dir, f"{user.id}.jpg")
     image.convert("RGB").save(file_path, format="JPEG", quality=85)
-        
+
     return {"status": "success"}
 
 
@@ -1283,6 +1349,10 @@ class UpdateUserRequest(BaseModel):
 
 class AssignRequest(BaseModel):
     courseId: str
+
+
+class BulkAssignRequest(BaseModel):
+    courseIds: list[str]
 
 
 def admin_user_view(db, u):
@@ -1514,6 +1584,46 @@ def admin_unassign(user_id: str, course_id: str,
     db.query(models.Enrollment).filter_by(learner_id=user_id, course_id=course_id).delete()
     db.commit()
     return {"ok": True}
+
+
+@app.put("/api/admin/users/{user_id}/enrollments")
+def admin_bulk_set_enrollments(user_id: str, req: BulkAssignRequest,
+                               admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    """Set a learner's full course assignment list in one call — the "Manage
+    courses" picker sends the exact set it wants assigned, and this diffs it
+    against current enrollments instead of the admin clicking course-by-course
+    (unworkable once a fleet has 50-100 courses)."""
+    user = db.get(models.User, user_id)
+    if not user or user.role != "learner":
+        raise HTTPException(404, "Learner not found")
+
+    valid_course_ids = {c.id for c in db.query(models.Course.id).all()}
+    wanted = set(req.courseIds) & valid_course_ids
+    current = {e.course_id for e in
+               db.query(models.Enrollment).filter_by(learner_id=user_id).all()}
+
+    to_add = wanted - current
+    to_remove = current - wanted
+
+    if to_remove:
+        (db.query(models.Enrollment)
+           .filter(models.Enrollment.learner_id == user_id,
+                   models.Enrollment.course_id.in_(to_remove))
+           .delete(synchronize_session=False))
+
+    if to_add:
+        courses_by_id = {c.id: c for c in
+                         db.query(models.Course).filter(models.Course.id.in_(to_add)).all()}
+        for cid in to_add:
+            db.add(models.Enrollment(learner_id=user_id, course_id=cid, assigned_by=admin.id))
+            course = courses_by_id.get(cid)
+            if course:
+                notify(db, user_id, "assigned", "New course assigned",
+                       f"{course.title} has been assigned to you.",
+                       f"/course/{course.slug}")
+
+    db.commit()
+    return {"ok": True, "added": len(to_add), "removed": len(to_remove)}
 
 
 # ----- compliance reporting -----
