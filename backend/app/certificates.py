@@ -41,7 +41,12 @@ def _y(top):
 
 def _blank(c, x, top, label, value, blank_w, label_size=11, value_size=11,
            bold_label=False):
-    """Draw 'label  ____value____' and return the x where the blank ends."""
+    """Draw 'label  ____value____' and return the x where the blank ends.
+
+    The value's font auto-shrinks (down to a 7pt floor) to stay inside the
+    blank, and is ellipsized as a last resort, so a long name/ID never
+    spills back over the label text to its left.
+    """
     y = _y(top)
     c.setFillColor(INK)
     c.setFont("Helvetica-Bold" if bold_label else "Helvetica", label_size)
@@ -52,8 +57,20 @@ def _blank(c, x, top, label, value, blank_w, label_size=11, value_size=11,
     c.setStrokeColor(INK)
     c.setLineWidth(0.6)
     c.line(x, y - 2, bx1, y - 2)
-    c.setFont("Helvetica", value_size)
-    c.drawCentredString((x + bx1) / 2, y + 1.5, value or "")
+
+    text = value or ""
+    pad = 2  # small inset so the value never touches the blank's end ticks
+    fit_w = max(blank_w - 2 * pad, 4)
+    size = value_size
+    while size > 7 and c.stringWidth(text, "Helvetica", size) > fit_w:
+        size -= 0.5
+    if c.stringWidth(text, "Helvetica", size) > fit_w:
+        while text and c.stringWidth(text + "…", "Helvetica", size) > fit_w:
+            text = text[:-1].rstrip()
+        text = (text + "…") if text else ""
+
+    c.setFont("Helvetica", size)
+    c.drawCentredString((x + bx1) / 2, y + 1.5, text)
     return bx1
 
 
@@ -88,7 +105,7 @@ def build_certificate_pdf(data: dict) -> bytes:
     try:
         logo = ImageReader(_LOGO)
         lw, lh = logo.getSize()
-        disp_w = 42 * mm
+        disp_w = 32 * mm
         disp_h = disp_w * lh / lw
         c.drawImage(logo, RIGHT - disp_w, _y(30 * mm + disp_h), disp_w, disp_h,
                     mask="auto", preserveAspectRatio=True)
@@ -118,7 +135,7 @@ def build_certificate_pdf(data: dict) -> bytes:
     # ── certifying lines — left aligned, fill-in-the-blank ───────────────────
     learner_label = "This is to certify that"
     learner_label_w = c.stringWidth(learner_label + " ", "Helvetica", 11)
-    learner_blank_w = min(62 * mm, RIGHT - LEFT - learner_label_w - 4 * mm)
+    learner_blank_w = min(100 * mm, RIGHT - LEFT - learner_label_w - 4 * mm)
     end = _blank(c, LEFT, 62 * mm, learner_label, data["learner"] or "",
                  learner_blank_w, value_size=11)
 
@@ -135,18 +152,23 @@ def build_certificate_pdf(data: dict) -> bytes:
                  completed_text if c.stringWidth(completed_text, "Helvetica", 11) <= avail_w
                  else "has successfully")
 
-    # ── course title — centred, bold, auto-wrap ───────────────────────────────
+    # ── course title — centred, bold, auto-wrap, auto-shrink ─────────────────
+    # Longer titles get a smaller font (down to an 8pt floor) so they stay
+    # within a predictable 2-line box instead of pushing everything below
+    # (conducted-on / topics / photo) further down the page.
     c.setFillColor(INK)
     title_max_w = RIGHT - LEFT
-    title_font_size = 16
+    TITLE_MAX_LINES = 2
+    title_font_size = 8
     title_lines = _wrap(c, data["titleUpper"], "Helvetica-Bold", title_font_size, title_max_w)
-    if len(title_lines) == 1 and c.stringWidth(title_lines[0], "Helvetica-Bold", title_font_size) > title_max_w:
-        for fs in range(15, 9, -1):
-            if c.stringWidth(title_lines[0], "Helvetica-Bold", fs) <= title_max_w:
-                title_font_size = fs
-                break
+    for fs in range(16, 7, -1):
+        lines = _wrap(c, data["titleUpper"], "Helvetica-Bold", fs, title_max_w)
+        if len(lines) <= TITLE_MAX_LINES:
+            title_font_size = fs
+            title_lines = lines
+            break
     c.setFont("Helvetica-Bold", title_font_size)
-    title_line_h = 6 * mm
+    title_line_h = title_font_size * 0.4 * mm + 1.5 * mm
     title_top = 84 * mm
     for tl in title_lines:
         c.drawCentredString(cx, _y(title_top), tl)
@@ -172,12 +194,26 @@ def build_certificate_pdf(data: dict) -> bytes:
     c.drawCentredString(x + bw2 / 2, _y(y) + 1.5, data.get("location") or "")
 
     # ── topics — full-width, max 8, auto-shrink font ──────────────────────────
-    # Available vertical space: from heading to just above photo (196mm)
-    TOPIC_TOP    = y + 4 * mm          # heading y
+    # Available vertical space: from heading to just above photo (196mm).
+    # A minimum floor keeps this sane even if the title above ran long.
+    TOPIC_TOP    = y + 9 * mm          # heading y — clear of the "Conducted on" underline
     TOPIC_BOTTOM = 192 * mm            # bottom limit (photo frame at 196mm)
-    TOPIC_AVAIL  = TOPIC_BOTTOM - TOPIC_TOP - 9 * mm  # subtract heading row
+    TOPIC_AVAIL  = max(TOPIC_BOTTOM - TOPIC_TOP - 9 * mm, 30 * mm)  # subtract heading row
 
     topics = (data.get("topics") or [])[:8]  # hard cap at 8
+    TOPIC_MAX_LINES = 2  # per-topic cap so one long sentence can't blow the layout
+
+    def _topic_lines(text, size, max_w):
+        """Wrap one topic and clip it to TOPIC_MAX_LINES with an ellipsis."""
+        lines = _wrap(c, text, "Helvetica", size, max_w)
+        if len(lines) <= TOPIC_MAX_LINES:
+            return lines
+        lines = lines[:TOPIC_MAX_LINES]
+        last = lines[-1]
+        while last and c.stringWidth(last + "…", "Helvetica", size) > max_w:
+            last = last[:-1].rstrip()
+        lines[-1] = (last or lines[-1]) + "…"
+        return lines
 
     if topics:
         c.setFont("Helvetica-Bold", 11)
@@ -188,25 +224,37 @@ def build_certificate_pdf(data: dict) -> bytes:
         TEXT_OFF   = 9 * mm
         TEXT_W     = RIGHT - LEFT - TEXT_OFF  # full width for text
 
-        # Auto-select font size so all topics fit: try 10 → 9 → 8 → 7
-        chosen_size = 10
-        for try_size in [10, 9, 8, 7]:
+        # Auto-select font size so all topics fit: try 10 → 9 → ... down to a
+        # 6.5pt floor. Each step is checked against the real (capped) line
+        # count, so the loop always converges instead of overflowing silently.
+        chosen_size = 6.5
+        chosen_gap = 1.2 * mm
+        for try_size in [10, 9, 8, 7, 6.5]:
             line_h = try_size * 0.6 * mm + 3.5 * mm   # empirical: ~pt * 0.6mm + gap
             gap_h  = 1.2 * mm
             total_h = sum(
-                len(_wrap(c, t, "Helvetica", try_size, TEXT_W)) * line_h + gap_h
+                len(_topic_lines(t, try_size, TEXT_W)) * line_h + gap_h
                 for t in topics
             )
             if total_h <= TOPIC_AVAIL:
                 chosen_size = try_size
+                chosen_gap = gap_h
                 break
+        else:
+            # Even the smallest font overflows (pathological input) — keep the
+            # floor size but compress the gap between topics so it still fits
+            # as closely as possible instead of running off the page.
+            line_h = chosen_size * 0.6 * mm + 3.5 * mm
+            lines_total = sum(len(_topic_lines(t, chosen_size, TEXT_W)) for t in topics)
+            leftover = TOPIC_AVAIL - lines_total * line_h
+            chosen_gap = max(min(1.2 * mm, leftover / max(len(topics), 1)), 0.4 * mm)
 
         line_h = chosen_size * 0.6 * mm + 3.5 * mm
-        gap_h  = 1.2 * mm
+        gap_h  = chosen_gap
         ty = TOPIC_TOP + 9 * mm
 
         for t in topics:
-            t_lines = _wrap(c, t, "Helvetica", chosen_size, TEXT_W)
+            t_lines = _topic_lines(t, chosen_size, TEXT_W)
             c.setFillColor(ORANGE)
             c.setFont("Helvetica-Bold", chosen_size)
             c.drawString(LEFT + BULLET_OFF, _y(ty), "•")
@@ -257,17 +305,18 @@ def build_certificate_pdf(data: dict) -> bytes:
     qr = _qr_reader(data.get("verifyUrl"))
     if qr:
         qr_size = 15 * mm
-        qr_top = 237 * mm
+        qr_top = 233 * mm
         c.drawImage(qr, RIGHT - qr_size, _y(qr_top + qr_size), qr_size, qr_size)
         c.setFont("Helvetica", 6)
         c.setFillColor(GREY)
-        c.drawCentredString(RIGHT - qr_size / 2, _y(qr_top + qr_size + 3 * mm), "Scan to verify")
+        c.drawCentredString(RIGHT - qr_size / 2, _y(qr_top + qr_size + 2.5 * mm), "Scan to verify")
 
     # ── date of issue (left) + rev no (right) ─────────────────────────────────
+    # Rev No sits clear below the QR + its caption so the two never touch.
     _blank(c, LEFT, 246 * mm, "Date of Issue:", data["issued"], 34 * mm, value_size=10)
     c.setFont("Helvetica", 8)
     c.setFillColor(GREY)
-    c.drawRightString(RIGHT, _y(252 * mm), "Rev No 001/2026/10-03-2026")
+    c.drawRightString(RIGHT, _y(256 * mm), "Rev No 001/2026/10-03-2026")
 
     # ── verification footer — cert no + verify URL ────────────────────────────
     footer_text = f"Certificate No {data['id']}  ·  Verify at {data['verifyUrl']}"
@@ -276,7 +325,7 @@ def build_certificate_pdf(data: dict) -> bytes:
     max_footer_w = RIGHT - LEFT
     while c.stringWidth(footer_text, "Helvetica", 7.5) > max_footer_w and len(footer_text) > 10:
         footer_text = footer_text[:-4] + "…"
-    c.drawCentredString(cx, _y(258 * mm), footer_text)
+    c.drawCentredString(cx, _y(261 * mm), footer_text)
 
     # ── self-paced duration line — bold, centred, very bottom ────────────────
     duration_hrs = data.get("durationHours") or 4
