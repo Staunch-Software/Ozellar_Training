@@ -33,6 +33,7 @@ export default function AdminCourseCertificate() {
   const [titleUpper, setTitleUpper] = useState('')
   const [topics, setTopics] = useState([])
   const [certPrefix, setCertPrefix] = useState('')
+  const [durationHours, setDurationHours] = useState(4)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const [savedFlash, setSavedFlash] = useState(false)
@@ -46,6 +47,7 @@ export default function AdminCourseCertificate() {
       setTitleUpper(cert.titleUpper || c.title.toUpperCase())
       setTopics(cert.topics && cert.topics.length ? cert.topics : suggestedTopics(c.chapters))
       setCertPrefix(cert.certPrefix || defaultCertPrefix(c.title))
+      setDurationHours(cert.durationHours || 4)
     })
   }, [id])
 
@@ -54,18 +56,18 @@ export default function AdminCourseCertificate() {
     setPreviewLoading(true)
     const t = setTimeout(() => setPreviewNonce(n => n + 1), 500)
     return () => clearTimeout(t)
-  }, [titleUpper, topics, certPrefix])
+  }, [titleUpper, topics, certPrefix, durationHours])
 
   const previewUrl = useMemo(() => {
     if (!course) return null
-    return adminCourseCertificatePreviewUrl(id, { titleUpper, topics: topics.filter(t => t.trim()), certPrefix: certPrefix.trim() })
+    return adminCourseCertificatePreviewUrl(id, { titleUpper, topics: topics.filter(t => t.trim()), certPrefix: certPrefix.trim(), durationHours })
       + `&_=${previewNonce}`
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [course, id, previewNonce, titleUpper, topics, certPrefix])
+  }, [course, id, previewNonce, titleUpper, topics, certPrefix, durationHours])
 
   const setTopic = (i, v) => setTopics(ts => ts.map((t, idx) => idx === i ? v : t))
   const removeTopic = (i) => setTopics(ts => ts.filter((_, idx) => idx !== i))
-  const addTopic = () => setTopics(ts => [...ts, ''])
+  const addTopic = () => { if (topics.length < 8) setTopics(ts => [...ts, '']) }
 
   // Drag-to-reorder — only armed while the grip handle is held down, so
   // dragging text inside the input itself still works normally.
@@ -109,6 +111,7 @@ export default function AdminCourseCertificate() {
         titleUpper: titleUpper.trim(),
         topics: topics.map(t => t.trim()).filter(Boolean),
         certPrefix: certPrefix.trim(),
+        durationHours: Number(durationHours) || 4,
       })
       if (andContinue) {
         navigate(`/admin/courses/${id}`)
@@ -183,7 +186,7 @@ export default function AdminCourseCertificate() {
                 value={certPrefix}
                 onChange={e => setCertPrefix(e.target.value.toUpperCase())}
                 placeholder="e.g. MH"
-                style={{ fontWeight: 700, letterSpacing: '0.01em', maxWidth: 300 }}
+                style={{ fontWeight: 700, letterSpacing: '0.01em', maxWidth: 200 }}
               />
               <span className="mut" style={{ fontSize: 11, marginTop: 4, display: 'block' }}>
                 e.g. OZ-<strong>{certPrefix || 'MH'}</strong>-{(new Date()).getFullYear()}-0001
@@ -191,9 +194,24 @@ export default function AdminCourseCertificate() {
             </label>
           </div>
 
-          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
-            This course covered the following topics
+
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)', marginBottom: 4, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>This course covered the following topics</span>
+            <span style={{
+              fontSize: 11, fontWeight: 700,
+              color: topics.filter(t => t.trim()).length >= 8 ? '#ef4444' : '#f59e0b',
+              background: topics.filter(t => t.trim()).length >= 8 ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
+              padding: '2px 8px', borderRadius: 6,
+            }}>
+              {topics.filter(t => t.trim()).length}/8
+            </span>
           </div>
+          {topics.filter(t => t.trim()).length >= 8 && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: '#ef4444', background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', borderRadius: 8, padding: '8px 12px', marginBottom: 10 }}>
+              <AlertCircle size={14} />
+              Maximum 8 topics allowed on the certificate. Only the first 8 will be printed.
+            </div>
+          )}
           <div className="mut" style={{ fontSize: 12, marginBottom: 12 }}>
             Pre-filled from the course chapters — edit freely to match what should print.
           </div>
@@ -280,6 +298,36 @@ export default function AdminCourseCertificate() {
           >
             <Plus size={15} /> Add topic
           </button>
+
+          {/* Course Duration — after topics */}
+          <div style={{ marginTop: 20, paddingTop: 18, borderTop: '1px solid var(--border)' }}>
+            <label className="admin-field">
+              <span style={{ fontWeight: 700, fontSize: 13 }}>Course Duration (Hours)</span>
+              <input
+                type="number"
+                min="1"
+                max="999"
+                value={durationHours}
+                onChange={e => setDurationHours(Math.max(1, parseInt(e.target.value) || 1))}
+                style={{ fontWeight: 700, maxWidth: 120, marginTop: 6 }}
+              />
+            </label>
+            <div style={{
+              marginTop: 10,
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+              borderRadius: 10,
+              padding: '10px 16px',
+              textAlign: 'center',
+            }}>
+              <div style={{ fontSize: 10, color: 'var(--text-muted)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+                Printed at bottom of certificate
+              </div>
+              <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text)' }}>
+                This course is a Self paced Course , with a duration of {durationHours} Hours
+              </div>
+            </div>
+          </div>
 
           {error && <div className="form-error" style={{ marginTop: 16 }}><AlertCircle size={15} /> {error}</div>}
 

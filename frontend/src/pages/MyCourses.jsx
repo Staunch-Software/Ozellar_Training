@@ -190,7 +190,7 @@ function CourseCard({ c, onOpen }) {
         
         <div className="myc-footer">
           <div className="myc-time">
-            <span>{c.total} chapters</span>
+            <span>{c.total} modules</span>
             <span>·</span>
             <span>{c.durationLabel}</span>
           </div>

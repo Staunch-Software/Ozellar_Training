@@ -81,7 +81,7 @@ function ChapterQuiz({ questions, onPassed }) {
     <div className="lesson-body">
       <div className="novis" style={{ marginBottom: 18 }}>
         <HelpCircle size={16} style={{ verticalAlign: -3, marginRight: 6 }} />
-        Answer every question correctly to continue to the next lesson.
+        Answer every question correctly to continue to the next module.
       </div>
       {questions.map((q, qi) => {
         const state = perQ[qi]
@@ -247,7 +247,7 @@ export default function CourseReader() {
             </div>
             <h1 style={{ fontSize: 30, marginTop: 20, fontWeight: 700 }}>Course Completed!</h1>
             <p className="mut" style={{ fontSize: 16, marginTop: 10, lineHeight: 1.6 }}>
-              Well done! You have successfully completed all lessons in
+              Well done! You have successfully completed all modules in
               <br /><strong style={{ color: 'var(--text)' }}>{course.title}</strong>.
             </p>
             <p className="mut" style={{ fontSize: 13.5, marginTop: 8 }}>
@@ -275,7 +275,7 @@ export default function CourseReader() {
             <span>{course.completedCount}/{course.total}</span></div>
           <div className="prog"><i style={{ width: `${course.progressPct}%` }} /></div>
 
-          <div className="chlabel">Lessons</div>
+          <div className="chlabel">Modules</div>
           <div className="chlist">
             {course.chapters.map((c, i) => (
               <button key={c.id} className={`ch ${i === idx ? 'on' : ''} ${c.done ? 'done' : ''}`}
@@ -340,7 +340,7 @@ export default function CourseReader() {
           <div className="chead">
             <div>
               <div className="eyebrow">
-                {ch.kind === 'quiz' ? 'Checkpoint quiz' : `Lesson ${ch.n} of ${course.total}`}
+                {ch.kind === 'quiz' ? 'Checkpoint quiz' : `Module ${ch.n} of ${course.total}`}
               </div>
               <h1>{ch.title}</h1>
             </div>
@@ -364,7 +364,7 @@ export default function CourseReader() {
                 ))}
                 {(!ch.sections || ch.sections.length === 0) && (!ch.videos || ch.videos.length === 0) && (
                   <div className="novis"><Info size={16} style={{ verticalAlign: -3, marginRight: 6 }} />
-                    This lesson is delivered visually — see the original slide below.</div>
+                    This module is delivered visually — see the original slide below.</div>
                 )}
                 {ch.figure && (
                   <div className="figure-note"><ImageIcon size={15} /> {ch.figure}</div>
@@ -392,7 +392,7 @@ export default function CourseReader() {
               <div className="gate-hint"><Play size={15} /> Watch the full video to continue</div>
             ) : (
               !reached && !ch.done && (
-                <div className="gate-hint"><ArrowDown size={15} /> Scroll to the end of this lesson to continue</div>
+                <div className="gate-hint"><ArrowDown size={15} /> Scroll to the end of this module to continue</div>
               )
             )
           )}

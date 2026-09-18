@@ -718,11 +718,12 @@ def cert_pdf_data(cert, user, course):
         "learner": user.full_name,
         "ppNo": user.pp_no,
         "titleUpper": c.get("titleUpper") or course.title.upper(),
-        "topics": topics,
+        "topics": topics[:8],  # max 8 topics on certificate
         "issued": cert.issued_at.strftime("%d %B %Y") if cert.issued_at else "",
         "location": os.getenv("CERT_LOCATION", "Chennai"),
         "photoPath": os.path.join(UPLOAD_DIR, "photos", f"{user.id}.jpg"),
         "verifyUrl": f"{PUBLIC_BASE_URL}/verify/{cert.id}",
+        "durationHours": c.get("durationHours") or 4,
     }
 
 
@@ -2306,6 +2307,7 @@ class SaveCertificateRequest(BaseModel):
     titleUpper: str | None = None
     topics: list[str] = []
     certPrefix: str | None = None
+    durationHours: int | None = None
 
 
 @app.put("/api/admin/courses/{course_id}/certificate")
@@ -2316,10 +2318,11 @@ def admin_save_course_certificate(course_id: str, req: SaveCertificateRequest,
     course = db.get(models.Course, course_id)
     if not course:
         raise HTTPException(404, "Course not found")
-    topics = [t.strip() for t in req.topics if t and t.strip()]
+    topics = [t.strip() for t in req.topics if t and t.strip()][:8]  # cap at 8
     title_upper = (req.titleUpper or "").strip() or None
     cert_prefix = (req.certPrefix or "").strip() or None
-    course.cert = {"titleUpper": title_upper, "topics": topics, "certPrefix": cert_prefix}
+    duration_hours = req.durationHours if req.durationHours and req.durationHours > 0 else None
+    course.cert = {"titleUpper": title_upper, "topics": topics, "certPrefix": cert_prefix, "durationHours": duration_hours}
     db.commit()
     return course.cert
 
@@ -2330,6 +2333,7 @@ def admin_preview_course_certificate(
     token: Optional[str] = None,
     titleUpper: Optional[str] = None,
     certPrefix: Optional[str] = None,
+    durationHours: Optional[int] = None,
     topics: list[str] = Query([]),
     db: Session = Depends(get_db),
 ):
@@ -2387,11 +2391,12 @@ def admin_preview_course_certificate(
         "learner": MockUser.full_name,
         "ppNo": MockUser.pp_no,
         "titleUpper": (titleUpper or "").strip() or (course.cert or {}).get("titleUpper") or course.title.upper(),
-        "topics": clean_topics,
+        "topics": clean_topics[:8],
         "issued": datetime.now(timezone.utc).strftime("%d %B %Y"),
         "location": os.getenv("CERT_LOCATION", "Chennai"),
         "photoPath": None,
         "verifyUrl": "",
+        "durationHours": durationHours if durationHours else (course.cert or {}).get("durationHours") or 4,
     }
     pdf = build_certificate_pdf(data)
     return Response(content=pdf, media_type="application/pdf",
