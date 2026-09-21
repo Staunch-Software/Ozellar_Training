@@ -45,7 +45,8 @@ crew = upsert_user(
     role           = "learner",
     rank           = "SECOND OFFICER" if program.department == "deck" else "SECOND ENGINEER",
     current_vessel = VESSEL,
-    password_hash  = pwd.hash("Test@1234"),
+    dob            = "01011990",
+    password_hash  = pwd.hash("01011990"),
     is_active      = True,
 )
 
@@ -57,7 +58,8 @@ approver = upsert_user(
     role           = "learner",        # approvers are learners with a qualifying rank
     rank           = approver_rank,
     current_vessel = VESSEL,
-    password_hash  = pwd.hash("Test@1234"),
+    dob            = "02021980",
+    password_hash  = pwd.hash("02021980"),
     is_active      = True,
 )
 
@@ -81,8 +83,8 @@ db.commit()
 db.close()
 
 print("\n?  QA users ready!")
-print("-" * 40)
-print(f"  Crew     : qa.crew@ozellar-test.com   / Test@1234")
-print(f"  Approver : qa.master@ozellar-test.com / Test@1234")
-print("-" * 40)
+print("─" * 40)
+print(f"  Crew     : qa.crew@ozellar-test.com   / 01011990")
+print(f"  Approver : qa.master@ozellar-test.com / 02021980")
+print("─" * 40)
 print("Run  python qa_cleanup.py  to delete everything when done.\n")
