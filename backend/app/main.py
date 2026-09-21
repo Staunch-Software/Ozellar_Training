@@ -4956,16 +4956,12 @@ def approver_list_submissions(approver: models.User = Depends(require_vessel_app
     info = orientation_ranks.vessel_approver_info(approver)
     
     enrollments = (db.query(models.OrientationEnrollment)
-                  .join(models.OrientationTaskCompletion)
                   .join(models.OrientationProgram)
                   .filter(
                       models.OrientationEnrollment.vessel_name == info["vessel"],
                       models.OrientationProgram.department == info["department"],
-                  ).filter(
-                      models.OrientationTaskCompletion.status.in_(["pending_review", "approved", "rejected"]) |
-                      models.OrientationEnrollment.status.in_(["approved", "rejected"])
-                  ).distinct().all())
-                  
+                  ).all())
+
     return [orientation_submission_detail(db, e) for e in enrollments]
 
 

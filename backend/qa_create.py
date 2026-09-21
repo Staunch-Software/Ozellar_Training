@@ -56,6 +56,7 @@ approver = upsert_user(
     role           = "learner",        # approvers are learners with a qualifying rank
     rank           = approver_rank,
     current_vessel = VESSEL,
+    emp_status     = "SAIL",           # required so vessel_approver_info() recognises them
     date_of_birth  = datetime.date(1980, 2, 2),
     is_active      = True,
 )
