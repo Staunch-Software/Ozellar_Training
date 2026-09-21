@@ -9,11 +9,10 @@ Usage:
 Login credentials printed at the end.
 """
 import sys
-from passlib.context import CryptContext
+import datetime
 from app.database import SessionLocal
 from app import models
 
-pwd = CryptContext(schemes=["bcrypt"], deprecated="auto")
 db  = SessionLocal()
 
 # -- helpers ------------------------------------------------------------------
@@ -45,8 +44,7 @@ crew = upsert_user(
     role           = "learner",
     rank           = "SECOND OFFICER" if program.department == "deck" else "SECOND ENGINEER",
     current_vessel = VESSEL,
-    dob            = "01011990",
-    password_hash  = pwd.hash("01011990"),
+    date_of_birth  = datetime.date(1990, 1, 1),
     is_active      = True,
 )
 
@@ -58,8 +56,7 @@ approver = upsert_user(
     role           = "learner",        # approvers are learners with a qualifying rank
     rank           = approver_rank,
     current_vessel = VESSEL,
-    dob            = "02021980",
-    password_hash  = pwd.hash("02021980"),
+    date_of_birth  = datetime.date(1980, 2, 2),
     is_active      = True,
 )
 
@@ -83,8 +80,8 @@ db.commit()
 db.close()
 
 print("\n?  QA users ready!")
-print("─" * 40)
-print(f"  Crew     : qa.crew@ozellar-test.com   / 01011990")
-print(f"  Approver : qa.master@ozellar-test.com / 02021980")
-print("─" * 40)
+print("-" * 40)
+print(f"  Crew     : QA CREW MEMBER   / 01011990")
+print(f"  Approver : QA MASTER        / 02021980")
+print("-" * 40)
 print("Run  python qa_cleanup.py  to delete everything when done.\n")
