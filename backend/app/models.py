@@ -296,13 +296,10 @@ class OrientationTaskCompletion(Base):
     proof_paths = Column(JSON, default=list)   # list[str] — zero or more attachment URLs
     note = Column(Text)                        # free-text remarks the candidate adds
     completed_at = Column(DateTime)
-    # Per-task sign-off by the reviewing Master/Chief Engineer — separate
-    # from is_completed (which the candidate sets). Lets the approver work
-    # through the stepper and mark each task individually verified, giving
-    # an audit trail that they actually reviewed every task rather than
-    # approving the whole submission at a glance. Reset to unverified
-    # whenever a fresh submission cycle starts (see submit_orientation) so
-    # a resubmission after rejection always starts its own clean review.
+    # The review status for this specific task
+    status = Column(String, default="draft") # draft | pending_review | approved | rejected
+    rejection_note = Column(Text, nullable=True)
+    # Per-task sign-off by the reviewing Master/Chief Engineer
     verified = Column(Boolean, default=False)
     verified_at = Column(DateTime, nullable=True)
     verified_by = Column(String, ForeignKey("users.id"), nullable=True)

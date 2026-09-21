@@ -6,11 +6,13 @@ import {
 import { ThemeToggle } from '../App.jsx'
 import { useAuth } from '../auth.jsx'
 import {
-  getMyOrientationEnrollment, completeOrientationTask,
-  deleteOrientationTaskAttachment, submitOrientation,
+  getMyOrientationEnrollment, completeOrientationTask, getCourses,
+  deleteOrientationTaskAttachment, submitOrientationTask, submitMultipleOrientationTasks,
 } from '../api.js'
 import { useConfirm } from '../components/ConfirmDialog.jsx'
+import { useNavigate } from 'react-router-dom'
 import NotificationBell from '../NotificationBell.jsx'
+import { TopNav } from '../App.jsx'
 import './Orientation.css'
 
 function ProgressRing({ pct, size = 72 }) {
@@ -36,11 +38,17 @@ function attachmentName(url) {
   try { return decodeURIComponent(url.split('/').pop()) } catch { return url }
 }
 
-function TaskCard({ task, onToggle, onSaveNote, onAddFiles, onRemoveFile, busy, locked }) {
+function TaskCard({ task, onToggle, onSaveNote, onAddFiles, onRemoveFile, onSubmit, busy }) {
   const [note, setNote] = useState(task.note || '')
   const fileRef = useRef(null)
   const noteDirty = note !== (task.note || '')
   const proofMissing = task.requiresProof && (!task.proofUrls || task.proofUrls.length === 0)
+  
+  const locked = task.status === 'pending_review' || task.status === 'approved'
+  const isRejected = task.status === 'rejected'
+  const isPending = task.status === 'pending_review'
+  const isApproved = task.status === 'approved'
+  const canSubmit = task.isCompleted && !proofMissing && (!task.status || task.status === 'draft' || isRejected)
 
   return (
     <div className={`cnd-task${task.isCompleted ? ' cnd-task--done' : ''}${proofMissing ? ' cnd-task--proof-missing' : ''}`}>
@@ -106,6 +114,27 @@ function TaskCard({ task, onToggle, onSaveNote, onAddFiles, onRemoveFile, busy, 
             </>
           )}
         </div>
+        
+        <div className="cnd-task-status-row" style={{ marginTop: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div className="cnd-task-status-labels" style={{ display: 'flex', gap: 8 }}>
+            {isPending && <span className="cnd-badge" style={{ color: '#854d0e', background: '#fef08a', padding: '2px 6px', borderRadius: 4, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}><AlertCircle size={12}/> Pending task approve</span>}
+            {isApproved && <span className="cnd-badge" style={{ color: '#166534', background: '#dcfce7', padding: '2px 6px', borderRadius: 4, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}><Check size={12}/> Approved</span>}
+            {isRejected && <span className="cnd-badge" style={{ color: '#991b1b', background: '#fee2e2', padding: '2px 6px', borderRadius: 4, fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}><AlertCircle size={12}/> Needs Rework</span>}
+          </div>
+          
+          {canSubmit && (
+            <button className="cnd-btn-submit-task" disabled={busy} onClick={() => onSubmit(task)}
+              style={{ padding: '6px 12px', background: 'var(--cnd-accent)', color: 'white', borderRadius: 4, fontSize: 13, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Send size={13} /> Submit Task
+            </button>
+          )}
+        </div>
+        
+        {isRejected && task.rejectionNote && (
+          <div className="cnd-task-rejection-note" style={{ marginTop: 8, padding: 10, background: '#fee2e2', color: '#991b1b', borderRadius: 4, fontSize: 13 }}>
+            <strong>Master's Note:</strong> {task.rejectionNote}
+          </div>
+        )}
       </div>
     </div>
   )
@@ -117,9 +146,14 @@ export default function Orientation() {
   const [busyTaskId, setBusyTaskId] = useState(null)
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  
   const { confirm, dialog } = useConfirm()
 
-  const load = () => getMyOrientationEnrollment().then(setEnrollment).catch((e) => setError(e.message))
+  const navigate = useNavigate()
+
+  const load = () => getMyOrientationEnrollment().then((res) => {
+    setEnrollment(res || null)
+  }).catch((e) => setError(e.message))
   useEffect(() => { load() }, [])
 
   const run = async (task, action) => {
@@ -140,15 +174,22 @@ export default function Orientation() {
   const addFiles = (task, files, note) => run(task, () => completeOrientationTask(task.id, task.isCompleted, note, files))
   const removeFile = (task, url) => run(task, () => deleteOrientationTaskAttachment(task.id, url))
 
-  const submit = async () => {
-    if (!(await confirm('You will not be able to edit tasks while it is under review.', {
-      title: 'Submit for approval?', confirmLabel: 'Submit',
+
+  const readyTasks = enrollment ? enrollment.tasks.filter(t => {
+    const proofMissing = t.requiresProof && (!t.proofUrls || t.proofUrls.length === 0)
+    return t.isCompleted && !proofMissing && (!t.status || t.status === 'draft' || t.status === 'rejected')
+  }) : []
+
+  const submitReadyTasks = async () => {
+    if (!(await confirm(`You are about to submit ${readyTasks.length} task(s) for review.`, {
+      title: 'Submit tasks?', confirmLabel: 'Submit',
     }))) return
+    
     setSubmitting(true)
     setError('')
     try {
-      await submitOrientation()
-      load()
+      await submitMultipleOrientationTasks(readyTasks.map((t) => t.id))
+      await load()
     } catch (e) {
       setError(e.message)
     } finally {
@@ -156,30 +197,26 @@ export default function Orientation() {
     }
   }
 
-  const locked = enrollment && (enrollment.status === 'submitted' || enrollment.status === 'approved')
-  const missingProof = enrollment
-    ? enrollment.tasks.filter((t) => t.requiresProof && (!t.proofUrls || t.proofUrls.length === 0))
-    : []
+  const submitTask = async (task) => {
+    setBusyTaskId(task.id)
+    setError('')
+    try {
+      await submitOrientationTask(task.id)
+      await load()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusyTaskId(null)
+    }
+  }
 
   return (
-    <div className="cnd-page">
-      {dialog}
-      <nav className="cnd-nav">
-        <div className="cnd-brand">
-          <span className="cnd-brand-icon"><GraduationCap size={16} /></span>
-          Orientation Program
-        </div>
-        <div className="cnd-nav-right">
-          {user?.name && (
-            <div className="cnd-nav-user"><strong>{user.name}</strong>{user.rank ? ` · ${user.rank}` : ''}</div>
-          )}
-          <NotificationBell />
-          <ThemeToggle />
-          <button className="iconbtn" aria-label="Sign out" onClick={logout}><LogOut size={18} /></button>
-        </div>
-      </nav>
+    <>
+      <TopNav />
+      <div className="cnd-page">
+        {dialog}
 
-      <div className="cnd-body">
+        <div className="cnd-body">
         {enrollment === undefined ? (
           <div className="spinner">Loading…</div>
         ) : !enrollment ? (
@@ -193,27 +230,17 @@ export default function Orientation() {
         ) : (
           <div className="cnd-layout">
             <div className="cnd-main">
-              {enrollment.status === 'submitted' && (
-                <div className="cnd-banner cnd-banner--submitted">
-                  <Check size={15} /> Submitted — awaiting review by {enrollment.masterName || `your vessel's ${enrollment.masterLabel?.toLowerCase()}`}.
-                </div>
-              )}
-              {enrollment.status === 'approved' && (
+                            {enrollment.status === 'approved' && (
                 <div className="cnd-banner cnd-banner--approved"><Check size={15} /> Approved — congratulations!</div>
               )}
-              {enrollment.status === 'rejected' && (
-                <div className="cnd-banner cnd-banner--rejected">
-                  <AlertCircle size={15} /> Sent back for review — fix the flagged items and resubmit.
-                </div>
-              )}
-
+              
               {error && <div className="form-error" style={{ marginBottom: 16 }}><AlertCircle size={15} /> {error}</div>}
 
               <div className="cnd-list">
                 {enrollment.tasks.map((task) => (
                   <TaskCard key={task.id} task={task}
                     onToggle={toggle} onSaveNote={saveNote} onAddFiles={addFiles} onRemoveFile={removeFile}
-                    busy={busyTaskId === task.id} locked={locked} />
+                    onSubmit={submitTask} busy={busyTaskId === task.id} />
                 ))}
               </div>
             </div>
@@ -243,25 +270,19 @@ export default function Orientation() {
                 </div>
               </div>
 
-              {(enrollment.status === 'in_progress' || enrollment.status === 'rejected') && (
+{readyTasks.length > 0 && (
                 <button className="cnd-submit-btn"
-                  disabled={enrollment.progressPct < 100 || missingProof.length > 0 || submitting}
-                  onClick={submit}>
-                  <Send size={15} /> {submitting ? 'Submitting…' : 'Submit for approval'}
+                  disabled={submitting || busyTaskId}
+                  onClick={submitReadyTasks}
+                  style={{ marginTop: 16 }}>
+                  <Send size={15} /> {submitting ? 'Submitting…' : (readyTasks.length === enrollment.tasks.length ? 'Submit all tasks' : `Submit ${readyTasks.length} task${readyTasks.length > 1 ? 's' : ''}`)}
                 </button>
-              )}
-              {enrollment.progressPct < 100 && (enrollment.status === 'in_progress' || enrollment.status === 'rejected') && (
-                <div className="cnd-side-hint">Complete every task to unlock submission.</div>
-              )}
-              {enrollment.progressPct === 100 && missingProof.length > 0 && (enrollment.status === 'in_progress' || enrollment.status === 'rejected') && (
-                <div className="cnd-side-hint cnd-side-hint--warn">
-                  <Paperclip size={12} /> Attach a document/photo for {missingProof.length} task{missingProof.length > 1 ? 's' : ''} to unlock submission.
-                </div>
               )}
             </aside>
           </div>
         )}
       </div>
     </div>
+    </>
   )
 }

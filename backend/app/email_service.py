@@ -75,7 +75,7 @@ def _send_email(to_email: str, subject: str, html_content: str, attachment=None)
     }
     
     try:
-        response = requests.post(endpoint, headers=headers, json=payload)
+        response = requests.post(endpoint, headers=headers, json=payload, timeout=30)
         response.raise_for_status()
         print(f"[email_service] Sent email to {to_email} via Graph API")
     except requests.exceptions.HTTPError as e:

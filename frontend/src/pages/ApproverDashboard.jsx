@@ -5,10 +5,10 @@ import {
   FileText, X, ExternalLink, Image as ImageIcon, MessageSquare, ChevronLeft, ChevronRight,
   ShieldQuestion,
 } from 'lucide-react'
-import { ThemeToggle } from '../App.jsx'
+import { ThemeToggle, TopNav } from '../App.jsx'
 import { useAuth } from '../auth.jsx'
 import {
-  getApproverSubmissions, approveOrientationSubmission, rejectOrientationSubmission, verifyOrientationTask,
+  getApproverSubmissions, verifyOrientationTask, decideOrientationSubmission,
 } from '../api.js'
 import { useConfirm } from '../components/ConfirmDialog.jsx'
 import NotificationBell from '../NotificationBell.jsx'
@@ -16,12 +16,12 @@ import './ApproverDashboard.css'
 
 function fmt(iso) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleString(undefined, { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+  return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })
 }
 
 function fmtShort(iso) {
   if (!iso) return ''
-  return new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short' })
+  return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'Asia/Kolkata' })
 }
 
 function attachmentName(url, i, total) {
@@ -99,34 +99,44 @@ function SubmissionDetail({ s, onDecide, onVerifyTask }) {
   const goTo = (i) => setIdx(Math.max(0, Math.min(total - 1, i)))
   const evidenceCount = (task.proofUrls || []).length
   const isPending = s.status === 'pending'
-  const verifiedCount = s.verifiedCount ?? tasks.filter((t) => t.verified).length
+  const verifiedCount = s.verifiedCount ?? tasks.filter((t) => t.status === 'approved').length
   const allVerified = s.allVerified ?? (total > 0 && verifiedCount === total)
 
-  const toggleVerify = async () => {
-    setVerifyBusy(true)
+
+  const decide = async (action) => {
+    const msg = action === 'approve'
+      ? 'This will mark the orientation as fully approved and notify the crew member and admin.'
+      : 'This will reject the orientation program.'
+    if (!(await confirm(msg, { title: action === 'approve' ? 'Final Approve Program?' : 'Reject Program?', confirmLabel: action === 'approve' ? 'Approve Program' : 'Reject' }))) return
+    setBusy(true)
     try {
-      await onVerifyTask(s.id, task.id, !task.verified)
+      await onDecide(s.id, action)
     } finally {
-      setVerifyBusy(false)
+      setBusy(false)
     }
   }
 
-  const decide = async (action) => {
-    if (action === 'reject' && !(await confirm(
-      `${s.candidateName} will be able to fix the flagged items and resubmit.`,
-      { title: 'Reject this submission?', confirmLabel: 'Reject', danger: true },
-    ))) return
-    if (action === 'approve' && !(await confirm(
-      `This marks ${s.candidateName}'s checklist as approved.`,
-      { title: 'Approve this submission?', confirmLabel: 'Approve' },
-    ))) return
-    setBusy(true)
+  const handleVerify = async (action) => {
+    let note = null
+    if (action === 'reject') {
+      note = window.prompt("Rejection Note: What needs to be fixed?")
+      if (!note) return // cancelled
+    }
+    setVerifyBusy(true)
     try {
-      if (action === 'approve') await approveOrientationSubmission(s.id)
-      else await rejectOrientationSubmission(s.id)
-      onDecide()
+      await onVerifyTask(s.id, task.id, action, note)
+      // Auto-advance to the next pending task
+      const nextPending = tasks.findIndex((t, i) => i > idx && !t.verified && t.status !== 'rejected' && t.status === 'pending_review')
+      if (nextPending >= 0) {
+        setIdx(nextPending)
+      } else {
+        const anyPending = tasks.findIndex((t) => !t.verified && t.status !== 'rejected' && t.status === 'pending_review')
+        if (anyPending >= 0) {
+          setIdx(anyPending)
+        }
+      }
     } finally {
-      setBusy(false)
+      setVerifyBusy(false)
     }
   }
 
@@ -139,7 +149,9 @@ function SubmissionDetail({ s, onDecide, onVerifyTask }) {
           <div className="apr-detail-name">{s.candidateName}</div>
           <div className="apr-detail-sub">{s.candidateRank} · {s.programTitle} · {s.vessel}</div>
         </div>
-        <span className={`apr-status-pill apr-status-pill--${s.status}`}>{s.status}</span>
+        <span className={`apr-status-pill apr-status-pill--${s.status}`}>
+          {s.status === 'waiting_on_crew' ? 'Waiting on Crew' : s.status}
+        </span>
         <div className="apr-detail-date">Submitted {fmt(s.submittedAt)}</div>
       </div>
 
@@ -150,9 +162,9 @@ function SubmissionDetail({ s, onDecide, onVerifyTask }) {
             const flagged = !!t.note || (t.proofUrls || []).length > 0
             return (
               <button key={t.id} type="button" ref={i === idx ? activePipRef : null}
-                className={`apr-stepper-pip${i === idx ? ' apr-stepper-pip--active' : ''}${flagged ? ' apr-stepper-pip--flagged' : ''}${t.verified ? ' apr-stepper-pip--verified' : ''}`}
+                className={`apr-stepper-pip${i === idx ? ' apr-stepper-pip--active' : ''}${flagged ? ' apr-stepper-pip--flagged' : ''}${t.status === 'approved' ? ' apr-stepper-pip--verified' : (t.status === 'rejected' ? ' apr-stepper-pip--rejected' : '')}`}
                 onClick={() => goTo(i)} title={t.verified ? `${t.title} — verified` : t.title}>
-                {t.verified ? <ShieldCheck size={11} /> : i + 1}
+                {t.status === 'approved' ? <ShieldCheck size={11} /> : (t.status === 'rejected' ? <XCircle size={11} /> : i + 1)}
               </button>
             )
           })}
@@ -204,13 +216,29 @@ function SubmissionDetail({ s, onDecide, onVerifyTask }) {
             <div className="apr-review-empty">Marked complete — no notes or attachments were added for this task.</div>
           )}
 
-          {isPending && (
-            <button type="button" disabled={verifyBusy}
-              className={`apr-verify-btn${task.verified ? ' apr-verify-btn--on' : ''}`}
-              onClick={toggleVerify}>
-              <ShieldCheck size={14} />
-              {task.verified ? `Verified${task.verifiedAt ? ` · ${fmt(task.verifiedAt)}` : ''}` : 'Mark this task verified'}
-            </button>
+          {task.status === 'pending_review' && (
+            <div className="apr-task-decide-actions" style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+              <button type="button" disabled={verifyBusy}
+                className="apr-btn apr-btn--approve"
+                onClick={() => handleVerify('approve')}>
+                <CheckCircle2 size={14} /> Approve Task
+              </button>
+              <button type="button" disabled={verifyBusy}
+                className="apr-btn apr-btn--reject"
+                onClick={() => handleVerify('reject')}>
+                <XCircle size={14} /> Reject Task
+              </button>
+            </div>
+          )}
+          {task.status === 'approved' && (
+            <div className="apr-task-status-banner" style={{ marginTop: 16, padding: 10, background: '#dcfce7', color: '#166534', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+              <ShieldCheck size={15} /> Verified {task.verifiedAt ? ` · ${fmt(task.verifiedAt)}` : ''}
+            </div>
+          )}
+          {task.status === 'rejected' && (
+            <div className="apr-task-status-banner" style={{ marginTop: 16, padding: 10, background: '#fee2e2', color: '#991b1b', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
+              <XCircle size={15} /> Rejected {task.rejectionNote ? ` · Note: ${task.rejectionNote}` : ''}
+            </div>
           )}
         </div>
 
@@ -224,11 +252,11 @@ function SubmissionDetail({ s, onDecide, onVerifyTask }) {
         </div>
       </div>
 
-      {s.status === 'pending' ? (
+      {(s.status === 'pending' || s.status === 'waiting_on_crew') ? (
         <div className="apr-detail-foot">
           <button className="apr-btn apr-btn--approve" disabled={busy || !allVerified} onClick={() => decide('approve')}
             title={allVerified ? undefined : `Verify all ${total} tasks before approving (${verifiedCount} of ${total} done)`}>
-            <CheckCircle2 size={14} /> Approve
+            <CheckCircle2 size={14} /> Final Approve Program
           </button>
           <button className="apr-btn apr-btn--reject" disabled={busy} onClick={() => decide('reject')}>
             <XCircle size={14} /> Reject
@@ -258,13 +286,18 @@ export default function ApproverDashboard() {
 
   // Patch just the one submission in place rather than refetching the
   // whole list on every single task-verify click.
-  const verifyTask = async (submissionId, taskId, verified) => {
-    const updated = await verifyOrientationTask(submissionId, taskId, verified)
+  const verifyTask = async (submissionId, taskId, action, note) => {
+    const updated = await verifyOrientationTask(submissionId, taskId, action, note)
     setSubmissions((prev) => (prev || []).map((sub) => (sub.id === submissionId ? updated : sub)))
   }
 
-  const pending = useMemo(() => (submissions || []).filter((s) => s.status === 'pending'), [submissions])
-  const decided = useMemo(() => (submissions || []).filter((s) => s.status !== 'pending'), [submissions])
+  const decideSubmission = async (submissionId, action) => {
+    await decideOrientationSubmission(submissionId, action)
+    await load()
+  }
+
+  const pending = useMemo(() => (submissions || []).filter((s) => s.status === 'pending' || s.status === 'waiting_on_crew'), [submissions])
+  const decided = useMemo(() => (submissions || []).filter((s) => s.status !== 'pending' && s.status !== 'waiting_on_crew'), [submissions])
   const visibleList = tab === 'pending' ? pending : decided
 
   // Keep a selection alive across reloads (e.g. right after approving one),
@@ -280,7 +313,7 @@ export default function ApproverDashboard() {
       setSearchParams((prev) => { prev.delete('submission'); return prev }, { replace: true })
       const target = submissions.find((s) => s.id === deepLinkedId)
       if (target) {
-        setTab(target.status === 'pending' ? 'pending' : 'history')
+        setTab((target.status === 'pending' || target.status === 'waiting_on_crew') ? 'pending' : 'history')
         setSelectedId(target.id)
         return
       }
@@ -293,21 +326,10 @@ export default function ApproverDashboard() {
   const selected = (submissions || []).find((s) => s.id === selectedId) || null
 
   return (
-    <div className="apr-page">
-      <nav className="apr-nav">
-        <div className="apr-brand">
-          <span className="apr-brand-icon"><ShieldCheck size={16} /></span>
-          Orientation Approvals
-        </div>
-        <div className="apr-nav-right">
-          <span className="apr-nav-tag">{user?.approverDepartment === 'engine' ? 'Chief Engineer' : 'Master'} · {user?.approverVessel}</span>
-          <NotificationBell />
-          <ThemeToggle />
-          <button className="iconbtn" aria-label="Sign out" onClick={logout}><LogOut size={18} /></button>
-        </div>
-      </nav>
-
-      <div className="apr-body">
+    <>
+      <TopNav />
+      <div className="apr-page">
+        <div className="apr-body">
         {error && <div className="form-error" style={{ marginBottom: 14 }}><AlertCircle size={15} /> {error}</div>}
 
         {!submissions ? (
@@ -342,7 +364,7 @@ export default function ApproverDashboard() {
             </aside>
 
             {selected ? (
-              <SubmissionDetail s={selected} onDecide={load} onVerifyTask={verifyTask} />
+              <SubmissionDetail s={selected} onDecide={decideSubmission} onVerifyTask={verifyTask} />
             ) : (
               <div className="apr-detail">
                 <div className="apr-detail-empty">
@@ -356,5 +378,6 @@ export default function ApproverDashboard() {
         )}
       </div>
     </div>
+    </>
   )
 }

@@ -4,6 +4,7 @@ import { GraduationCap, Search, Sun, Moon, LogOut } from 'lucide-react'
 import NotificationBell from './NotificationBell.jsx'
 import Login from './pages/Login.jsx'
 import MyCourses from './pages/MyCourses.jsx'
+import CrewDashboardRouter from './pages/CrewDashboardRouter.jsx'
 import CourseReader from './pages/CourseReader.jsx'
 import Assessment from './pages/Assessment.jsx'
 import Certificate from './pages/Certificate.jsx'
@@ -36,7 +37,7 @@ import AdminUserManagement from './pages/admin/AdminUserManagement.jsx'
 import TestWelcome from './pages/test/TestWelcome.jsx'
 import TestExam from './pages/test/TestExam.jsx'
 import TestResult from './pages/test/TestResult.jsx'
-import { AuthProvider, useAuth, ProtectedRoute, AdminRoute, TestRoute, ApproverRoute, OrientationRoute } from './auth.jsx'
+import { AuthProvider, useAuth, ProtectedRoute, AdminRoute, TestRoute, ApproverRoute } from './auth.jsx'
 
 /* ---- theme ---- */
 const ThemeCtx = createContext()
@@ -64,6 +65,12 @@ export function TopNav({ searchQuery, onSearch }) {
       </Link>
       <div className="navlinks">
         <NavLink to="/my-courses" className={({ isActive }) => (isActive ? 'on' : '')}>My courses</NavLink>
+        {user?.role === 'learner' && !user?.isVesselApprover && (
+          <NavLink to="/orientation" className={({ isActive }) => (isActive ? 'on' : '')}>Orientation</NavLink>
+        )}
+        {user?.isVesselApprover && (
+          <NavLink to="/approvals" className={({ isActive }) => (isActive ? 'on' : '')}>Approvals</NavLink>
+        )}
         <NavLink to="/certificates" className={({ isActive }) => (isActive ? 'on' : '')}>Certificates</NavLink>
         <NavLink to="/help" className={({ isActive }) => (isActive ? 'on' : '')}>Help</NavLink>
       </div>
@@ -127,8 +134,9 @@ export default function App() {
         <Route path="/verify/:id" element={<Verify />} />
         <Route path="/profile" element={P(<Profile />)} />
         <Route path="/upload-photo" element={P(<UploadPhoto />)} />
-        <Route path="/my-courses" element={P(<MyCourses />)} />
-        <Route path="/orientation" element={<OrientationRoute><Orientation /></OrientationRoute>} />
+        <Route path="/dashboard" element={P(<CrewDashboardRouter />)} />
+            <Route path="/my-courses" element={P(<MyCourses />)} />
+        <Route path="/orientation" element={P(<Orientation />)} />
         <Route path="/certificates" element={P(<Certificates />)} />
         <Route path="/help" element={P(<Help />)} />
         <Route path="/course/:slug" element={P(<CourseReader />)} />

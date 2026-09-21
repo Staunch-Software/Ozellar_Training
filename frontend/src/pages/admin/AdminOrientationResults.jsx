@@ -12,7 +12,7 @@ const STATUS_OPTIONS = [
 
 function fmt(iso) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+  return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })
 }
 
 function initials(name) {

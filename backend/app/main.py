@@ -171,7 +171,10 @@ app.add_middleware(
 import mimetypes
 
 @app.get("/api/uploads/{course_id}/{filename}")
-async def serve_upload(course_id: str, filename: str, request: Request):
+def serve_upload(course_id: str, filename: str, request: Request):
+    # Plain `def` on purpose: storage.get_size() is a blocking Azure round-trip.
+    # As `async def` it ran on the event loop and froze every other request
+    # (login, page loads) for each image/video/Range request.
     file_size = storage.get_size(course_id, filename)
     if file_size is None:
         raise HTTPException(status_code=404, detail="File not found")
@@ -1277,7 +1280,7 @@ def list_notifications(user: models.User = Depends(get_current_user), db: Sessio
     items = [{
         "id": n.id, "kind": n.kind, "title": n.title, "body": n.body, "link": n.link,
         "isRead": bool(n.is_read),
-        "createdAt": n.created_at.isoformat() if n.created_at else None,
+        "createdAt": (n.created_at.isoformat() + 'Z') if n.created_at else None,
     } for n in rows]
     return {"unread": unread, "items": items}
 
@@ -1323,7 +1326,7 @@ def admin_notifications(admin: models.User = Depends(require_admin), db: Session
             "courseId": ap.course_id,
             "learnerName": user.full_name,
             "courseName": course.title,
-            "createdAt": ap.created_at.isoformat() if ap.created_at else None,
+            "createdAt": (ap.created_at.isoformat() + 'Z') if ap.created_at else None,
         })
     return {"unread": len(items), "items": items}
 
@@ -4540,13 +4543,33 @@ def admin_delete_orientation_enrollment(enrollment_id: str,
 
 def orientation_enrollment_result(db, e):
     learner = db.get(models.User, e.learner_id)
-    total = len(e.completions)
-    done = sum(1 for c in e.completions if c.is_completed)
+    tasks = e.program.tasks if e.program else []
+    total = len(tasks)
+    completions_map = {c.task_id: c for c in e.completions}
+    done = sum(1 for t in tasks if completions_map.get(t.id) and completions_map[t.id].is_completed)
     pct = round(done / total * 100) if total else 0
+
+    # submittedAt: when the first task was submitted for review
+    submitted_completions = [c for c in e.completions if c.status in ("pending_review", "approved", "rejected") and c.completed_at]
+    submitted_at = min((c.completed_at for c in submitted_completions), default=None)
+
+    # decidedAt: when the enrollment was finally approved/rejected — use the latest verified_at from approved tasks
+    decided_at = None
+    if e.status in ("approved", "rejected"):
+        verified_times = [c.verified_at for c in e.completions if c.verified_at]
+        decided_at = max(verified_times, default=None)
+
+    # Legacy OrientationSubmission fallback for older enrollments
     submission = (db.query(models.OrientationSubmission)
                   .filter_by(enrollment_id=e.id)
                   .order_by(models.OrientationSubmission.submitted_at.desc()).first())
-    decided_by = db.get(models.User, submission.decided_by) if submission and submission.decided_by else None
+    if submission:
+        if not submitted_at and submission.submitted_at:
+            submitted_at = submission.submitted_at
+        if not decided_at and submission.decided_at:
+            decided_at = submission.decided_at
+
+    decided_by_user = db.get(models.User, submission.decided_by) if submission and submission.decided_by else None
     department = e.program.department if e.program else None
     master_label = "Chief Engineer" if department == "engine" else "Master"
     return {
@@ -4558,11 +4581,11 @@ def orientation_enrollment_result(db, e):
         "programTitle": e.program.title if e.program else None,
         "status": e.status,
         "completedCount": done, "totalCount": total, "progressPct": pct,
-        "submittedAt": submission.submitted_at.isoformat() if submission and submission.submitted_at else None,
-        "decidedAt": submission.decided_at.isoformat() if submission and submission.decided_at else None,
+        "submittedAt": submitted_at.isoformat() if submitted_at else None,
+        "decidedAt": decided_at.isoformat() if decided_at else None,
         "masterLabel": master_label,
         "masterName": e.master_name,
-        "approvedByName": decided_by.full_name if decided_by else None,
+        "approvedByName": decided_by_user.full_name if decided_by_user else None,
     }
 
 
@@ -4681,11 +4704,13 @@ def orientation_enrollment_detail(e):
         "tasks": [{
             "id": t.id, "title": t.title, "description": t.description, "order": t.order,
             "requiresProof": bool(t.requires_proof),
-            "isCompleted": bool(completions.get(t.id) and completions[t.id].is_completed),
+            "isCompleted": bool(completions.get(t.id) and (completions[t.id].is_completed or completions[t.id].status in ("approved", "pending_review"))),
             "note": completions[t.id].note if completions.get(t.id) else None,
             "proofUrls": (completions[t.id].proof_paths or []) if completions.get(t.id) else [],
             "completedAt": (completions[t.id].completed_at.isoformat()
                            if completions.get(t.id) and completions[t.id].completed_at else None),
+            "status": completions[t.id].status if completions.get(t.id) else "draft",
+            "rejectionNote": getattr(completions[t.id], "rejection_note", None) if completions.get(t.id) else None,
         } for t in tasks],
     }
 
@@ -4741,6 +4766,89 @@ async def complete_orientation_task(task_id: str, completed: bool = Form(...),
     return {"ok": True, "isCompleted": completion.is_completed, "proofUrls": completion.proof_paths or []}
 
 
+class SubmitMultipleTasksRequest(BaseModel):
+    task_ids: list[str]
+
+@app.post("/api/orientation/tasks/submit-multiple")
+def submit_multiple_orientation_tasks(req: SubmitMultipleTasksRequest, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    print("Hit submit_multiple_orientation_tasks with task_ids:", req.task_ids)
+    if not req.task_ids:
+        return {"ok": True, "count": 0}
+        
+    tasks = db.query(models.OrientationTask).filter(models.OrientationTask.id.in_(req.task_ids)).all()
+    if not tasks:
+        raise HTTPException(404, "Tasks not found")
+        
+    # Assume all tasks belong to the same program for simplicity
+    program_id = tasks[0].program_id
+    enrollment = (db.query(models.OrientationEnrollment)
+                  .filter_by(learner_id=user.id, program_id=program_id).first())
+    if not enrollment or enrollment.status not in ("in_progress", "rejected", "submitted"):
+        raise HTTPException(403, "Not actively enrolled")
+        
+    completions = db.query(models.OrientationTaskCompletion).filter(
+        models.OrientationTaskCompletion.enrollment_id == enrollment.id,
+        models.OrientationTaskCompletion.task_id.in_(req.task_ids)
+    ).all()
+    
+    completion_map = {c.task_id: c for c in completions}
+    
+    count = 0
+    for task in tasks:
+        completion = completion_map.get(task.id)
+        if not completion or not completion.is_completed:
+            continue # Or raise error
+        if task.requires_proof and not completion.proof_paths:
+            continue
+            
+        completion.status = "pending_review"
+        completion.rejection_note = None
+        count += 1
+        
+    if count > 0:
+        department = enrollment.program.department
+        program_title = enrollment.program.title if enrollment.program else "Orientation Program"
+        task_word = "tasks" if count > 1 else "task"
+        
+        for appr in find_vessel_approvers(db, user.current_vessel, department):
+            notify(db, appr.id, "orientation_submitted", f"{count} {task_word} submitted for review",
+                   body=f"{user.full_name} submitted {count} {task_word} in {program_title} for your review.",
+                   link="/approvals")
+        db.commit()
+        
+    return {"ok": True, "count": count}
+
+@app.post("/api/orientation/tasks/{task_id}/submit")
+def submit_orientation_task(task_id: str, user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
+    task = db.get(models.OrientationTask, task_id)
+    if not task:
+        raise HTTPException(404, "Task not found")
+    enrollment = (db.query(models.OrientationEnrollment)
+                  .filter_by(learner_id=user.id, program_id=task.program_id).first())
+    if not enrollment or enrollment.status not in ("in_progress", "rejected", "submitted"):
+        raise HTTPException(403, "Not actively enrolled")
+    
+    completion = db.query(models.OrientationTaskCompletion).filter_by(
+        enrollment_id=enrollment.id, task_id=task_id).first()
+    
+    if not completion or not completion.is_completed:
+        raise HTTPException(400, "Task must be marked completed first")
+    if task.requires_proof and not completion.proof_paths:
+        raise HTTPException(400, "Attach a document/photo before submitting")
+    
+    completion.status = "pending_review"
+    completion.rejection_note = None
+    
+    department = enrollment.program.department
+    program_title = enrollment.program.title if enrollment.program else "Orientation Program"
+    
+    for appr in find_vessel_approvers(db, user.current_vessel, department):
+        notify(db, appr.id, "orientation_submitted", "Task submitted for review",
+               body=f"{user.full_name} submitted a task in {program_title} for your review.",
+               link="/approvals")
+    db.commit()
+    return {"ok": True, "status": completion.status}
+
 @app.delete("/api/orientation/tasks/{task_id}/attachments")
 def delete_orientation_task_attachment(task_id: str, url: str,
                                        user: models.User = Depends(get_current_user),
@@ -4776,177 +4884,195 @@ def find_vessel_approvers(db, vessel: str, department: str):
             if (info := orientation_ranks.vessel_approver_info(u)) and info["department"] == department]
 
 
-@app.post("/api/orientation/submit")
-def submit_orientation(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
-    enrollment = (db.query(models.OrientationEnrollment)
-                  .filter(models.OrientationEnrollment.learner_id == user.id,
-                         models.OrientationEnrollment.status.in_(["in_progress", "rejected"]))
-                  .first())
-    if not enrollment:
-        raise HTTPException(404, "No active enrollment to submit")
-    completions = {c.task_id: c for c in enrollment.completions}
-    tasks = enrollment.program.tasks
-    if not tasks or not all(completions.get(t.id) and completions[t.id].is_completed for t in tasks):
-        raise HTTPException(400, "All tasks must be completed before submitting")
-    missing_proof = [t.title for t in tasks if t.requires_proof
-                     and not (completions.get(t.id) and completions[t.id].proof_paths)]
-    if missing_proof:
-        names = ", ".join(missing_proof[:3])
-        more = f" and {len(missing_proof) - 3} more" if len(missing_proof) > 3 else ""
-        raise HTTPException(400, f"Attach a document/photo for: {names}{more} before submitting")
-    department = enrollment.program.department
-    submission = models.OrientationSubmission(
-        enrollment_id=enrollment.id,
-        vessel_name=user.current_vessel,
-        department=department,
-        status="pending",
-    )
-    db.add(submission)
-    db.flush()  # assigns submission.id (its default is evaluated on flush) — needed below for the notification deep link
-    enrollment.status = "submitted"
-    # A fresh review cycle starts clean — any per-task verification left
-    # over from a previous rejected round shouldn't count toward this one.
-    for c in completions.values():
-        c.verified = False
-        c.verified_at = None
-        c.verified_by = None
-    program_title = enrollment.program.title if enrollment.program else "Orientation Program"
-    for appr in find_vessel_approvers(db, user.current_vessel, department):
-        notify(db, appr.id, "orientation_submitted", "New submission awaiting your review",
-              body=f"{user.full_name} submitted their {program_title} checklist for review.",
-              link=f"/approvals?submission={submission.id}")
-    db.commit()
-    return {"ok": True, "submissionId": submission.id}
-
-
 # ---------------- Approver-facing (vessel Master / Chief Engineer) ----------------
 
-def orientation_submission_detail(db, s):
-    enrollment = s.enrollment
+
+def orientation_submission_detail(db, enrollment):
     learner = db.get(models.User, enrollment.learner_id) if enrollment else None
     tasks = sorted(enrollment.program.tasks, key=lambda t: t.order) if enrollment and enrollment.program else []
-    completions = {c.task_id: c for c in enrollment.completions} if enrollment else {}
-    verified_count = sum(1 for c in completions.values() if c.verified)
+    completions_map = {c.task_id: c for c in enrollment.completions} if enrollment else {}
+    
+    tasks_out = []
+    for t in tasks:
+        c = completions_map.get(t.id)
+        tasks_out.append({
+            "id": t.id,
+            "title": t.title,
+            "description": t.description,
+            "requiresProof": t.requires_proof,
+            "isCompleted": c.is_completed if c else False,
+            "proofUrls": c.proof_paths if c else [],
+            "note": c.note if c else None,
+            "completedAt": c.completed_at.isoformat() if c and c.completed_at else None,
+            "status": c.status if c else "draft",
+            "rejectionNote": c.rejection_note if c else None,
+            # Backwards compatibility
+            "verified": (c.status == "approved") if c else False,
+            "verifiedAt": c.verified_at.isoformat() if c and c.verified_at else None,
+        })
+        
+    has_pending_tasks = any(c.status == "pending_review" for c in enrollment.completions)
+    approved_tasks = sum(1 for c in enrollment.completions if c.status == "approved")
+    total_tasks = len(enrollment.program.tasks) if enrollment.program else 0
+    
+    if enrollment.status in ("approved", "rejected"):
+        computed_status = enrollment.status
+    elif has_pending_tasks or (total_tasks > 0 and approved_tasks == total_tasks):
+        computed_status = "pending"
+    else:
+        computed_status = "waiting_on_crew"
+    
     return {
-        "id": s.id, "enrollmentId": s.enrollment_id,
-        "candidateName": learner.full_name if learner else None,
-        "candidateRank": learner.rank if learner else None,
-        "vessel": s.vessel_name, "department": s.department,
-        "programTitle": enrollment.program.title if enrollment and enrollment.program else None,
-        "status": s.status,
-        "submittedAt": s.submitted_at.isoformat() if s.submitted_at else None,
-        "decidedAt": s.decided_at.isoformat() if s.decided_at else None,
-        "verifiedCount": verified_count,
-        "totalCount": len(tasks),
-        "allVerified": len(tasks) > 0 and verified_count == len(tasks),
-        "tasks": [{
-            "id": t.id, "title": t.title, "description": t.description,
-            "completedAt": (completions[t.id].completed_at.isoformat()
-                           if completions.get(t.id) and completions[t.id].completed_at else None),
-            "note": completions[t.id].note if completions.get(t.id) else None,
-            "proofUrls": (completions[t.id].proof_paths or []) if completions.get(t.id) else [],
-            "verified": bool(completions[t.id].verified) if completions.get(t.id) else False,
-            "verifiedAt": (completions[t.id].verified_at.isoformat()
-                          if completions.get(t.id) and completions[t.id].verified_at else None),
-        } for t in tasks],
+        "id": enrollment.id,
+        "enrollmentId": enrollment.id,
+        "vesselName": enrollment.vessel_name,
+        "vessel": enrollment.vessel_name,
+        "department": enrollment.program.department if enrollment.program else "",
+        "submittedAt": enrollment.created_at.isoformat(),
+        "status": computed_status,
+        "decidedAt": enrollment.created_at.isoformat() if computed_status != "pending" else None,
+        "candidateName": learner.full_name if learner else "Unknown",
+        "candidateRank": learner.rank if learner else "Unknown",
+        "candidateCrewId": learner.crew_id if learner else "",
+        "programTitle": enrollment.program.title if enrollment and enrollment.program else "Program",
+        "learner": {
+            "name": learner.full_name if learner else "Unknown",
+            "rank": learner.rank if learner else "Unknown",
+            "crewId": learner.crew_id if learner else "",
+        },
+        "program": {
+            "title": enrollment.program.title if enrollment and enrollment.program else "Program",
+            "subtitle": enrollment.program.subtitle if enrollment and enrollment.program else "",
+        },
+        "tasks": tasks_out,
+        "verifiedCount": approved_tasks,
+        "allVerified": total_tasks > 0 and approved_tasks == total_tasks,
     }
+
 
 
 @app.get("/api/approver/submissions")
 def approver_list_submissions(approver: models.User = Depends(require_vessel_approver), db: Session = Depends(get_db)):
     info = orientation_ranks.vessel_approver_info(approver)
-    submissions = (db.query(models.OrientationSubmission)
-                  .filter_by(vessel_name=info["vessel"], department=info["department"])
-                  .order_by(models.OrientationSubmission.submitted_at.desc()).all())
-    return [orientation_submission_detail(db, s) for s in submissions]
+    
+    enrollments = (db.query(models.OrientationEnrollment)
+                  .join(models.OrientationTaskCompletion)
+                  .join(models.OrientationProgram)
+                  .filter(
+                      models.OrientationEnrollment.vessel_name == info["vessel"],
+                      models.OrientationProgram.department == info["department"],
+                  ).filter(
+                      models.OrientationTaskCompletion.status.in_(["pending_review", "approved", "rejected"]) |
+                      models.OrientationEnrollment.status.in_(["approved", "rejected"])
+                  ).distinct().all())
+                  
+    return [orientation_submission_detail(db, e) for e in enrollments]
 
-
-def _get_approver_submission(db, approver, submission_id):
-    """Shared lookup + ownership check for the three approver-on-submission
-    actions below (verify-task, approve, reject)."""
-    info = orientation_ranks.vessel_approver_info(approver)
-    submission = db.get(models.OrientationSubmission, submission_id)
-    if (not submission or submission.vessel_name != info["vessel"]
-            or submission.department != info["department"]):
-        raise HTTPException(404, "Submission not found")
-    return submission
 
 
 class OrientationVerifyTaskRequest(BaseModel):
-    verified: bool
-
+    action: str  # 'approve' | 'reject'
+    note: str | None = None
 
 @app.post("/api/approver/submissions/{submission_id}/tasks/{task_id}/verify")
 def approver_verify_task(submission_id: str, task_id: str, req: OrientationVerifyTaskRequest,
                          approver: models.User = Depends(require_vessel_approver), db: Session = Depends(get_db)):
-    """Per-task sign-off, separate from the final Approve/Reject — lets the
-    Master/Chief Engineer work through the stepper and mark each task
-    individually seen+verified, so there's a real record they reviewed
-    every task rather than skimming and approving the whole thing at
-    once."""
-    submission = _get_approver_submission(db, approver, submission_id)
-    if submission.status != "pending":
-        raise HTTPException(400, "This submission has already been decided")
+    info = orientation_ranks.vessel_approver_info(approver)
+    enrollment = db.get(models.OrientationEnrollment, submission_id)
+    if not enrollment or enrollment.vessel_name != info["vessel"] or enrollment.program.department != info["department"]:
+        raise HTTPException(404, "Enrollment not found")
+        
     completion = (db.query(models.OrientationTaskCompletion)
-                  .filter_by(enrollment_id=submission.enrollment_id, task_id=task_id).first())
+                  .filter_by(enrollment_id=enrollment.id, task_id=task_id).first())
     if not completion:
-        raise HTTPException(404, "Task not found on this submission")
-    completion.verified = req.verified
-    completion.verified_at = datetime.now(timezone.utc) if req.verified else None
-    completion.verified_by = approver.id if req.verified else None
+        raise HTTPException(404, "Task not found")
+        
+    if req.action == 'approve':
+        completion.status = "approved"
+        completion.verified = True
+        completion.verified_at = datetime.now(timezone.utc)
+        completion.verified_by = approver.id
+    elif req.action == 'reject':
+        if not req.note:
+            raise HTTPException(400, "Rejection note is required")
+        completion.status = "rejected"
+        completion.rejection_note = req.note
+        completion.verified = False
+        completion.verified_at = None
+        completion.verified_by = None
+    else:
+        raise HTTPException(400, "Invalid action")
+        
+    # Notify learner
+    learner = db.get(models.User, enrollment.learner_id)
+    task = db.get(models.OrientationTask, task_id)
+    if learner and task:
+        if req.action == 'approve':
+            notify(db, learner.id, "orientation_task_approved", "Task approved",
+                   body=f"Your task '{task.title}' was approved by {approver.full_name}.",
+                   link="/orientation")
+        else:
+            notify(db, learner.id, "orientation_task_rejected", "Task rejected",
+                   body=f"Your task '{task.title}' was rejected by {approver.full_name}. Note: {req.note}",
+                   link="/orientation")
+                   
     db.commit()
-    return orientation_submission_detail(db, submission)
+    return orientation_submission_detail(db, enrollment)
 
+class OrientationDecideRequest(BaseModel):
+    action: str
 
-@app.post("/api/approver/submissions/{submission_id}/approve")
-def approver_approve_submission(submission_id: str, approver: models.User = Depends(require_vessel_approver),
-                                db: Session = Depends(get_db)):
-    submission = _get_approver_submission(db, approver, submission_id)
-    if submission.status != "pending":
-        raise HTTPException(400, "Already decided")
-    total = len(submission.enrollment.program.tasks) if submission.enrollment and submission.enrollment.program else 0
-    verified = sum(1 for c in submission.enrollment.completions if c.verified) if submission.enrollment else 0
-    if total and verified < total:
-        raise HTTPException(400, f"Verify all {total} tasks before approving ({verified} of {total} done)")
-    submission.status = "approved"
-    submission.decided_at = datetime.now(timezone.utc)
-    submission.decided_by = approver.id
-    submission.enrollment.status = "approved"
-    learner = db.get(models.User, submission.enrollment.learner_id)
-    program_title = submission.enrollment.program.title if submission.enrollment.program else "Orientation Program"
-    if learner:
-        notify(db, learner.id, "orientation_approved", "Orientation Program approved",
-              body=f"{approver.full_name} approved your {program_title} submission.",
-              link="/orientation")
-    for adm in db.query(models.User).filter(models.User.role.in_(["admin", "super_admin"])).all():
-        notify(db, adm.id, "orientation_approved", "Orientation Program approved",
-              body=f"{learner.full_name if learner else 'A candidate'}'s {program_title} submission "
-                   f"was approved by {approver.full_name}.",
-              link="/admin/orientation-program/results")
-    db.commit()
-    return {"ok": True}
-
-
-@app.post("/api/approver/submissions/{submission_id}/reject")
-def approver_reject_submission(submission_id: str, approver: models.User = Depends(require_vessel_approver),
+@app.post("/api/approver/submissions/{submission_id}/decide")
+def approver_decide_submission(submission_id: str, req: OrientationDecideRequest,
+                               approver: models.User = Depends(require_vessel_approver),
                                db: Session = Depends(get_db)):
-    submission = _get_approver_submission(db, approver, submission_id)
-    if submission.status != "pending":
-        raise HTTPException(400, "Already decided")
-    submission.status = "rejected"
-    submission.decided_at = datetime.now(timezone.utc)
-    submission.decided_by = approver.id
-    submission.enrollment.status = "rejected"
-    learner = db.get(models.User, submission.enrollment.learner_id)
-    program_title = submission.enrollment.program.title if submission.enrollment.program else "Orientation Program"
-    if learner:
-        notify(db, learner.id, "orientation_rejected", "Orientation Program submission rejected",
-              body=f"{approver.full_name} sent back your {program_title} submission — review and resubmit.",
-              link="/orientation")
-    for adm in db.query(models.User).filter(models.User.role.in_(["admin", "super_admin"])).all():
-        notify(db, adm.id, "orientation_rejected", "Orientation Program submission rejected",
-              body=f"{learner.full_name if learner else 'A candidate'}'s {program_title} submission "
-                   f"was rejected by {approver.full_name}.",
-              link="/admin/orientation-program/results")
+    info = orientation_ranks.vessel_approver_info(approver)
+    enrollment = db.get(models.OrientationEnrollment, submission_id)
+    if not enrollment or enrollment.vessel_name != info["vessel"] or enrollment.program.department != info["department"]:
+        raise HTTPException(404, "Enrollment not found")
+
+    if req.action == 'approve':
+        # Verify all tasks are actually approved
+        all_tasks = enrollment.program.tasks
+        completions = {c.task_id: c for c in enrollment.completions}
+        all_approved = all(completions.get(t.id) and completions[t.id].status == "approved" for t in all_tasks)
+        
+        if not all_approved:
+            raise HTTPException(400, "Cannot approve until all tasks are verified")
+            
+        enrollment.status = "approved"
+        db.commit()
+        
+        # Notify learner
+        if enrollment.learner_id:
+            notify(db, enrollment.learner_id, "orientation_approved", "Orientation completed",
+                   body=f"All tasks approved! Your {enrollment.program.title} is now complete.",
+                   link="/orientation")
+                   
+        # Notify all admins
+        admins = db.query(models.User).filter(
+            models.User.role.in_(["super_admin", "office_admin", "admin"]),
+            models.User.is_active == True
+        ).all()
+        for admin in admins:
+            learner = db.get(models.User, enrollment.learner_id)
+            learner_name = learner.full_name if learner else "A crew member"
+            notify(db, admin.id, "orientation_master_approved", "Orientation fully approved by Master",
+                   body=f"{approver.full_name} has fully approved the {enrollment.program.title} orientation for {learner_name} on {info['vessel']}.",
+                   link="/admin/orientation/results")
+                   
+        db.commit()
+                   
+    elif req.action == 'reject':
+        enrollment.status = "rejected"
+        db.commit()
+        
+        if enrollment.learner_id:
+            notify(db, enrollment.learner_id, "orientation_rejected", "Orientation rejected",
+                   body=f"Your {enrollment.program.title} was rejected by {approver.full_name}.",
+                   link="/orientation")
+    else:
+        raise HTTPException(400, "Invalid action")
+        
     db.commit()
-    return {"ok": True}
+    return orientation_submission_detail(db, enrollment)

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, useMemo } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import {
   Award, Clock, Circle, FileSpreadsheet, FileText,
@@ -280,6 +280,23 @@ export default function AdminReport() {
     return filteredRows.slice(start, start + ROWS_PER_PAGE)
   }, [filteredRows, page])
 
+  // Keep at least 5 rows visible: measure the real height of the first 5 rows
+  // (they get taller when a cell has a progress bar) + header + pagination and
+  // use it as the card's minimum height. The page scrolls on short screens
+  // instead of squeezing the table.
+  const tableCardRef = useRef(null)
+  const [minCardH, setMinCardH] = useState(0)
+  useLayoutEffect(() => {
+    const card = tableCardRef.current
+    const table = card?.querySelector('.rpt-table')
+    if (!table) { setMinCardH(0); return }
+    const head = table.querySelector('thead')?.getBoundingClientRect().height || 0
+    const rowsH = [...table.querySelectorAll('tbody tr')].slice(0, 5)
+      .reduce((sum, r) => sum + r.getBoundingClientRect().height, 0)
+    const pager = card.querySelector('.rpt-pagination')?.getBoundingClientRect().height || 0
+    setMinCardH(Math.ceil(head + rowsH + pager) + 4)   // +4: card borders / sub-pixel rounding
+  }, [paginatedRows, visibleCourses])
+
   const getPageNumbers = () => {
     const maxVisible = 5;
     const pages = [];
@@ -442,35 +459,6 @@ export default function AdminReport() {
         <div className="report-error"><AlertCircle size={14} /> {error}</div>
       )}
 
-      {/* ═══════════════════════ ACTIVE CHIPS ═══════════════════════════ */}
-      {hasFilters && (
-        <div style={{ marginBottom: 12 }}>
-          <div className="rpt-chips">
-            {crewSearch && (
-              <span className="rpt-chip">
-                "{crewSearch}"
-                <button onClick={() => setCrewSearch('')}><X size={10} /></button>
-              </span>
-            )}
-            {selectedCourse !== 'all' && (
-              <span className="rpt-chip">
-                {data.courses.find(c => c.id === selectedCourse)?.title}
-                <button onClick={() => setSelectedCourse('all')}><X size={10} /></button>
-              </span>
-            )}
-            {selectedStatus !== 'all' && (
-              <span className="rpt-chip">
-                {S[selectedStatus]?.label}
-                <button onClick={() => setSelectedStatus('all')}><X size={10} /></button>
-              </span>
-            )}
-            <span className="rpt-result-count">
-              {filteredRows.length} of {data.rows.length} crew
-            </span>
-          </div>
-        </div>
-      )}
-
       {/* ═══════════════════════ KPI STRIP ════════════════════════════ */}
       <div className="rpt-kpi-strip">
         <KpiCard icon={<Users size={16} />} value={kpis.crew}       label="Crew Shown"  color="accent" />
@@ -481,7 +469,8 @@ export default function AdminReport() {
       </div>
 
       {/* ═══════════════════════ TABLE ════════════════════════════════ */}
-      <div className="rpt-table-card" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      <div className="rpt-table-card" ref={tableCardRef}
+        style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: minCardH }}>
         {filteredRows.length === 0 ? (
           <div className="rpt-empty">
             <Search size={40} className="rpt-empty-icon" />
@@ -662,14 +651,6 @@ export default function AdminReport() {
             </div>
           </div>
         )}
-      </div>
-
-      {/* ═══════════════════════ FOOTER ═══════════════════════════════ */}
-      <div className="rpt-footer">
-        <span>
-          <FileSpreadsheet size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-          Excel export always exports all rows matching current filters
-        </span>
       </div>
 
       {approveTarget && (

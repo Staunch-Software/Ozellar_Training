@@ -9,13 +9,34 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [loading, setLoading] = useState(true)
 
-  // restore session on load if a token is present
-  useEffect(() => {
-    if (api.getToken()) {
-      api.getMe().then(setUser).catch(() => api.setToken(null)).finally(() => setLoading(false))
-    } else {
-      setLoading(false)
+  const [serverError, setServerError] = useState(false)
+
+  // Restore the session on load if a token is present. Only a real auth
+  // failure (401, handled inside api.req which clears the token) signs the user
+  // out. A slow/unreachable server must NOT wipe the token — retry a few times,
+  // then offer a Retry button instead of bouncing the user to the login page.
+  const restoreSession = async () => {
+    setServerError(false)
+    setLoading(true)
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        setUser(await api.getMe())
+        setLoading(false)
+        return
+      } catch (err) {
+        if (!api.getToken()) break               // 401 → req() already cleared the session
+        if (err.status && err.status < 500) { api.setToken(null); break }
+        await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)))
+      }
     }
+    if (api.getToken()) setServerError(true)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    if (api.getToken()) restoreSession()
+    else setLoading(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const login = async (body) => {
@@ -33,6 +54,18 @@ export function AuthProvider({ children }) {
   }
 
   const logout = () => { api.setToken(null); setUser(null) }
+
+  if (serverError) {
+    return (
+      <div className="spinner" style={{ flexDirection: 'column', gap: 12, textAlign: 'center' }}>
+        <div>Can't reach the server right now. You're still signed in.</div>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+          <button className="btn primary" onClick={restoreSession}>Retry</button>
+          <button className="btn" onClick={() => { logout(); setServerError(false) }}>Sign out</button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <AuthCtx.Provider value={{ user, loading, login, screeningLogin, logout }}>
@@ -84,21 +117,11 @@ export function ApproverRoute({ children }) {
   return children
 }
 
-// Orientation Program candidate routes — same crew credentials as ProtectedRoute,
-// but deliberately skips the passport-photo gate (that's for certificates,
-// unrelated to the promotion checklist) so the dedicated Orientation login
-// tab lands straight on the checklist, nothing else.
-export function OrientationRoute({ children }) {
-  const { user, loading } = useAuth()
-  if (loading) return <div className="spinner">Loading…</div>
-  if (!user) return <Navigate to="/" replace />
-  if (user.role !== 'learner') return <Navigate to={homeFor(user)} replace />
-  return children
-}
 
 // where a signed-in user belongs by role
 export const homeFor = (u) => {
   if (u?.role === 'admin' || u?.role === 'super_admin') return '/admin'
   if (u?.role === 'test_taker') return '/test/welcome'
-  return '/my-courses'
+  if (u?.isVesselApprover) return '/approvals'
+  return '/dashboard'
 }

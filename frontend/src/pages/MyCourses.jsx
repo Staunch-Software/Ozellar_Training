@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Anchor, HardHat, ShieldCheck, ArrowRight, Download, PlayCircle, BookOpen, FileDown, AlertCircle, Filter } from 'lucide-react'
 import { TopNav } from '../App.jsx'
 import { useAuth } from '../auth.jsx'
-import { getCourses, crewDownloadMyReportXlsx } from '../api.js'
+import { getCourses, crewDownloadMyReportXlsx, getMyOrientationEnrollment } from '../api.js'
 
 const ICONS = { Anchor, HardHat, ShieldCheck }
 
@@ -16,7 +16,10 @@ export default function MyCourses() {
   const { user: learner } = useAuth()
   const navigate = useNavigate()
 
-  useEffect(() => { getCourses().then(setCourses) }, [])
+  useEffect(() => {
+    getCourses().then(setCourses).catch(() => setCourses([]))
+  }, [])
+
   if (!courses) return (<><TopNav /><div className="spinner">Loading your courses…</div></>)
 
   // a course "counts" as completed when its assessment is passed (a cert is
@@ -107,7 +110,14 @@ export default function MyCourses() {
         )}
 
         {/* ---- Course Grid ---- */}
-        <div className="myc-grid">
+        {courses.length === 0 ? (
+          <div className="cnd-empty" style={{ margin: '60px auto', textAlign: 'center', color: 'var(--text-mut)' }}>
+            <BookOpen size={40} style={{ marginBottom: 12, opacity: 0.5 }} />
+            <div style={{ fontSize: 16, fontWeight: 500, color: 'var(--text)', marginBottom: 8 }}>No courses enrolled</div>
+            <div style={{ fontSize: 14 }}>Please ask your administrator or Training Officer to enroll you.</div>
+          </div>
+        ) : (
+          <div className="myc-grid">
           {courses.filter(c => {
             if (reportFilter === 'all') return true;
             if (reportFilter === 'completed') return c.passed;
@@ -122,6 +132,7 @@ export default function MyCourses() {
             <CourseCard key={c.id} c={c} onOpen={() => navigate(`/course/${c.slug}`)} />
           ))}
         </div>
+        )}
       </div>
     </>
   )

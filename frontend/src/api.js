@@ -13,7 +13,23 @@ async function req(path, opts = {}) {
   const headers = { 'Content-Type': 'application/json', ...(opts.headers || {}) }
   const t = getToken()
   if (t) headers.Authorization = `Bearer ${t}`
-  const res = await fetch(API + path, { ...opts, headers })
+
+  // Never wait forever on a stalled server: abort after 30s so screens (login
+  // "Signing in…", page spinners) fail with a clear message instead of hanging.
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 30000)
+  let res
+  try {
+    res = await fetch(API + path, { ...opts, headers, signal: opts.signal || ctrl.signal })
+  } catch (e) {
+    const err = new Error(e.name === 'AbortError'
+      ? 'The server is taking too long to respond. Please try again.'
+      : 'Cannot reach the server. Check your connection and try again.')
+    err.network = true
+    throw err
+  } finally {
+    clearTimeout(timer)
+  }
 
   if (res.status === 401) {
     const err = await res.json().catch(() => ({}))
@@ -35,7 +51,7 @@ async function req(path, opts = {}) {
 
 // auth
 export const login = (body) => req('/auth/login', { method: 'POST', body: JSON.stringify(body) })
-export const getMe = () => req('/auth/me')
+export const getMe = () => req(`/auth/me?t=${Date.now()}`)
 export const searchCrewNames = (q, scope) =>
   req(`/auth/crew-search?q=${encodeURIComponent(q)}${scope ? `&scope=${encodeURIComponent(scope)}` : ''}`)
 
@@ -105,6 +121,28 @@ export const adminAssign = (id, courseId) =>
   req(`/admin/users/${id}/enrollments`, { method: 'POST', body: JSON.stringify({ courseId }) })
 export const adminUnassign = (id, courseId) =>
   req(`/admin/users/${id}/enrollments/${courseId}`, { method: 'DELETE' })
+export const adminSetEnrollments = (id, courseIds) =>
+  req(`/admin/users/${id}/enrollments`, { method: 'PUT', body: JSON.stringify({ courseIds }) })
+// Admin: fetch a crew member's issued certificate PDF (auth header, not a ?token= URL) as an object URL
+export async function adminFetchCertificatePdfUrl(userId, courseId) {
+  const ctrl = new AbortController()
+  const timer = setTimeout(() => ctrl.abort(), 30000)
+  let res
+  try {
+    res = await fetch(`${API}/admin/users/${userId}/courses/${courseId}/certificate.pdf`, {
+      headers: { Authorization: `Bearer ${getToken()}` }, signal: ctrl.signal,
+    })
+  } catch {
+    throw new Error('Could not reach the server. Please try again.')
+  } finally {
+    clearTimeout(timer)
+  }
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail || 'Could not load the certificate')
+  }
+  return URL.createObjectURL(await res.blob())
+}
 export const adminReport = () => req('/admin/report')
 export const adminDashboardStats = () => req('/admin/dashboard-stats')
 export const adminApproveCertificate = (userId, courseId, remark = '') =>
@@ -370,7 +408,8 @@ export async function adminDownloadScreeningResultsXlsx(testId) {
 
 // Candidate-facing (existing crew login)
 export const getMyOrientationEnrollment = () => req('/orientation/my-enrollment')
-export const submitOrientation = () => req('/orientation/submit', { method: 'POST' })
+export const submitOrientationTask = (taskId) => req(`/orientation/tasks/${taskId}/submit`, { method: 'POST' })
+export const submitMultipleOrientationTasks = (taskIds) => req('/orientation/tasks/submit-multiple', { method: 'POST', body: JSON.stringify({ task_ids: taskIds }) })
 export const completeOrientationTask = (taskId, completed, note, files) => {
   const fd = new FormData()
   fd.append('completed', completed ? 'true' : 'false')
@@ -383,13 +422,10 @@ export const deleteOrientationTaskAttachment = (taskId, url) =>
 
 // Approver-facing (vessel Master / Chief Engineer)
 export const getApproverSubmissions = () => req('/approver/submissions')
-export const approveOrientationSubmission = (id) =>
-  req(`/approver/submissions/${id}/approve`, { method: 'POST' })
-export const rejectOrientationSubmission = (id) =>
-  req(`/approver/submissions/${id}/reject`, { method: 'POST' })
-export const verifyOrientationTask = (submissionId, taskId, verified) =>
+export const decideOrientationSubmission = (id, action) => req(`/approver/submissions/${id}/decide`, { method: 'POST', body: JSON.stringify({ action }) })
+export const verifyOrientationTask = (submissionId, taskId, action, note = null) =>
   req(`/approver/submissions/${submissionId}/tasks/${taskId}/verify`, {
-    method: 'POST', body: JSON.stringify({ verified }),
+    method: 'POST', body: JSON.stringify({ action, note }),
   })
 
 // Admin — programs / tasks

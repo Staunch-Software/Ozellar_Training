@@ -483,16 +483,24 @@ async def run_sync():
 
     try:
         records = await fetch_crew_with_retry()
-        created = updated = errors = 0
-        for rec in records:
-            result = upsert_crew_record(db, rec, now)
-            if result == "created":
-                created += 1
-            elif result == "updated":
-                updated += 1
-            else:
-                errors += 1
-        db.commit()
+
+        # Hundreds of synchronous per-row queries: run them in a worker thread,
+        # otherwise the whole API (logins, page loads) freezes on the event
+        # loop until the upsert loop finishes.
+        def _apply():
+            c = u = e = 0
+            for rec in records:
+                result = upsert_crew_record(db, rec, now)
+                if result == "created":
+                    c += 1
+                elif result == "updated":
+                    u += 1
+                else:
+                    e += 1
+            db.commit()
+            return c, u, e
+
+        created, updated, errors = await asyncio.to_thread(_apply)
 
         log.records_fetched = len(records)
         log.records_created = created
