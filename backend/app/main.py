@@ -3077,11 +3077,144 @@ def pptx_status(course_id: str, admin: models.User = Depends(require_admin)):
         "added": job.get("added"),
     }
 
+# ---------------------------------------------------------------------------
+# Video upload/processing job tracker
+#
+# Mirrors the PPTX job tracker above. File-based so all gunicorn workers can
+# read the same state without needing Redis/a schema change.
+# ---------------------------------------------------------------------------
+_video_job_lock = _threading.Lock()
+
+
+def _video_job_path(course_id: str) -> str:
+    return os.path.join(UPLOAD_DIR, course_id, "_video_job.json")
+
+
+def _video_job_read(course_id: str) -> dict | None:
+    try:
+        with open(_video_job_path(course_id), "r", encoding="utf-8") as fh:
+            return json.loads(fh.read())
+    except (FileNotFoundError, json.JSONDecodeError):
+        return None
+
+
+def _video_job_write(course_id: str, job: dict) -> None:
+    path = _video_job_path(course_id)
+    tmp = path + ".tmp"
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    with open(tmp, "w", encoding="utf-8") as fh:
+        fh.write(json.dumps(job))
+    os.replace(tmp, path)
+
+
+def _video_job_set(course_id: str, *, stage: str, pct: int | None = None,
+                   message: str = "", error: str | None = None,
+                   done: bool = False, url: str | None = None,
+                   chapter_id: str | None = None):
+    with _video_job_lock:
+        job = _video_job_read(course_id) or {}
+        job.update({
+            "stage": stage,
+            "message": message,
+            "error": error,
+            "done": done,
+            "updated": time.time(),
+        })
+        if pct is not None:
+            job["pct"] = max(0, min(100, int(pct)))
+        if url is not None:
+            job["url"] = url
+        if chapter_id is not None:
+            job["chapter_id"] = chapter_id
+        _video_job_write(course_id, job)
+    return job
+
+
+def _process_video_background(course_id: str, raw_path: str, filename: str,
+                               ext: str, chapter_id: str | None, title: str | None):
+    """Run ffmpeg compression and save in a background thread, then persist to DB."""
+    db = SessionLocal()
+    try:
+        _video_job_set(course_id, stage="compressing", pct=10,
+                       message="Compressing video — this can take several minutes for large files…")
+
+        if ext.lower() == ".mp4":
+            final_path = compress_video(raw_path)
+            if final_path == raw_path:
+                # ffmpeg unavailable/failed — try moving moov atom for fast-start
+                try:
+                    from qtfaststart import processor
+                    processor.process(raw_path, raw_path + ".tmp")
+                    os.replace(raw_path + ".tmp", raw_path)
+                except Exception as e:
+                    print("qtfaststart failed:", e)
+        else:
+            final_path = raw_path
+
+        _video_job_set(course_id, stage="saving", pct=85,
+                       message="Compression done — saving file…")
+
+        storage.save(course_id, filename, final_path)
+        url = f"/api/uploads/{course_id}/{filename}"
+
+        course = db.query(models.Course).filter(models.Course.id == course_id).first()
+        if not course:
+            _video_job_set(course_id, stage="failed", pct=100, done=True,
+                           error="Course no longer exists.")
+            return
+
+        if chapter_id:
+            ch = db.get(models.Chapter, chapter_id)
+            if ch and ch.course_id == course_id:
+                ch.videos = [*(ch.videos or []), url]
+                db.commit()
+                _video_job_set(course_id, stage="done", pct=100, done=True,
+                               url=url, chapter_id=ch.id,
+                               message="Video added to existing lesson.")
+                return
+
+        # Create a new chapter
+        ch = models.Chapter(
+            id=f"{course_id}-video-{_next_chapter_n(course)}-{uuid.uuid4().hex[:8]}",
+            course_id=course_id,
+            n=_next_chapter_n(course),
+            title=(title or "Video").strip() or "Video",
+            sections=[], videos=[url],
+            order=_next_chapter_order(course),
+            kind="lesson",
+        )
+        db.add(ch)
+        db.commit()
+        db.refresh(ch)
+        _video_job_set(course_id, stage="done", pct=100, done=True,
+                       url=url, chapter_id=ch.id,
+                       message="Video lesson created successfully.")
+        print(f"[video] background processing finished for {course_id}")
+
+    except Exception as e:
+        print(f"[video] background processing failed: {e}")
+        import traceback; traceback.print_exc()
+        _video_job_set(course_id, stage="failed", pct=100, done=True,
+                       error=f"Processing failed: {e}")
+        # clean up raw file on failure
+        if os.path.exists(raw_path):
+            try:
+                os.remove(raw_path)
+            except OSError:
+                pass
+    finally:
+        db.close()
+
+
 @app.post("/api/admin/courses/{course_id}/upload-video")
-def admin_upload_video(course_id: str, file: UploadFile = File(...),
-                             chapterId: str | None = Form(None), title: str | None = Form(None),
-                             admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+async def admin_upload_video(course_id: str, background_tasks: BackgroundTasks,
+                              file: UploadFile = File(...),
+                              chapterId: str | None = Form(None),
+                              title: str | None = Form(None),
+                              admin: models.User = Depends(require_admin),
+                              db: Session = Depends(get_db)):
     course = db.get(models.Course, course_id)
+    db.close()
     if not course:
         raise HTTPException(404, "Course not found")
 
@@ -3089,47 +3222,60 @@ def admin_upload_video(course_id: str, file: UploadFile = File(...),
     os.makedirs(course_dir, exist_ok=True)
     ext = os.path.splitext(file.filename or "")[1] or ".mp4"
     prefix = f"/api/uploads/{course_id}/video"
-    existing = sum(1 for ch in course.chapters for v in (ch.videos or []) if v.startswith(prefix))
+
+    # Re-open a fresh session to count existing videos (the one above was closed)
+    with SessionLocal() as count_db:
+        fresh_course = count_db.get(models.Course, course_id)
+        existing = sum(
+            1 for ch in (fresh_course.chapters if fresh_course else [])
+            for v in (ch.videos or []) if v.startswith(prefix)
+        )
     filename = f"video{existing + 1}{ext}"
 
+    # Step 1: stream body to disk immediately — return 202 as soon as it lands.
+    # ffmpeg runs in the background so this HTTP request resolves right away.
     raw_path = os.path.join(course_dir, f"_upload_{uuid.uuid4().hex[:8]}{ext}")
-    with open(raw_path, "wb") as f:
-        shutil.copyfileobj(file.file, f)
+    CHUNK = 4 * 1024 * 1024
+    size = 0
+    try:
+        with open(raw_path, "wb") as f:
+            while True:
+                chunk = await file.read(CHUNK)
+                if not chunk:
+                    break
+                f.write(chunk)
+                size += len(chunk)
+    except Exception as e:
+        _safe_unlink(raw_path)
+        raise HTTPException(500, f"Could not save the upload: {e}")
 
-    if ext.lower() == ".mp4":
-        final_path = compress_video(raw_path)
-        if final_path == raw_path:
-            # ffmpeg unavailable/failed — fall back to just relocating the moov
-            # atom so playback can still start immediately.
-            try:
-                from qtfaststart import processor
-                processor.process(raw_path, raw_path + ".tmp")
-                os.replace(raw_path + ".tmp", raw_path)
-            except Exception as e:
-                print("qtfaststart failed:", e)
-    else:
-        final_path = raw_path
-
-    storage.save(course_id, filename, final_path)
-    url = f"/api/uploads/{course_id}/{filename}"
-
-    if chapterId:
-        ch = db.get(models.Chapter, chapterId)
-        if not ch or ch.course_id != course_id:
-            raise HTTPException(404, "Chapter not found")
-        ch.videos = [*(ch.videos or []), url]
-        db.commit()
-        return admin_chapter_detail(ch)
-
-    ch = models.Chapter(
-        id=f"{course_id}-video-{_next_chapter_n(course)}-{uuid.uuid4().hex[:8]}", course_id=course_id,
-        n=_next_chapter_n(course), title=(title or "Video").strip() or "Video",
-        sections=[], videos=[url], order=_next_chapter_order(course), kind="lesson",
+    _video_job_set(course_id, stage="queued", pct=5,
+                   message="Upload received — starting compression…")
+    background_tasks.add_task(
+        _process_video_background,
+        course_id, raw_path, filename, ext, chapterId, title
     )
-    db.add(ch)
-    db.commit()
-    db.refresh(ch)
-    return admin_chapter_detail(ch)
+    return {"message": "Processing started in background.", "bytes": size}
+
+
+@app.get("/api/admin/courses/{course_id}/upload-video-status")
+def video_upload_status(course_id: str, admin: models.User = Depends(require_admin)):
+    """Progress of the background video compression/import for this course.
+
+    Returns `{stage: "idle"}` when nothing is running.
+    """
+    job = _video_job_read(course_id)
+    if not job:
+        return {"stage": "idle", "pct": 0, "done": True, "error": None, "message": "", "url": None, "chapter_id": None}
+    return {
+        "stage": job.get("stage", "queued"),
+        "pct": job.get("pct", 0),
+        "message": job.get("message", ""),
+        "error": job.get("error"),
+        "done": bool(job.get("done")),
+        "url": job.get("url"),
+        "chapter_id": job.get("chapter_id"),
+    }
 
 
 @app.post("/api/admin/courses/{course_id}/quiz-chapters")

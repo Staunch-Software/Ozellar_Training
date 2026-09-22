@@ -304,6 +304,9 @@ export const adminUploadVideo = (courseId, file, { chapterId, title } = {}, onPr
   return uploadReq(`/admin/courses/${courseId}/upload-video`, fd, onProgress)
 }
 
+export const adminVideoUploadStatus = (courseId) =>
+  req(`/admin/courses/${courseId}/upload-video-status`)
+
 
 // ============================================================
 // SCREENING TEST — TEST-TAKER APIs
