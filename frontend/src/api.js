@@ -147,6 +147,8 @@ export const adminReport = () => req('/admin/report')
 export const adminDashboardStats = () => req('/admin/dashboard-stats')
 export const adminApproveCertificate = (userId, courseId, remark = '') =>
   req(`/admin/users/${userId}/courses/${courseId}/approve`, { method: 'POST', body: JSON.stringify({ remark }) })
+export const adminReassignCourse = (userId, courseId) =>
+  req(`/admin/users/${userId}/courses/${courseId}/reassign`, { method: 'POST' })
 
 export const adminGetNotifications = () => req('/admin/notifications')
 

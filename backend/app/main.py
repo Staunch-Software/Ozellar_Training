@@ -350,6 +350,35 @@ def notify(db, user_id, kind, title, body=None, link=None):
                                body=body, link=link))
 
 
+def _revoke_course_completion(db, course_id):
+    """When a new module is added, re-assign the course to users who already completed it,
+    and notify all enrolled users."""
+    course = db.query(models.Course).filter_by(id=course_id).first()
+    if not course:
+        return
+        
+    course_name = course.title
+    slug = course.slug if course.slug else course_id
+    
+    # 1. Reset completion for those who passed
+    progress_records = db.query(models.Progress).filter(
+        models.Progress.course_id == course_id,
+        models.Progress.passed == True
+    ).all()
+    
+    for p in progress_records:
+        p.passed = False
+        
+    # 2. Notify ALL assigned users
+    enrollments = db.query(models.Enrollment).filter_by(course_id=course_id).all()
+    for e in enrollments:
+        notify(
+            db, e.learner_id, "info", "Course Updated",
+            f"A new module was added to '{course_name}'. Please complete the new content.",
+            f"/course/{slug}"
+        )
+
+
 def enrolled_course_ids(db, user_id):
     return [e.course_id for e in
             db.query(models.Enrollment).filter_by(learner_id=user_id).all()]
@@ -1524,6 +1553,36 @@ def admin_panel_update_admin(user_id: str, req: UpdateUserRequest,
         "isActive": bool(user.is_active),
         "createdAt": user.created_at.isoformat() if user.created_at else None,
     }
+
+
+@app.post("/api/admin/users/{user_id}/courses/{course_id}/reassign")
+def admin_reassign_course(user_id: str, course_id: str, admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    user = db.get(models.User, user_id)
+    if not user:
+        raise HTTPException(404, "User not found")
+        
+    course = db.get(models.Course, course_id)
+    if not course:
+        raise HTTPException(404, "Course not found")
+        
+    enrollment = db.query(models.Enrollment).filter_by(learner_id=user_id, course_id=course_id).first()
+    if not enrollment:
+        raise HTTPException(400, "User is not assigned to this course")
+
+    # Delete progress, attempts, approvals, and certificates so they start fully from scratch
+    db.query(models.Progress).filter_by(learner_id=user_id, course_id=course_id).delete()
+    db.query(models.Certificate).filter_by(learner_id=user_id, course_id=course_id).delete()
+    db.query(models.AssessmentApproval).filter_by(learner_id=user_id, course_id=course_id).delete()
+    db.query(models.Attempt).filter_by(learner_id=user_id, course_id=course_id).delete()
+    
+    notify(
+        db, user_id, "info", "Course Reassigned",
+        f"You have been reassigned to '{course.title}'. Please complete it from the beginning.",
+        f"/course/{course.slug or course_id}"
+    )
+
+    db.commit()
+    return {"message": "Course reassigned successfully."}
 
 
 class InlineApproveRequest(BaseModel):
@@ -2963,6 +3022,8 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
             
             if doc:
                 doc.close()
+            if num_slides > 0:
+                _revoke_course_completion(db, course_id)
             db.commit()
             _pptx_job_set(course_id, stage="done", pct=100, done=True,
                           added=num_slides,
@@ -3184,6 +3245,7 @@ def _process_video_background(course_id: str, raw_path: str, filename: str,
             kind="lesson",
         )
         db.add(ch)
+        _revoke_course_completion(db, course_id)
         db.commit()
         db.refresh(ch)
         _video_job_set(course_id, stage="done", pct=100, done=True,
@@ -3304,6 +3366,7 @@ def admin_create_quiz_chapter(course_id: str, req: CreateQuizChapterRequest,
     for i, ch in enumerate(chapters):
         ch.order = i
         ch.n = i + 1
+    _revoke_course_completion(db, course_id)
     db.commit()
     db.refresh(quiz)
     return admin_chapter_detail(quiz)
