@@ -2850,10 +2850,34 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
             
             import zipfile
             import xml.etree.ElementTree as ET
-            
-            slide_videos = {}
+
+            # Unique tag for this upload — prefixed on every extracted file so
+            # that a second PPTX upload to the same course never overwrites the
+            # video files produced by the first one.
+            upload_tag = uuid.uuid4().hex[:8]
+
+            # Build a mapping: zip slide part name (e.g. "ppt/slides/slide3.xml")
+            # -> 0-based presentation order index.
+            # python-pptx iterates prs.slides in presentation order, and each
+            # slide exposes its part's name.  The zip file-system numbering
+            # (slide1.xml, slide2.xml…) does NOT have to match presentation
+            # order, so we must resolve the mapping explicitly before processing
+            # any videos — otherwise a video on slide3.xml (which might be the
+            # 5th slide shown) lands on chapter index 2 instead of 4.
+            slide_part_to_prs_idx: dict[str, int] = {}
+            if prs is not None:
+                try:
+                    for prs_idx, slide in enumerate(prs.slides):
+                        # slide.part.partname is e.g. "/ppt/slides/slide3.xml"
+                        part_name = slide.part.partname.lstrip("/")
+                        slide_part_to_prs_idx[part_name] = prs_idx
+                except Exception as e:
+                    print(f"[pptx] could not build slide part map: {e}")
+
+            slide_videos: dict[int, set] = {}
             try:
                 with zipfile.ZipFile(pptx_path, "r") as z:
+                    namelist_set = set(z.namelist())
                     # Count the videos up front so the progress bar can actually
                     # move through this phase. ffmpeg on a deck's worth of video
                     # is the longest part of the whole job (minutes), so a fixed
@@ -2864,66 +2888,92 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                     # media part -> served URL, so each video is only ever
                     # extracted and compressed once (see the note below).
                     processed_media: dict[str, str] = {}
-                    for name in z.namelist():
-                        if name.startswith("ppt/slides/_rels/slide") and name.endswith(".xml.rels"):
-                            try:
-                                slide_num_str = name.split("slide")[2].split(".")[0]
-                                slide_idx = int(slide_num_str) - 1
-                                
-                                rels_data = z.read(name)
-                                root = ET.fromstring(rels_data)
-                                ns = {"r": "http://schemas.openxmlformats.org/package/2006/relationships"}
-                                for rel in root.findall("r:Relationship", ns):
-                                    target = rel.get("Target")
-                                    if target and target.startswith("../media/") and target.lower().endswith(".mp4"):
-                                        media_path = "ppt/" + target[3:]
-                                        if media_path in z.namelist():
-                                            # PowerPoint writes TWO relationships
-                                            # per video shape (a `video` and a
-                                            # `media` ref) pointing at the same
-                                            # part, so without this cache every
-                                            # video is extracted and re-encoded
-                                            # twice — roughly doubling the job.
-                                            # Keying on the media part also means
-                                            # one video reused across slides is
-                                            # compressed once and shared.
-                                            if media_path in processed_media:
-                                                slide_videos.setdefault(slide_idx, set()).add(
-                                                    processed_media[media_path])
-                                                continue
 
-                                            basename = os.path.basename(target)
-                                            vid_filename = f"slide{slide_num_str}_{basename}"
-                                            vid_path = os.path.join(course_dir, vid_filename)
-                                            # copy in chunks — a single embedded
-                                            # MP4 can be 500 MB+, and z.read()
-                                            # would hold all of it in RAM.
-                                            with z.open(media_path) as src, open(vid_path, "wb") as vf:
-                                                shutil.copyfileobj(src, vf, 1024 * 1024)
-                                            _pptx_job_set(
-                                                course_id, stage="video",
-                                                pct=40 + int(20 * done_vids / max(total_vids, 1)),
-                                                message=(f"Compressing video {done_vids + 1} of "
-                                                         f"{total_vids} — {basename} "
-                                                         f"({os.path.getsize(vid_path) // 1048576} MB). "
-                                                         "Large videos take several minutes each."))
-                                            final_vid_path = compress_video(vid_path)
-                                            done_vids += 1
-                                            if final_vid_path == vid_path:
-                                                try:
-                                                    from qtfaststart import processor
-                                                    processor.process(vid_path, vid_path + ".tmp")
-                                                    os.replace(vid_path + ".tmp", vid_path)
-                                                except Exception:
-                                                    pass
-                                            storage.save(course_id, vid_filename, final_vid_path)
-                                            vid_url = f"/api/uploads/{course_id}/{vid_filename}"
-                                            processed_media[media_path] = vid_url
-                                            if slide_idx not in slide_videos:
-                                                slide_videos[slide_idx] = set()
-                                            slide_videos[slide_idx].add(vid_url)
-                            except Exception as e:
-                                print(f"Error parsing {name}: {e}")
+                    # Sort the slide rels by their numeric slide number so that
+                    # iteration order is deterministic (zip central directory
+                    # order is not guaranteed to be in slide order).
+                    def _slide_rels_sort_key(n):
+                        try:
+                            return int(n.split("slide")[2].split(".")[0])
+                        except Exception:
+                            return 0
+
+                    slide_rels = sorted(
+                        [n for n in z.namelist()
+                         if n.startswith("ppt/slides/_rels/slide") and n.endswith(".xml.rels")],
+                        key=_slide_rels_sort_key
+                    )
+
+                    for name in slide_rels:
+                        try:
+                            slide_num_str = name.split("slide")[2].split(".")[0]
+
+                            # Resolve presentation-order index via the part map.
+                            # The .rels file lives at ppt/slides/_rels/slideN.xml.rels
+                            # and describes ppt/slides/slideN.xml.
+                            slide_part_name = f"ppt/slides/slide{slide_num_str}.xml"
+                            if slide_part_name in slide_part_to_prs_idx:
+                                slide_idx = slide_part_to_prs_idx[slide_part_name]
+                            else:
+                                # Fallback: use file-system numbering (minus 1).
+                                # This can still be wrong but is better than nothing.
+                                slide_idx = int(slide_num_str) - 1
+
+                            rels_data = z.read(name)
+                            root = ET.fromstring(rels_data)
+                            ns = {"r": "http://schemas.openxmlformats.org/package/2006/relationships"}
+                            for rel in root.findall("r:Relationship", ns):
+                                target = rel.get("Target")
+                                if target and target.startswith("../media/") and target.lower().endswith(".mp4"):
+                                    media_path = "ppt/" + target[3:]
+                                    if media_path in namelist_set:
+                                        # PowerPoint writes TWO relationships
+                                        # per video shape (a `video` and a
+                                        # `media` ref) pointing at the same
+                                        # part, so without this cache every
+                                        # video is extracted and re-encoded
+                                        # twice — roughly doubling the job.
+                                        # Keying on the media part also means
+                                        # one video reused across slides is
+                                        # compressed once and shared.
+                                        if media_path in processed_media:
+                                            slide_videos.setdefault(slide_idx, set()).add(
+                                                processed_media[media_path])
+                                            continue
+
+                                        basename = os.path.basename(target)
+                                        # upload_tag prefix prevents filename
+                                        # collisions when multiple PPTXes are
+                                        # uploaded to the same course.
+                                        vid_filename = f"{upload_tag}_slide{slide_num_str}_{basename}"
+                                        vid_path = os.path.join(course_dir, vid_filename)
+                                        # copy in chunks — a single embedded
+                                        # MP4 can be 500 MB+, and z.read()
+                                        # would hold all of it in RAM.
+                                        with z.open(media_path) as src, open(vid_path, "wb") as vf:
+                                            shutil.copyfileobj(src, vf, 1024 * 1024)
+                                        _pptx_job_set(
+                                            course_id, stage="video",
+                                            pct=40 + int(20 * done_vids / max(total_vids, 1)),
+                                            message=(f"Compressing video {done_vids + 1} of "
+                                                     f"{total_vids} — {basename} "
+                                                     f"({os.path.getsize(vid_path) // 1048576} MB). "
+                                                     "Large videos take several minutes each."))
+                                        final_vid_path = compress_video(vid_path)
+                                        done_vids += 1
+                                        if final_vid_path == vid_path:
+                                            try:
+                                                from qtfaststart import processor
+                                                processor.process(vid_path, vid_path + ".tmp")
+                                                os.replace(vid_path + ".tmp", vid_path)
+                                            except Exception:
+                                                pass
+                                        storage.save(course_id, vid_filename, final_vid_path)
+                                        vid_url = f"/api/uploads/{course_id}/{vid_filename}"
+                                        processed_media[media_path] = vid_url
+                                        slide_videos.setdefault(slide_idx, set()).add(vid_url)
+                        except Exception as e:
+                            print(f"Error parsing {name}: {e}")
             except Exception as e:
                 print(f"Error parsing PPTX zip for videos: {e}")
 
@@ -3283,16 +3333,7 @@ async def admin_upload_video(course_id: str, background_tasks: BackgroundTasks,
     course_dir = os.path.join(UPLOAD_DIR, course_id)
     os.makedirs(course_dir, exist_ok=True)
     ext = os.path.splitext(file.filename or "")[1] or ".mp4"
-    prefix = f"/api/uploads/{course_id}/video"
-
-    # Re-open a fresh session to count existing videos (the one above was closed)
-    with SessionLocal() as count_db:
-        fresh_course = count_db.get(models.Course, course_id)
-        existing = sum(
-            1 for ch in (fresh_course.chapters if fresh_course else [])
-            for v in (ch.videos or []) if v.startswith(prefix)
-        )
-    filename = f"video{existing + 1}{ext}"
+    filename = f"video_{uuid.uuid4().hex[:8]}{ext}"
 
     # Step 1: stream body to disk immediately — return 202 as soon as it lands.
     # ffmpeg runs in the background so this HTTP request resolves right away.

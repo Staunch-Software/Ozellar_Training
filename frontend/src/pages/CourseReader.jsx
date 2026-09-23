@@ -300,6 +300,7 @@ export default function CourseReader() {
           {ch.videos && ch.videos.map((v, vi) => (
             <div className="media" style={{ marginBottom: 22 }} key={v}>
               <video
+                key={v}
                 controls
                 controlsList="nodownload"
                 poster={vi === 0 ? ch.image : undefined}
