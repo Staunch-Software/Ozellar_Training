@@ -93,15 +93,7 @@ export default function AdminUsers() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div style={{
-        background: 'var(--surface)',
-        borderBottom: '1px solid var(--border)',
-        padding: '10px 0',
-        marginBottom: '12px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px'
-      }}>
+      <div className="users-head">
         <div style={{
           width: '4px',
           height: '36px',
@@ -128,10 +120,10 @@ export default function AdminUsers() {
           <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', marginTop: '1px' }}>Crew Users</div>
         </div>
 
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'center', paddingRight: '20px' }}>
+                <div className="users-head-actions">
           {!showForm && (
             <>
-              <div className="rpt-search-wrap" style={{ minWidth: 280, maxWidth: 400, margin: 0 }}>
+              <div className="rpt-search-wrap users-search" style={{ margin: 0 }}>
                 <Search size={14} className="rpt-field-icon" />
                 <input 
                   type="text" 
@@ -147,10 +139,10 @@ export default function AdminUsers() {
                 )}
               </div>
               
-              <div style={{ position: 'relative' }} ref={dropdownRef}>
+                            <div className="users-rank-wrap" ref={dropdownRef}>
                 <div 
-                  className="rpt-field" 
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', minWidth: '180px', background: '#fff' }}
+                  className="rpt-field users-rank-field" 
+                  style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                 >
                   <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '13px' }}>
@@ -225,8 +217,8 @@ export default function AdminUsers() {
       )}
 
       <div className="admin-card" style={{ padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-        <div className="admin-table-wrap" style={{ flex: 1 }}>
-          <table className="admin-table">
+        <div className="admin-table-wrap users-table-wrap" style={{ flex: 1 }}>
+  <table className="admin-table">
             <thead>
               <tr>
                 <th style={{ width: 60 }}>SI No.</th><th>Name</th><th>Role</th><th>Login ID</th><th>Rank</th>
@@ -238,23 +230,23 @@ export default function AdminUsers() {
                 <tr key={u.id} className={`${u.isActive ? '' : 'row-inactive'} premium-table-row`}>
                   <td className="mut" style={{ fontSize: 12 }}>{(currentPage - 1) * itemsPerPage + index + 1}</td>
                   <td>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                      <div style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
-                        background: 'rgba(2,132,199,0.1)',
-                        color: '#0284c7',
-                        display: 'grid',
-                        placeItems: 'center',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        flexShrink: 0
-                      }}>
-                        {getInitials(u.name)}
-                      </div>
-                      <b>{u.name}</b>
-                    </div>
+                    <div className="users-name-cell">
+  <div style={{
+    width: '32px',
+    height: '32px',
+    borderRadius: '50%',
+    background: 'rgba(2,132,199,0.1)',
+    color: '#0284c7',
+    display: 'grid',
+    placeItems: 'center',
+    fontSize: '12px',
+    fontWeight: 700,
+    flexShrink: 0
+  }}>
+    {getInitials(u.name)}
+  </div>
+  <b className="users-name-text">{u.name}</b>
+</div>
                   </td>
                 <td><span className={`pill ${u.role}`}>{u.role === 'super_admin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : 'Crew'}</span></td>
                 <td className="mono">{u.role === 'admin' || u.role === 'super_admin' ? u.email : u.crewId}</td>

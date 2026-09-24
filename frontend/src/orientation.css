@@ -445,10 +445,11 @@
 /* dept pill buttons */
 .orn-dept-pills { display: flex; gap: 6px; align-items: center; }
 .orn-dept-pill {
-  display: inline-flex; align-items: center; gap: 5px;
+  display: inline-flex; align-items: center; justify-content: center; gap: 5px;
   padding: 7px 13px; border-radius: 20px; font-size: 12.5px; font-weight: 600;
   border: 1px solid var(--border-strong); background: var(--surface); color: var(--text-mut);
   cursor: pointer; transition: all .15s;
+  flex: 1 1 0; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .orn-dept-pill:hover { background: var(--surface-2); color: var(--text); }
 .orn-dept-pill-count { background: var(--surface-2); border-radius: 20px; padding: 1px 7px; font-size: 11px; margin-left: 2px; }
@@ -524,7 +525,7 @@
   animation: orn-modal-in .18s ease;
 }
 .orn-modal--wide { max-width: 540px; }
-.orn-modal--split { max-width: 920px; }
+.orn-modal--split { max-width: clamp(920px, 60vw, 1600px); }
 @keyframes orn-modal-in {
   from { opacity: 0; transform: scale(.95) translateY(8px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
@@ -533,6 +534,7 @@
   display: flex; align-items: center; justify-content: space-between; gap: 12px;
   padding: 18px 20px; border-bottom: 1px solid var(--border);
   background: linear-gradient(180deg, var(--orn-accent-bg), transparent);
+  flex-shrink: 0;
 }
 .orn-modal-header-info { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .orn-modal-header-icon {
@@ -546,6 +548,7 @@
 .orn-modal-footer {
   display: flex; justify-content: flex-end; gap: 10px;
   padding: 14px 20px; border-top: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 /* selected crew display inside modal */
@@ -588,10 +591,24 @@
 .orn-dept-pills--sm { flex-shrink: 0; }
 .orn-dept-pills--sm .orn-dept-pill { padding: 6px 10px; font-size: 11.5px; }
 
+/* Enroll modal's dept pills live in a fixed-width column and must never
+   overflow it — force the 3 pills to divide the row equally instead of
+   sizing to content (this is what pushed "Engine" past the edge). */
+.orn-enroll-col-pills { flex-wrap: nowrap; }
+.orn-enroll-col-pills .orn-dept-pill {
+  flex: 1 1 0;
+  min-width: 0;
+  box-sizing: border-box;
+  justify-content: center;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ---- Enroll modal: two-column layout (crew browser | detail) ---- */
 .orn-enroll-layout {
-  display: grid; grid-template-columns: 360px 1fr;
-  flex: 1; min-height: 480px; overflow: hidden;
+  display: grid; grid-template-columns: clamp(360px, 18vw, 460px) 1fr;
+  flex: 1 1 clamp(480px, 32vw, 760px); min-height: 0; overflow: hidden;
 }
 .orn-enroll-col { display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .orn-enroll-col--crew { border-right: 1px solid var(--border); background: var(--surface-2); }
@@ -650,3 +667,339 @@
   margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .orn-crew-dropdown-sub .chip { font-size: 9px; padding: 1px 6px; flex-shrink: 0; }
+
+/* ============================================================
+   RESPONSIVE ADDITIONS — shared orientation.css
+   Applies across AdminOrientationPrograms, AdminOrientationCandidates,
+   AdminOrientationEnrollments, AdminOrientationApprovers, Builder header,
+   Preview page. All rules additive — no existing selectors changed.
+   ============================================================ */
+
+/* ---------------------------------------------------------
+   Large desktop (>1280px) — a little extra breathing room
+   --------------------------------------------------------- */
+/* ---------------------------------------------------------
+   Large desktop (>1280px) — a little extra breathing room
+   --------------------------------------------------------- */
+@media (min-width: 1280px) {
+  .orn-page { gap: 24px; }
+}
+
+/* ---------------------------------------------------------
+   Ultra-wide desktop (≥1920px) — the Enroll modal's 920px cap
+   reads as "small" once the viewport is this much wider than it;
+   scale the cap (and give the crew column a bit more room) so it
+   keeps the same proportions it has at ~1440px.
+   --------------------------------------------------------- */
+
+
+/* ---------------------------------------------------------
+   Laptop / small desktop (≤1279px)
+   --------------------------------------------------------- */
+@media (max-width: 1279px) {
+  .orn-prog-stats-filters .orn-filter-search { width: 190px; }
+}
+
+/* ---------------------------------------------------------
+   Tablet landscape (≤1024px)
+   --------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .orn-prog-header { padding: 18px 20px; }
+  .orn-prog-stats { padding: 12px 18px; }
+  .orn-prog-stats-filters { justify-content: flex-start; width: 100%; }
+  .orn-prog-stats-filters .orn-filter-search { width: auto; flex: 1 1 200px; }
+
+  .orn-form-grid-3 { grid-template-columns: 1fr 1fr; }
+
+  .orn-enroll-layout { grid-template-columns: 300px 1fr; }
+  .orn-enroll-col--detail { padding: 22px 24px; }
+
+  .orn-crew-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+}
+
+/* ---------------------------------------------------------
+   Tablet portrait (≤900px)
+   --------------------------------------------------------- */
+@media (max-width: 900px) {
+  .orn-results-filters .orn-filter-search,
+  .orn-results-filters .orn-filter-select { flex: 1 1 45%; max-width: none; }
+
+  .orn-modal--split { max-width: 640px; }
+  .orn-enroll-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(220px, 320px) 1fr;
+  }
+  .orn-enroll-col--crew { border-right: none; border-bottom: 1px solid var(--border); }
+  .orn-enroll-col--detail { padding: 20px; }
+
+  
+
+
+  .orn-panel-body { padding: 18px; }
+  .orn-panel-head { padding: 14px 18px; }
+  .orn-panel-foot { padding: 12px 18px; }
+}
+
+
+/* ---------------------------------------------------------
+   Large mobile / small tablet (≤768px)
+   --------------------------------------------------------- */
+@media (max-width: 768px) {
+  .orn-prog-header { padding: 16px 18px; }
+  .orn-prog-stats { padding: 12px 16px; }
+  .orn-form-card { padding: 16px; gap: 12px; }
+
+  .orn-table th, .orn-table td { padding: 10px 14px; }
+
+  .orn-prog-card, .orn-program-card {
+    flex-wrap: wrap;
+  }
+  .orn-prog-card-meta { align-items: flex-start; flex-direction: row; gap: 10px; }
+
+  .orn-row-card { padding: 12px 14px; }
+}
+
+/* ---------------------------------------------------------
+   Mobile (≤640px)
+   --------------------------------------------------------- */
+@media (max-width: 640px) {
+  .orn-page { gap: 16px; }
+
+  /* header */
+  .orn-prog-header { flex-direction: column; align-items: stretch; padding: 14px; gap: 12px; }
+  .orn-prog-header-left { gap: 10px; }
+  .orn-prog-header-actions { width: 100%; flex-wrap: wrap; }
+  .orn-prog-header-actions .btn { flex: 1 1 auto; justify-content: center; }
+
+  /* stats + filters */
+  .orn-prog-stats { flex-direction: column; align-items: stretch; padding: 12px; gap: 12px; }
+  .orn-prog-stats-group { justify-content: space-between; width: 100%; }
+  .orn-prog-stat { padding: 4px 10px; }
+  .orn-prog-stat-sep { display: none; }
+  .orn-prog-stats-filters,
+  .orn-results-filters {
+    flex-direction: column; align-items: stretch; width: 100%; justify-content: flex-start;
+  }
+  .orn-prog-stats-filters .orn-filter-search,
+  .orn-prog-stats-filters .orn-filter-select,
+  .orn-results-filters .orn-filter-search,
+  .orn-results-filters .orn-filter-select {
+    width: 100%; max-width: none; flex: none;
+  }
+    .orn-dept-pills { width: 90%; }
+  .orn-dept-pills .orn-dept-pill {
+    flex: 1 1 0;
+    min-width: 0;
+    justify-content: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* form card */
+  .orn-form-grid-2,
+  .orn-form-grid-3 { grid-template-columns: 1fr; }
+  .orn-form-actions { flex-wrap: wrap; }
+  .orn-form-actions .btn { flex: 1 1 auto; justify-content: center; }
+
+  /* program / prog cards */
+  .orn-program-card, .orn-prog-card {
+    padding: 14px 16px; gap: 12px;
+  }
+  .orn-prog-card-actions { width: 100%; justify-content: flex-end; }
+
+  /* crew grid */
+  .orn-crew-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+
+  /* table: allow horizontal scroll, tighten padding */
+  .orn-table-card { border-radius: 12px; }
+  .orn-table th, .orn-table td { padding: 9px 12px; font-size: 12.5px; }
+
+  /* modal */
+  .orn-modal-overlay { padding: 12px; }
+  .orn-modal { border-radius: 16px; max-height: 90vh; }
+  .orn-modal--wide, .orn-modal--split { max-width: 100%; }
+  .orn-modal-header { padding: 14px 16px; }
+  .orn-modal-body { padding: 16px; }
+  .orn-modal-footer { padding: 12px 16px; flex-wrap: wrap; }
+  .orn-modal-footer .btn { flex: 1 1 auto; justify-content: center; }
+
+  .orn-enroll-layout { grid-template-rows: minmax(200px, 280px) 1fr; }
+  .orn-enroll-col--detail { padding: 16px; }
+  .orn-enroll-col-filters { flex-direction: column; }
+  .orn-selected-crew-check-row { flex-wrap: wrap; }
+
+  .orn-builder-header { padding: 14px 16px; gap: 10px; }
+  .orn-preview-body { padding: 24px 16px; }
+}
+
+/* ---------------------------------------------------------
+   Small mobile (≤480px)
+   --------------------------------------------------------- */
+@media (max-width: 480px) {
+  .orn-prog-header { padding: 12px; border-radius: 14px; }
+  .orn-prog-header-icon { width: 40px; height: 40px; border-radius: 12px; }
+  .orn-title { font-size: 15.5px; }
+  .orn-subtitle { font-size: 12px; }
+
+  .orn-prog-stats { padding: 10px; border-radius: 10px; }
+  .orn-prog-stat-val { font-size: 18px; }
+  .orn-prog-stat-lbl { font-size: 10px; }
+
+  .orn-form-card { padding: 14px; border-radius: 12px; }
+  .orn-form-heading { font-size: 13px; }
+
+  .orn-crew-grid { grid-template-columns: 1fr; }
+  .orn-crew-card { padding: 14px; }
+
+  .orn-table th, .orn-table td { padding: 8px 10px; font-size: 12px; }
+  .orn-table-name { gap: 8px; }
+  .orn-avatar { width: 32px; height: 32px; font-size: 12px; }
+  .orn-avatar-sm { width: 26px; height: 26px; font-size: 10.5px; }
+
+  .orn-modal-title { font-size: 14.5px; }
+  .orn-modal-header-icon { width: 34px; height: 34px; }
+  .orn-selected-crew-name { font-size: 15px; }
+
+  .orn-dept-pill { padding: 6px 10px; font-size: 11.5px; }
+  .orn-badge { font-size: 10.5px; padding: 2px 8px; }
+
+  .orn-builder-title { font-size: 14.5px; }
+  .orn-builder-dept-badge { width: 34px; height: 34px; }
+
+  .orn-preview-body { padding: 20px 12px; }
+  .orn-preview-task { padding: 14px; flex-direction: column; gap: 8px; }
+  /* ADD */
+.orn-enroll-col-pills .orn-dept-pill { padding: 6px 4px; font-size: 11px; gap: 3px; }
+}
+
+/* ---- Enroll modal: fix grid/flex "blowout" causing overflow at
+     very small widths. Every level below defaults to min-width:auto,
+     which refuses to shrink below its content's min-content size —
+     that's what was pushing the modal wider than the viewport. ---- */
+  /* ---- Enroll modal: fix grid/flex "blowout" causing overflow at
+     very small widths. Every level below defaults to min-width:auto,
+     which refuses to shrink below its content's min-content size —
+     that's what was pushing the modal wider than the viewport.
+     Scoped to small mobile only — desktop/tablet layout is untouched. ---- */
+@media (max-width: 480px) {
+  .orn-modal-overlay { padding: 10px; }
+  .orn-modal {
+    min-width: 0;
+    width: 100%;
+    max-width: calc(100vw - 20px);
+    max-height: calc(100vh - 20px);
+  }
+  .orn-modal--wide,
+  .orn-modal--split {
+    min-width: 0;
+    max-width: calc(100vw - 20px);
+  }
+  .orn-enroll-layout {
+    grid-template-columns: 1fr;
+    grid-template-rows: minmax(180px, 240px) 1fr;
+    min-width: 0;
+    width: 100%;
+    overflow-y: auto;
+  }
+  .orn-enroll-col,
+  .orn-enroll-col--crew,
+  .orn-enroll-col--detail {
+    min-width: 0;
+    width: 100%;
+  }
+    .orn-enroll-col-head,
+  .orn-enroll-col-filters,
+  .orn-selected-crew-check-row,
+  .orn-approver-ambiguous-note,
+  .orn-crew-search-row {
+    min-width: 0;
+  }
+  .orn-enroll-col-filters {
+    flex-direction: column;
+  }
+  .orn-enroll-col-filters .orn-filter-select,
+  .orn-enroll-col-filters .cardselect,
+  .orn-selected-crew-check .cardselect {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+  }
+  .orn-modal-footer {
+    flex-wrap: wrap;
+  }
+  .orn-modal-footer .btn {
+    flex: 1 1 auto;
+    min-width: 0;
+    justify-content: center;
+  }
+}
+
+
+/* ---------------------------------------------------------
+   Extra-small phones (≤380px)
+   --------------------------------------------------------- */
+@media (max-width: 380px) {
+  .orn-prog-header-actions,
+  .orn-prog-header-actions .btn { font-size: 12.5px; }
+  .orn-prog-stat { padding: 4px 6px; }
+  .orn-prog-stat-val { font-size: 16px; }
+
+  .orn-crew-card-top { gap: 8px; }
+  .orn-crew-name { font-size: 13px; }
+
+  .orn-modal-header { padding: 12px 14px; }
+  .orn-modal-body { padding: 14px; }
+  .orn-modal-footer { padding: 10px 14px; }
+
+    .orn-enroll-col-head { margin: 10px 10px 0; }
+  .orn-enroll-col-pills { margin: 8px 14px 0; }
+
+  .orn-enroll-col-pills .orn-dept-pill svg { display: none; }
+  .orn-enroll-col-pills .orn-dept-pill { padding: 6px 2px; font-size: 10.5px; box-sizing: border-box; }
+}
+
+/* ADD */
+
+
+/* ---------------------------------------------------------
+   Very small / legacy phones (≤320px)
+   --------------------------------------------------------- */
+@media (max-width: 320px) {
+  .orn-page { gap: 12px; }
+  .orn-prog-header { padding: 10px; }
+  .orn-prog-header-icon { width: 34px; height: 34px; }
+  .orn-title { font-size: 14px; }
+
+  .orn-prog-stats { padding: 8px; }
+  .orn-prog-stat { padding: 3px 5px; }
+  .orn-prog-stat-val { font-size: 14px; }
+  .orn-prog-stat-lbl { font-size: 9px; }
+
+  .orn-form-card { padding: 10px; }
+  .orn-input, .inputwrap input, .orn-select, .orn-textarea { font-size: 12.5px; padding: 8px 10px; }
+
+  .orn-table th, .orn-table td { padding: 7px 8px; font-size: 11px; }
+
+  .orn-modal-title { font-size: 13.5px; }
+  .orn-modal-subtitle { font-size: 11px; }
+
+    .orn-dept-pill { padding: 5px 8px; font-size: 11px; }
+  .orn-badge-sm { font-size: 9.5px; padding: 2px 6px; }
+
+  .orn-enroll-col-pills { gap: 7px; }
+  .orn-enroll-col-pills .orn-dept-pill { padding: 6px 1px; font-size: 10px; }
+}
+
+/* ADD inside existing @media (max-width: 320px) block */
+
+
+/* ---------------------------------------------------------
+   Safety net — no horizontal scroll from any shared container
+   --------------------------------------------------------- */
+.orn-page,
+.orn-table-scroll { max-width: 100%; }
+.orn-page { overflow-x: hidden; }
+.orn-table-scroll { overflow-x: auto; } /* table itself still scrolls, intentionally */
+
+

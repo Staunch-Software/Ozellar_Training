@@ -127,7 +127,7 @@ function CardSelect({ label, value, onChange, options = [], required }) {
         {label} {required && <span style={{ color: C.danger }}>*</span>}
       </label>
       <button type="button" onClick={() => setOpen(v => !v)}
-        style={{ width: '100%', padding: '9px 12px', borderRadius: 6, border: `1px solid ${missing ? C.danger : C.line}`, background: '#fff', color: value ? C.ink : C.inkFaint, fontSize: 14, fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', outline: 'none', boxShadow: open ? `0 0 0 3px ${C.brandSoft}` : 'none' }}>
+        style={{ width: '100%', padding: 'clamp(9px, 0.55vw, 16px) clamp(12px, 0.8vw, 20px)', borderRadius: 6, border: `1px solid ${missing ? C.danger : C.line}`, background: '#fff', color: value ? C.ink : C.inkFaint, fontSize: 'clamp(14px, 0.75vw, 16px)', fontFamily: 'inherit', textAlign: 'left', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between', outline: 'none', boxShadow: open ? `0 0 0 3px ${C.brandSoft}` : 'none' }}>
         <span>{value || `Select ${label}`}</span>
         <ChevronDown size={15} style={{ color: C.inkFaint, transform: open ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform .15s' }} />
       </button>
@@ -152,11 +152,11 @@ function CardSelect({ label, value, onChange, options = [], required }) {
 function Field({ label, value, onChange, readOnly, type = 'text', numeric = false }) {
   const missing = !readOnly && (!value || String(value).trim() === '')
   const base = {
-    width: '100%', padding: '9px 12px', borderRadius: 6,
+    width: '100%', padding: 'clamp(9px, 0.55vw, 16px) clamp(12px, 0.8vw, 20px)', borderRadius: 6,
     border: `1px solid ${readOnly ? C.lineSoft : missing ? C.danger : C.line}`,
     background: readOnly ? C.panelAlt : '#fff',
     color: readOnly ? C.inkMut : C.ink,
-    fontSize: 14, fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
+    fontSize: 'clamp(14px, 0.75vw, 16px)', fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
   }
   // Digits only — strip anything else as it's typed/pasted rather than
   // validating after the fact, so a mobile number field can't end up with
@@ -168,8 +168,8 @@ function Field({ label, value, onChange, readOnly, type = 'text', numeric = fals
         {label} {!readOnly && <span style={{ color: C.danger }}>*</span>}
       </label>
       {type === 'textarea' ? (
-        <textarea value={value || ''} onChange={handleChange} rows={3}
-          style={{ ...base, resize: 'vertical' }}
+        <textarea value={value || ''} onChange={handleChange} rows={4}
+          style={{ ...base, minHeight: 'clamp(90px, 6vw, 140px)',resize: 'vertical' }}
           onFocus={e => { e.target.style.borderColor = C.brandMid; e.target.style.boxShadow = `0 0 0 3px ${C.brandSoft}` }}
           onBlur={e => { e.target.style.borderColor = missing ? C.danger : C.line; e.target.style.boxShadow = 'none' }} />
       ) : (
@@ -572,7 +572,7 @@ export default function TestExam() {
     : (questions[qIdx] ? [{ q: questions[qIdx], qi: qIdx }] : [])
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: C.bg, color: C.ink, overflow: 'hidden', fontFamily: '"Inter",system-ui,-apple-system,"Segoe UI",sans-serif' }}>
+    <div className="ex-root" style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: C.bg, color: C.ink, overflow: 'hidden', fontFamily: '"Inter",system-ui,-apple-system,"Segoe UI",sans-serif' }}>
       <style>{`
         * { box-sizing: border-box; }
         .opt { transition: border-color .12s, background .12s; }
@@ -583,30 +583,58 @@ export default function TestExam() {
         .scroll::-webkit-scrollbar-thumb { background: #cbd3dc; border-radius: 6px; border: 3px solid ${C.bg}; }
         .scroll::-webkit-scrollbar-track { background: transparent; }
         @keyframes blink { 0%,100%{opacity:1} 50%{opacity:.5} }
+
+        /* ── Mobile: header stops wrapping, body stacks, grids collapse ── */
+         @media (max-width: 900px) {
+          .ex-root { height: auto !important; min-height: 100vh !important; overflow: visible !important; }
+          .ex-body { flex-direction: column !important; height: auto !important; overflow: visible !important; }
+          .ex-qcol { flex: none !important; }
+          .ex-q-scroll { flex: none !important; overflow: visible !important; }
+          .ex-aside {
+            flex: none !important; width: 100% !important;
+            border-left: none !important; border-top: 1px solid ${C.line} !important;
+          }
+          .ex-pal-scroll { flex: none !important; overflow: visible !important; min-height: 0 !important; }
+        }
+        @media (max-width: 760px) {
+          .ex-personal-grid { grid-template-columns: minmax(0, 1fr) !important; gap: 12px !important; }
+          .ex-personal-grid > div { width: 100% !important; min-width: 0 !important; }
+        }
+        @media (max-width: 640px) {
+          .ex-h-sep, .ex-h-title { display: none !important; }
+          .ex-header { gap: 10px !important; padding: 0 14px !important; }
+        }
+        @media (max-width: 480px) {
+          .ex-footer { flex-direction: column; align-items: stretch !important; }
+          .ex-footer > div { margin-left: 0 !important; width: 100%; justify-content: space-between; }
+          .ex-footer button { flex: 1 1 auto; justify-content: center; }
+          .ex-qactions { flex-direction: column; align-items: stretch !important; }
+          .ex-qactions button { justify-content: center; width: 100%; }
+        }
       `}</style>
 
       {/* ══ Header — same navy chrome as the login / welcome screens ══ */}
-      <header style={{ flexShrink: 0, background: `linear-gradient(135deg, ${C.brand} 0%, ${C.brandDeep} 100%)`, height: 64, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 18, position: 'relative', overflow: 'hidden' }}>
+      <header className="ex-header" style={{ flexShrink: 0, background: `linear-gradient(135deg, ${C.brand} 0%, ${C.brandDeep} 100%)`, height: 64, display: 'flex', alignItems: 'center', padding: '0 24px', gap: 18, position: 'relative', overflow: 'hidden' }}>
         <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,.05) 1px, transparent 0)', backgroundSize: '24px 24px', pointerEvents: 'none' }} />
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 11, position: 'relative' }}>
+        <div className="ex-h-brand" style={{ display: 'flex', alignItems: 'center', gap: 11, position: 'relative', flexShrink: 0 }}>
           <div style={{ width: 36, height: 36, borderRadius: 9, background: C.brandMid, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
             <Anchor size={18} color="#fff" />
           </div>
-          <div>
-            <div style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,.55)', letterSpacing: '.12em', textTransform: 'uppercase' }}>Ozellar Marine</div>
-            <div style={{ fontSize: 13.5, fontWeight: 700, marginTop: -1, color: '#fff' }}>Assessment Portal</div>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,.55)', letterSpacing: '.12em', textTransform: 'uppercase', whiteSpace: 'nowrap' }}>Ozellar Marine</div>
+            <div style={{ fontSize: 13.5, fontWeight: 700, marginTop: -1, color: '#fff', whiteSpace: 'nowrap' }}>Assessment Portal</div>
           </div>
         </div>
 
-        <div style={{ height: 32, width: 1, background: 'rgba(255,255,255,.15)', position: 'relative' }} />
+        <div className="ex-h-sep" style={{ height: 32, width: 1, background: 'rgba(255,255,255,.15)', position: 'relative' }} />
 
-        <div style={{ minWidth: 0, flex: 1, position: 'relative' }}>
+        <div className="ex-h-title" style={{ minWidth: 0, flex: 1, position: 'relative' }}>
           <div style={{ fontSize: 9.5, fontWeight: 700, color: 'rgba(255,255,255,.5)', letterSpacing: '.1em', textTransform: 'uppercase' }}>Assessment</div>
           <div style={{ fontSize: 13.5, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', color: '#fff' }}>{testData.title}</div>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative', animation: low ? 'blink 1.4s infinite' : 'none' }}>
+        <div className="ex-h-timer" style={{ display: 'flex', alignItems: 'center', gap: 12, position: 'relative', flexShrink: 0, animation: low ? 'blink 1.4s infinite' : 'none' }}>
           <div style={{ textAlign: 'right' }}>
             <div style={{ fontSize: 9, fontWeight: 700, color: 'rgba(255,255,255,.55)', textTransform: 'uppercase', letterSpacing: '.09em' }}>Time Remaining</div>
             <div style={{ fontSize: 20, fontWeight: 800, fontVariantNumeric: 'tabular-nums', color: '#fff', lineHeight: 1.1 }}>{fmtTime(timeLeft)}</div>
@@ -667,12 +695,12 @@ export default function TestExam() {
           the window, so the action bar below only spans the question column
           and Submit sits alone at the foot of the rail, well clear of the
           Next / Save & Next buttons. ══ */}
-      <div style={{ flex: 1, display: 'flex', minHeight: 0 }}>
+      <div className="ex-body" style={{ flex: 1, display: 'flex', minHeight: 0 }}>
 
         {/* ── Question column + its action bar ── */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <div className="scroll" style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 24px', minWidth: 0 }}>
-          <div style={{ maxWidth: 880, margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div className="ex-qcol" style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div className="scroll ex-q-scroll" style={{ flex: 1, overflowY: 'auto', padding: '20px 24px 24px', minWidth: 0 }}>
+           <div className="ex-content-col" style={{ maxWidth: 'max(1560px, 90vw)', margin: '0 auto', display: 'flex', flexDirection: 'column', gap: 16 }}>
 
             {tabWarning && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 9, background: C.dangerSoft, border: '1px solid #edc4bb', borderRadius: 8, padding: '11px 15px', color: C.danger, fontSize: 13.5, fontWeight: 600 }}>
@@ -699,9 +727,9 @@ export default function TestExam() {
                     All fields marked <span style={{ color: C.danger, fontWeight: 700 }}>*</span> are required. These details form part of your application record.
                   </div>
                 </div>
-                <div style={{ padding: 20, display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16 }}>
+                <div className="ex-personal-grid" style={{ padding: 20, display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 'clamp(16px, 1.2vw, 28px)' }}>
                   {PERSONAL_FIELDS.map(f => (
-                    <div key={f.key} style={{ gridColumn: f.span ? `span ${f.span}` : 'span 1' }}>
+                    <div key={f.key} style={{ gridColumn: f.span ? '1 / -1' : 'span 1', minWidth: 0 }}>
                       {f.type === 'select' ? (
                         <CardSelect label={f.label} value={personalData[f.key]} options={f.options} required
                           onChange={v => setPersonalData(p => ({ ...p, [f.key]: v }))} />
@@ -788,7 +816,7 @@ export default function TestExam() {
                         footer — they act on this specific question, so they read
                         more clearly here, and it keeps the footer to just the
                         section/question navigation buttons. */}
-                    <div style={{ display: 'flex', gap: 9, marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.lineSoft}` }}>
+                    <div className="ex-qactions" style={{ display: 'flex', flexWrap: 'wrap', gap: 9, marginTop: 16, paddingTop: 14, borderTop: `1px solid ${C.lineSoft}` }}>
                       <Btn variant={isM ? 'review' : 'default'} onClick={() => toggleMark(qi)}>
                         <Flag size={13} /> {isM ? 'Unmark' : 'Mark for Review'}
                       </Btn>
@@ -811,7 +839,7 @@ export default function TestExam() {
             Previous/Save & Next pair (MCQ sections only) pages through that
             section's own questions and stays on the right. Wraps to a second
             row rather than overflowing when the column gets narrow. ══ */}
-        <footer style={{ flexShrink: 0, background: '#fff', borderTop: `1px solid ${C.line}`, padding: '12px 24px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
+        <footer className="ex-footer" style={{ flexShrink: 0, background: '#fff', borderTop: `1px solid ${C.line}`, padding: '12px 24px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
           {isPersonal ? (
             <>
               <div style={{ fontSize: 12.5, color: C.inkMut }}>
@@ -861,7 +889,7 @@ export default function TestExam() {
                   Section" (jumps straight there); on the last question of the
                   last section there's nowhere left to advance to, so it's just
                   disabled — submitting only ever happens from the rail. */}
-              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 10 }}>
                 <Btn onClick={() => gotoQ(Math.max(0, qIdx - 1))} disabled={qIdx === 0}>
                   <ChevronLeft size={15} /> Previous
                 </Btn>
@@ -886,7 +914,7 @@ export default function TestExam() {
 
         {/* ── Right rail — full window height, so Submit sits below the
             action bar rather than beside it ── */}
-        <aside style={{ width: 296, flexShrink: 0, background: '#fff', borderLeft: `1px solid ${C.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <aside className="ex-aside" style={{ width: 356, flexShrink: 0, background: '#fff', borderLeft: `1px solid ${C.line}`, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
 
           {/* Candidate */}
           <div style={{ padding: '14px 18px', borderBottom: `1px solid ${C.lineSoft}`, display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -961,9 +989,9 @@ export default function TestExam() {
               </div>
 
               {/* Palette */}
-              <div className="scroll" style={{ flex: 1, overflowY: 'auto', padding: '14px 18px', minHeight: 0 }}>
+              <div className="scroll ex-pal-scroll" style={{ flex: 1, overflowY: 'auto', padding: '14px 18px', minHeight: 0 }}>
                 <div style={{ fontSize: 10.5, fontWeight: 700, color: C.inkFaint, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 11 }}>Question Palette</div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, 1fr)', gap: 8 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(0, 1fr))', gap: 8 }}>
                   {questions.map((_, qi) => {
                     const s = PSTATE[stateOf(qi)]
                     const cur = !isCompre && qi === qIdx
@@ -1019,7 +1047,7 @@ export default function TestExam() {
               <p style={{ margin: '0 0 16px', color: C.inkMut, fontSize: 13.5, lineHeight: 1.7 }}>
                 Your answers will be graded and finalised. You will not be able to return to the assessment.
               </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 4 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 8, marginBottom: 4 }}>
                 {[
                   { label: 'Answered',   value: overall.answered,   color: C.ok,     bg: C.okSoft },
                   { label: 'Unanswered', value: overall.unanswered, color: C.danger, bg: C.dangerSoft },

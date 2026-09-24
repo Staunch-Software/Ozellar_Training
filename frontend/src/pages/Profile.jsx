@@ -93,7 +93,7 @@ export default function Profile() {
   return (
     <>
       <TopNav />
-      <div className="page" style={{ maxWidth: 960, margin: '0 auto', padding: '40px 20px' }}>
+     <div className="page" style={{ margin: '0 auto', padding: '40px 20px' }}>
         
         <div style={{ marginBottom: 32 }}>
           <h1 style={{ fontSize: 24, marginBottom: 4 }}>Profile Settings</h1>

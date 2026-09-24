@@ -69,7 +69,7 @@ export default function TestWelcome() {
   const wp           = testData?.wrongPenalty || 1
 
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f0f2f5', fontFamily: '"Inter", system-ui, sans-serif', color: '#16181d', overflow: 'hidden' }}>
+    <div style={{ minHeight: '100vh', height: '100%', display: 'flex', flexDirection: 'column', background: '#f0f2f5', fontFamily: '"Inter", system-ui, sans-serif', color: '#16181d', overflow: 'auto' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
@@ -83,27 +83,58 @@ export default function TestWelcome() {
         .tw-rule-row { transition: background .15s; }
         @keyframes tw-in { from { opacity:0; transform:translateY(12px) } to { opacity:1; transform:translateY(0) } }
         @keyframes tw-slide-right { from { opacity:0; transform:translateX(20px) } to { opacity:1; transform:translateX(0) } }
+
+        /* ── Mobile: stack panels instead of a fixed 400px row ── */
+        @media (max-width: 900px) {
+          .tw-body {
+            flex-direction: column !important;
+            height: auto !important;
+            overflow: visible !important;
+          }
+          .tw-left-panel {
+            width: 100% !important;
+            flex: none !important;
+            overflow-y: visible !important;
+          }
+          .tw-right-panel {
+            flex: none !important;
+            overflow-y: visible !important;
+          }
+        }
+        @media (max-width: 640px) {
+          .tw-overview-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (max-width: 640px) {
+          .tw-overview-grid { grid-template-columns: repeat(2, 1fr) !important; }
+        }
+        @media (max-width: 480px) {
+          .tw-header { padding: 0 14px !important; }
+          .tw-header-spacer { display: none !important; }
+          .tw-left-panel { padding: 28px 20px !important; }
+          .tw-right-panel { padding: 22px 16px !important; }
+          .tw-overview-grid { grid-template-columns: 1fr !important; gap: 10px !important; }
+        }
       `}</style>
 
       {/* ── Header ── */}
-      <header style={{ flexShrink: 0, background: '#fff', borderBottom: '1px solid #e5e7eb', height: 58, display: 'flex', alignItems: 'center', padding: '0 32px', gap: 0, boxShadow: '0 1px 4px rgba(0,0,0,.06)' }}>
+      <header className="tw-header" style={{ flexShrink: 0, background: '#fff', borderBottom: '1px solid #e5e7eb', minHeight: 58, display: 'flex', alignItems: 'center', padding: '0 32px', flexWrap: 'wrap', gap: 0, boxShadow: '0 1px 4px rgba(0,0,0,.06)' }}>
         {/* Brand */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 'auto' }}>
-          <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, #2563eb, #1e40af)', display: 'grid', placeItems: 'center' }}>
-            <Anchor size={17} color="#fff" />
-          </div>
-          <div>
-            <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', letterSpacing: '.1em', textTransform: 'uppercase' }}>Ozellar Marine</div>
-            <div style={{ fontSize: 13.5, fontWeight: 700, color: '#111827', marginTop: -1 }}>Assessment Portal</div>
-          </div>
-        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 'auto', minWidth: 0, overflow: 'hidden' }}>
+  <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, #2563eb, #1e40af)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+    <Anchor size={17} color="#fff" />
+  </div>
+  <div style={{ minWidth: 0, overflow: 'hidden' }}>
+    <div style={{ fontSize: 10, fontWeight: 700, color: '#9ca3af', letterSpacing: '.1em', textTransform: 'uppercase', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Ozellar Marine</div>
+    <div style={{ fontSize: 13.5, fontWeight: 700, color: '#111827', marginTop: -1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>Assessment Portal</div>
+  </div>
+</div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 2, marginRight: 24 }}>
+        <div className="tw-header-spacer" style={{ display: 'flex', alignItems: 'center', gap: 2, marginRight: 24 }}>
           {/* Empty spacer where tabs used to be, to keep layout balanced */}
         </div>
 
         {/* User chip */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', borderRadius: 99, border: '1px solid #e5e7eb', background: '#f9fafb' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', borderRadius: 99, border: '1px solid #e5e7eb', background: '#f9fafb', flexShrink: 0 }}>
           <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #2563eb, #1e40af)', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 800, color: '#fff' }}>
             {user?.name?.charAt(0)?.toUpperCase() || 'C'}
           </div>
@@ -112,10 +143,10 @@ export default function TestWelcome() {
       </header>
 
       {/* ── Body ── */}
-      <div style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
+       <div className="tw-body" style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
 
         {/* ════ LEFT PANEL — Identity + Stats ════ */}
-        <div style={{ width: 400, flexShrink: 0, background: 'linear-gradient(160deg, #1e3a8a 0%, #1e40af 45%, #2563eb 100%)', display: 'flex', flexDirection: 'column', padding: '36px 32px', gap: 0, overflowY: 'auto', position: 'relative' }}>
+        <div className="tw-left-panel" style={{ width: 400, flexShrink: 0, background: 'linear-gradient(160deg, #1e3a8a 0%, #1e40af 45%, #2563eb 100%)', display: 'flex', flexDirection: 'column', padding: '36px 32px', gap: 0, overflowY: 'auto', position: 'relative' }}>
           {/* Subtle grid pattern */}
           <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,.06) 1px, transparent 0)', backgroundSize: '28px 28px', pointerEvents: 'none' }} />
           
@@ -258,12 +289,12 @@ export default function TestWelcome() {
         </div>
 
         {/* ════ RIGHT PANEL — Test Info + Rules ════ */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '36px 40px', display: 'flex', flexDirection: 'column', gap: 24, animation: 'tw-slide-right .5s ease-out' }}>
+        <div className="tw-right-panel" style={{ flex: 1, overflowY: 'auto', padding: '36px 40px', display: 'flex', flexDirection: 'column', gap: 24, animation: 'tw-slide-right .5s ease-out' }}>
 
           {/* Overview cards */}
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 14 }}>Test Overview</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 14 }}>
+             <div className="tw-overview-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 14 }}>
               {[
                 { label: 'Test Title',     value: testData?.title || 'Engine Cadet Assessment', span: 3 },
                 { label: 'Total Duration', value: `${timerMins} minutes` },

@@ -351,46 +351,41 @@ export default function AdminReport() {
     <div className="rpt-root" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
 
       {/* ═══════════════════════ PAGE HEADER (Premium Inline) ═══════════════════════ */}
-      <div style={{
-        background: 'var(--surface)',
-        borderBottom: '1px solid var(--border)',
-        padding: '10px 0',
-        marginBottom: 12,
-        display: 'flex',
-        alignItems: 'center',
-        gap: 12,
-        flexWrap: 'wrap'
-      }}>
-        {/* Accent Bar */}
-        <div style={{
-          width: 4,
-          height: 36,
-          background: 'linear-gradient(180deg, #059669, #10b981)',
-          borderRadius: '0 4px 4px 0',
-          flexShrink: 0
-        }} />
-        
-        {/* Icon Box */}
-        <div style={{
-          width: 36,
-          height: 36,
-          borderRadius: 10,
-          background: 'rgba(5,150,105,0.1)',
-          color: '#059669',
-          display: 'grid',
-          placeItems: 'center'
-        }}>
-          <BarChart3 size={18} />
-        </div>
+            <div className="rpt-header">
+        <div className="rpt-header-brand">
+          {/* Accent Bar */}
+          <div style={{
+            width: 4,
+            height: 36,
+            background: 'linear-gradient(180deg, #059669, #10b981)',
+            borderRadius: '0 4px 4px 0',
+            flexShrink: 0
+          }} />
+          
+          {/* Icon Box */}
+          <div style={{
+            width: 36,
+            height: 36,
+            borderRadius: 10,
+            background: 'rgba(5,150,105,0.1)',
+            color: '#059669',
+            display: 'grid',
+            placeItems: 'center',
+            flexShrink: 0
+          }}>
+            <BarChart3 size={18} />
+          </div>
 
-        {/* Title only */}
-        <div style={{ flex: 1, minWidth: 160 }}>
-          <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#059669', opacity: 0.8 }}>Fleet Training · Compliance</span>
-          <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', marginTop: '1px' }}>Completion Report</div>
+          {/* Title only */}
+          <div style={{ flex: 1, minWidth: 160 }}>
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#059669', opacity: 0.8 }}>Fleet Training · Compliance</span>
+            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', marginTop: '1px' }}>Completion Report</div>
+          </div>
         </div>
 
         {/* Right side controls */}
-        <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+                {/* Right side controls */}
+        <div className="rpt-header-actions">
           <div className="rpt-filter-row" style={{ gap: 8 }}>
             {/* crew search */}
             <div className="rpt-search-wrap" style={{ minWidth: 200 }}>
@@ -443,7 +438,7 @@ export default function AdminReport() {
             )}
           </div>
 
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', borderLeft: '1px solid var(--border)', paddingLeft: 16 }}>
+                    <div className="rpt-download-group">
             <button className="btn primary sm" onClick={downloadXlsx} disabled={dlXlsx}>
               <FileSpreadsheet size={14} />
               {dlXlsx ? 'Preparing…' : hasFilters ? 'Excel (Filtered)' : 'Excel'}
