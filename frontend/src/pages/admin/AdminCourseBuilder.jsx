@@ -5,9 +5,9 @@ import {
   HelpCircle, Plus, X, AlertCircle, ChevronDown, ChevronUp, Save, Check, Edit2, GripVertical, Settings, Search, Play, Award
 } from 'lucide-react'
 import {
-  adminGetCourseBuilder, adminUploadPptx, adminUploadVideo, adminCreateQuizChapter,
-  adminSaveQuizQuestions, adminReorderChapters, adminDeleteChapter, adminSaveAssessment,
-  adminUpdateCourse, adminListUsers, adminPptxStatus
+  adminGetCourseBuilder, adminUploadPptx, adminUploadVideo, adminVideoUploadStatus,
+  adminCreateQuizChapter, adminSaveQuizQuestions, adminReorderChapters, adminDeleteChapter,
+  adminSaveAssessment, adminUpdateCourse, adminListUsers, adminPptxStatus
 } from '../../api.js'
 
 const EMPTY_Q = () => ({ q: '', options: ['', '', '', ''], answer: 0, explain: '' })
@@ -38,6 +38,12 @@ export default function AdminCourseBuilder() {
   const [successMsg, setSuccessMsg] = useState('')
   const [previewImage, setPreviewImage] = useState(null)
   const pollRef = useRef(null)
+  const videoPollRef = useRef(null)
+  // Video upload byte-level progress (while bytes are going out over XHR)
+  const [videoUpload, setVideoUpload] = useState(null)   // { pct, loaded, total }
+  // Video server-side processing progress (polled after upload lands)
+  const [videoProc, setVideoProc] = useState(null)       // { stage, pct, message }
+  const [videoProcessing, setVideoProcessing] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [usersList, setUsersList] = useState([])
 
@@ -58,6 +64,45 @@ export default function AdminCourseBuilder() {
     setPptxProcessing(false)
     setProc(null)
     setUpload(null)
+  }
+
+  const stopVideoPolling = () => {
+    if (videoPollRef.current) clearInterval(videoPollRef.current)
+    videoPollRef.current = null
+    sessionStorage.removeItem(`video-processing-${id}`)
+    setVideoProcessing(false)
+    setVideoProc(null)
+    setVideoUpload(null)
+  }
+
+  const startVideoPolling = () => {
+    sessionStorage.setItem(`video-processing-${id}`, '1')
+    setVideoProcessing(true)
+    setVideoProc({ stage: 'queued', pct: 5, message: 'Upload received — starting compression…' })
+    if (videoPollRef.current) clearInterval(videoPollRef.current)
+    videoPollRef.current = setInterval(async () => {
+      try {
+        const st = await adminVideoUploadStatus(id)
+        if (st.stage === 'idle') {
+          // No active job — server may have restarted
+          stopVideoPolling()
+          setError('Video processing stopped unexpectedly. Please try uploading again.')
+          return
+        }
+        setVideoProc(st)
+        if (st.done) {
+          if (st.error) {
+            stopVideoPolling()
+            setError(st.error)
+            return
+          }
+          await load()
+          stopVideoPolling()
+          setSuccessMsg('Video lesson created successfully!')
+          setTimeout(() => setSuccessMsg(''), 8000)
+        }
+      } catch (_) { /* transient blip — keep polling */ }
+    }, 2000)
   }
 
   const startPolling = (prevChapterCount) => {
@@ -117,12 +162,19 @@ export default function AdminCourseBuilder() {
   
   useEffect(() => {
     const storedCount = sessionStorage.getItem(`pptx-processing-${id}`)
+    const storedVideo = sessionStorage.getItem(`video-processing-${id}`)
     load()
     // If we came back to this page and processing was already in flight, resume polling
     if (storedCount !== null) {
       startPolling(Number(storedCount))
     }
-    return () => { if (pollRef.current) clearInterval(pollRef.current) }
+    if (storedVideo !== null) {
+      startVideoPolling()
+    }
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current)
+      if (videoPollRef.current) clearInterval(videoPollRef.current)
+    }
   }, [id])
 
   const withBusy = async (fn) => {
@@ -153,9 +205,21 @@ export default function AdminCourseBuilder() {
   })
 
   const uploadVideo = (file, opts) => withBusy(async () => {
-    await adminUploadVideo(id, file, opts)
-    await load()
+    // Close the form immediately so only the progress bar is shown while
+    // the XHR is in flight — avoids both showing at the same time.
     setShowVideoForm(false)
+    setShowAddOptions(false)
+    setVideoUpload({ pct: 0, loaded: 0, total: file.size })
+    setVideoProcessing(true)
+    try {
+      await adminUploadVideo(id, file, opts, (p) => setVideoUpload(p))
+    } catch (e) {
+      setVideoUpload(null)
+      setVideoProcessing(false)
+      throw e
+    }
+    setVideoUpload(null)
+    startVideoPolling()
   })
 
   const move = (index, dir) => withBusy(async () => {
@@ -290,13 +354,17 @@ export default function AdminCourseBuilder() {
         })}
       </div>
 
-      {!showAddOptions && !showVideoForm && chapters.length > 0 && (
+      {!showAddOptions && !showVideoForm && !videoProcessing && chapters.length > 0 && (
         <button type="button" onClick={() => setShowAddOptions(true)} className="add-module-btn" style={{ width: '100%', padding: '14px', background: '#ffffff', border: '2px dashed #94a3b8', borderRadius: 10, color: '#475569', fontSize: 15, fontWeight: 600, cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, transition: 'all 0.2s ease', marginBottom: 30 }}>
           <Plus size={18} /> Add New Module
         </button>
       )}
 
-      {(showAddOptions || chapters.length === 0) && !showVideoForm && (
+      {videoProcessing && (
+        <VideoProgress upload={videoUpload} proc={videoProc} />
+      )}
+
+      {(showAddOptions || chapters.length === 0) && !showVideoForm && !videoProcessing && (
         <div className="admin-card" style={{ marginBottom: 30, background: '#f8fafc', border: chapters.length === 0 ? '2px dashed #cbd5e1' : '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 20 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <div>
@@ -331,12 +399,18 @@ export default function AdminCourseBuilder() {
               onChange={(e) => { const f = e.target.files[0]; e.target.value = ''; if (f) uploadPptx(f) }} />
 
             {/* Video Card */}
-            <button type="button" className="module-type-card" disabled={busy} onClick={() => setShowVideoForm(true)}>
-              <div className="module-icon-wrapper" style={{ background: '#fef2f2', color: '#ef4444' }}>
-                <Video size={24} />
+            <button type="button" className="module-type-card" disabled={busy || videoProcessing} onClick={() => setShowVideoForm(true)}>
+              <div className="module-icon-wrapper" style={{ background: '#fdf2f8', color: '#a855f7' }}>
+                {videoProcessing
+                  ? <span style={{ display: 'inline-block', width: 24, height: 24, border: '2px solid currentColor', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 0.7s linear infinite' }} />
+                  : <Video size={24} />}
               </div>
               <div>
-                <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 15, marginBottom: 4 }}>Video Lesson</div>
+                <div style={{ fontWeight: 600, color: '#1e293b', fontSize: 15, marginBottom: 4 }}>
+                  {videoUpload ? `Uploading… ${videoUpload.pct}%`
+                    : videoProc ? `Processing… ${videoProc.pct ?? 0}%`
+                    : 'Video Lesson'}
+                </div>
                 <div style={{ fontSize: 13, color: '#64748b' }}>Upload an MP4 video file</div>
               </div>
             </button>
@@ -357,6 +431,7 @@ export default function AdminCourseBuilder() {
 
       {showVideoForm && (
         <VideoUploadForm chapters={chapters.filter((c) => c.kind === 'lesson')}
+          busy={busy}
           onUpload={uploadVideo} onCancel={() => { setShowVideoForm(false); setShowAddOptions(true) }} />
       )}
 
@@ -437,6 +512,53 @@ function PptxProgress({ upload, proc }) {
         {uploading
           ? `${mb(upload.loaded)} of ${mb(upload.total)} sent — keep this tab open.`
           : (proc?.message || 'Working on the server…')}
+      </div>
+    </div>
+  )
+}
+
+const VIDEO_STAGES = {
+  queued:      'Queued',
+  compressing: 'Compressing video',
+  saving:      'Saving file',
+  done:        'Finished',
+  failed:      'Failed',
+}
+
+/* Two-stage progress for a standalone video upload: byte-level upload (XHR)
+   then server-side ffmpeg compression (polled from /upload-video-status). */
+function VideoProgress({ upload, proc }) {
+  const uploading = !!upload
+  const pct = uploading ? upload.pct : (proc?.pct ?? 0)
+  const label = uploading ? 'Uploading video' : (VIDEO_STAGES[proc?.stage] || 'Processing')
+  const failed = proc?.stage === 'failed'
+
+  return (
+    <div style={{
+      background: '#fff', border: '1px solid #e2e8f0', borderRadius: 10,
+      padding: 16, display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20,
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12 }}>
+        <div style={{ fontWeight: 600, fontSize: 14, color: '#1e293b' }}>
+          {uploading ? 'Step 1 of 2 — ' : 'Step 2 of 2 — '}{label}
+        </div>
+        <div style={{ fontWeight: 700, fontSize: 14, color: failed ? '#ef4444' : '#a855f7', fontVariantNumeric: 'tabular-nums' }}>
+          {pct}%
+        </div>
+      </div>
+
+      <div style={{ height: 8, background: '#e2e8f0', borderRadius: 99, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', width: `${pct}%`, borderRadius: 99,
+          background: failed ? '#ef4444' : 'linear-gradient(90deg, #a855f7, #7c3aed)',
+          transition: 'width 0.25s ease',
+        }} />
+      </div>
+
+      <div style={{ fontSize: 12.5, color: '#64748b' }}>
+        {uploading
+          ? `${mb(upload.loaded)} of ${mb(upload.total)} sent — keep this tab open.`
+          : (proc?.message || 'Compressing on the server… large videos can take several minutes.')}
       </div>
     </div>
   )
@@ -603,7 +725,7 @@ function PremiumSelect({ value, onChange, options }) {
   )
 }
 
-function VideoUploadForm({ chapters, onUpload, onCancel }) {
+function VideoUploadForm({ chapters, onUpload, onCancel, busy = false }) {
   const [file, setFile] = useState(null)
   const [mode, setMode] = useState('new')          // 'new' | 'attach'
   const [chapterId, setChapterId] = useState(chapters[0]?.id || '')
@@ -611,14 +733,14 @@ function VideoUploadForm({ chapters, onUpload, onCancel }) {
 
   const submit = (e) => {
     e.preventDefault()
-    if (!file) return
+    if (!file || busy) return
     onUpload(file, mode === 'attach' ? { chapterId } : { title })
   }
 
   return (
     <form className="admin-card" onSubmit={submit} style={{ marginBottom: 20, background: '#ffffff', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: 12, boxShadow: '0 2px 4px -1px rgba(0, 0, 0, 0.05)', padding: '16px 20px' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <button type="button" className="iconbtn" onClick={onCancel} style={{ background: '#f1f5f9', width: 28, height: 28, borderRadius: '50%' }}>
+        <button type="button" className="iconbtn" onClick={onCancel} disabled={busy} style={{ background: '#f1f5f9', width: 28, height: 28, borderRadius: '50%', opacity: busy ? 0.4 : 1, cursor: busy ? 'not-allowed' : 'pointer' }}>
           <ArrowLeft size={14} />
         </button>
         <div>
@@ -627,10 +749,10 @@ function VideoUploadForm({ chapters, onUpload, onCancel }) {
       </div>
       
       <div style={{ display: 'flex', gap: 8 }}>
-        <button type="button" className={`premium-chip ${mode === 'new' ? 'selected' : ''}`} onClick={() => setMode('new')} style={{ padding: '4px 10px', fontSize: 12 }}>
+        <button type="button" className={`premium-chip ${mode === 'new' ? 'selected' : ''}`} onClick={() => setMode('new')} disabled={busy} style={{ padding: '4px 10px', fontSize: 12 }}>
           Create new module
         </button>
-        <button type="button" className={`premium-chip ${mode === 'attach' ? 'selected' : ''}`} onClick={() => setMode('attach')} disabled={chapters.length === 0} style={{ padding: '4px 10px', fontSize: 12 }}>
+        <button type="button" className={`premium-chip ${mode === 'attach' ? 'selected' : ''}`} onClick={() => setMode('attach')} disabled={chapters.length === 0 || busy} style={{ padding: '4px 10px', fontSize: 12 }}>
           Attach to existing module
         </button>
       </div>
@@ -638,21 +760,21 @@ function VideoUploadForm({ chapters, onUpload, onCancel }) {
       <div className="form-grid" style={{ gridTemplateColumns: '1fr', gap: 12 }}>
         <div className="admin-field">
           <span style={{ fontWeight: 600, color: '#1e293b', marginBottom: 4, display: 'block', fontSize: 13 }}>Video file <i className="req">*</i></span>
-          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '16px 12px', border: '1px dashed', borderRadius: 8, cursor: 'pointer', background: file ? '#eff6ff' : '#f8fafc', borderColor: file ? '#3b82f6' : '#cbd5e1', transition: 'all 0.2s' }}>
+          <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, padding: '16px 12px', border: '1px dashed', borderRadius: 8, cursor: busy ? 'not-allowed' : 'pointer', background: file ? '#eff6ff' : '#f8fafc', borderColor: file ? '#3b82f6' : '#cbd5e1', transition: 'all 0.2s', opacity: busy ? 0.5 : 1 }}>
             <Video size={20} style={{ color: file ? '#3b82f6' : '#94a3b8' }} />
             <div>
               <div style={{ fontWeight: 600, color: file ? '#1e293b' : '#475569', fontSize: 13 }}>
                 {file ? file.name : 'Click to select video'}
               </div>
             </div>
-            <input type="file" accept="video/*" onChange={(e) => setFile(e.target.files[0] || null)} style={{ display: 'none' }} />
+            <input type="file" accept="video/*" disabled={busy} onChange={(e) => setFile(e.target.files[0] || null)} style={{ display: 'none' }} />
           </label>
         </div>
 
         {mode === 'new' ? (
           <label className="admin-field">
             <span style={{ fontWeight: 600, color: '#1e293b', marginBottom: 4, display: 'block', fontSize: 13 }}>Lesson Title</span>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Safety briefing" style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: '8px 12px', background: '#f8fafc', fontSize: 13, width: '100%' }} />
+            <input value={title} disabled={busy} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Safety briefing" style={{ border: '1px solid #e2e8f0', borderRadius: 6, padding: '8px 12px', background: '#f8fafc', fontSize: 13, width: '100%' }} />
           </label>
         ) : (
           <label className="admin-field">
@@ -667,8 +789,8 @@ function VideoUploadForm({ chapters, onUpload, onCancel }) {
       </div>
 
       <div style={{ marginTop: 4, display: 'flex', justifyContent: 'flex-end' }}>
-        <button className="btn primary" disabled={!file} style={{ background: '#3b82f6', padding: '8px 20px', fontSize: 13, fontWeight: 600, borderRadius: 6 }}>
-          Upload Video
+        <button className="btn primary" disabled={!file || busy} style={{ background: '#3b82f6', padding: '8px 20px', fontSize: 13, fontWeight: 600, borderRadius: 6, opacity: (!file || busy) ? 0.6 : 1 }}>
+          {busy ? 'Uploading…' : 'Upload Video'}
         </button>
       </div>
     </form>

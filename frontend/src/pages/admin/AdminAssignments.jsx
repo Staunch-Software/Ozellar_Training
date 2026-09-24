@@ -4,7 +4,7 @@ import {
   ClipboardList, AlertTriangle, Loader2, CheckSquare, Square, CheckCircle2,
   Circle, Hourglass, Calendar, Target, RotateCcw, MessageSquare, Eye, EyeOff, ExternalLink, Download,
 } from 'lucide-react'
-import { adminReport, adminSetEnrollments, adminFetchCertificatePdfUrl } from '../../api.js'
+import { adminReport, adminSetEnrollments, adminFetchCertificatePdfUrl, adminReassignCourse } from '../../api.js'
 import Pagination from '../../components/Pagination.jsx'
 
 const ACCENT = '#7c3aed'
@@ -116,7 +116,7 @@ function InfoTile({ icon, label, value }) {
   )
 }
 
-function CourseProgressModal({ row, course, cell, onClose, onManage }) {
+function CourseProgressModal({ row, course, cell, onClose, onManage, onReassign }) {
   const st = statusOf(cell)
   const stage = cell.status === 'passed' ? 2 : cell.status === 'in-progress' ? 1 : 0
   const pct = Math.max(0, Math.min(100, cell.completionPct ?? 0))
@@ -149,7 +149,16 @@ function CourseProgressModal({ row, course, cell, onClose, onManage }) {
       width={certUrl ? 760 : 500}
       onClose={onClose}
       footer={(
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', alignItems: 'center' }}>
+          <button type="button" className="btn" 
+            onClick={() => {
+              if (window.confirm('Are you sure you want to reassign this course? All progress and certificates for this course will be wiped.')) {
+                onReassign()
+              }
+            }}
+            style={{ color: '#ef4444', borderColor: '#fca5a5', background: '#fef2f2', marginRight: 'auto' }}>
+            <RotateCcw size={14} /> Reassign
+          </button>
           <button type="button" className="btn" onClick={onManage}><BookOpen size={14} /> Manage Courses</button>
           <button type="button" className="btn primary" onClick={onClose}
             style={{ background: ACCENT_GRADIENT, borderColor: 'transparent' }}>Close</button>
@@ -440,6 +449,16 @@ export default function AdminAssignments() {
   useEffect(() => { load() }, [])
   useEffect(() => { setCurrentPage(1) }, [search, rankFilter])
 
+  const handleReassign = async (learnerId, courseId) => {
+    try {
+      await adminReassignCourse(learnerId, courseId)
+      setProgressView(null)
+      load()
+    } catch (e) {
+      alert(e.message)
+    }
+  }
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -644,7 +663,12 @@ export default function AdminAssignments() {
         <CourseProgressModal
           row={progressView.row} course={progressView.course} cell={progressView.cell}
           onClose={() => setProgressView(null)}
-          onManage={() => { setManageRow(progressView.row); setProgressView(null) }}
+          onManage={() => {
+            const r = progressView.row
+            setProgressView(null)
+            setManageRow(r)
+          }}
+          onReassign={() => handleReassign(progressView.row.learnerId, progressView.course.id)}
         />
       )}
       {manageRow && (
