@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
-import { Shield, LayoutDashboard, LogOut, BookOpen, ClipboardList, ChevronDown, Users, GraduationCap } from 'lucide-react'
+import { Shield, LayoutDashboard, LogOut, BookOpen, ClipboardList, ChevronDown, Users, GraduationCap, Menu, X } from 'lucide-react'
 import { ThemeToggle } from '../../App.jsx'
 import { useAuth } from '../../auth.jsx'
 import AdminNotificationBell from '../../AdminNotificationBell.jsx'
@@ -53,13 +53,14 @@ function AdminProfileCard({ user, onSignOut }) {
         }}>
           {initials}
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2 }}>
+                <div className="admin-profile-meta" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', lineHeight: 1.2 }}>
           <span style={{ fontSize: '12px', fontWeight: 600, color: 'var(--text)', maxWidth: '90px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {name.split(' ')[0]}
           </span>
           <span style={{ fontSize: '10px', color: roleColor, fontWeight: 600 }}>{roleLabel}</span>
         </div>
         <ChevronDown
+          className="admin-profile-chevron"
           size={13}
           color="var(--text-mut)"
           style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.15s ease' }}
@@ -176,6 +177,19 @@ export default function AdminLayout() {
   const location = useLocation()
   const signOut = () => { logout(); navigate('/') }
 
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const mobileNavRef = useRef(null)
+
+  // Close the mobile nav when tapping anywhere outside it
+  useEffect(() => {
+    const onDoc = (e) => { if (mobileNavRef.current && !mobileNavRef.current.contains(e.target)) setMobileNavOpen(false) }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [])
+
+  // Close it automatically whenever the route changes (link tapped, back/forward)
+  useEffect(() => { setMobileNavOpen(false) }, [location.pathname])
+
   const tab = ({ isActive }) => (isActive ? 'admin-tab on' : 'admin-tab')
 
   // Custom isActive check for Course Management to stay highlighted when child routes are active
@@ -189,7 +203,7 @@ export default function AdminLayout() {
 
   return (
     <div className="admin">
-      <nav className="appnav">
+            <nav className="appnav">
         <Link to="/admin" className="brand">
           <span className="logo"><Shield size={18} /></span> Ozellar Admin
         </Link>
@@ -203,6 +217,34 @@ export default function AdminLayout() {
           <AdminNotificationBell />
           <ThemeToggle />
           <AdminProfileCard user={user} onSignOut={signOut} />
+
+          <div className="mobile-nav-wrap" ref={mobileNavRef}>
+            <button
+              className="menu-toggle"
+              aria-label={mobileNavOpen ? 'Close navigation menu' : 'Open navigation menu'}
+              aria-expanded={mobileNavOpen}
+              onClick={() => setMobileNavOpen(v => !v)}
+            >
+              {mobileNavOpen ? <X size={19} /> : <Menu size={19} />}
+            </button>
+
+            {mobileNavOpen && (
+              <div className="mobile-nav-panel">
+                <NavLink to="/admin" end className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                  <LayoutDashboard size={16} /> Dashboard
+                </NavLink>
+                <NavLink to="/admin/course-management/courses" className={isCourseManagementActive() ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                  <BookOpen size={16} /> Course management
+                </NavLink>
+                <NavLink to="/admin/orientation-program/programs" className={isOrientationActive() ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                  <GraduationCap size={16} /> Orientation Program
+                </NavLink>
+                <NavLink to="/admin/screening" className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                  <ClipboardList size={16} /> Assessment
+                </NavLink>
+              </div>
+            )}
+          </div>
         </div>
       </nav>
       <div className={`page ${isLockedPage ? 'page-locked' : ''} ${isFlushRoute ? 'page-cm' : ''}`}>

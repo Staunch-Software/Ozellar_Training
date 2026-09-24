@@ -276,13 +276,13 @@ export default function AdminDashboard() {
         {/* Course Completion Breakdown — stacked bar */}
         {coursesWithData.length > 0 && (
           <ChartCard title="Course Completion Breakdown" subtitle="Passed · In Progress · Not Started" icon={BarChart3} span={2}>
-            <ResponsiveContainer width="100%" height={240}>
-              <BarChart data={coursesWithData} margin={{ top: 5, right: 20, left: -10, bottom: 44 }} barSize={28}>
+                        <ResponsiveContainer width="100%" height={340}>
+              <BarChart data={coursesWithData} margin={{ top: 5, right: 20, left: -10, bottom: 90 }} barSize={28}>
                 <CartesianGrid strokeDasharray="3 3" stroke={tc.gridStroke} vertical={false} />
-                <XAxis dataKey="course" tick={{ fontSize: 10.5, fill: tc.tickFill }} axisLine={false} tickLine={false} angle={-22} textAnchor="end" interval={0} />
+                <XAxis dataKey="course" tick={{ fontSize: 9, fill: tc.tickFill }} axisLine={false} tickLine={false} angle={-45} textAnchor="end" interval={0} height={80} />
                 <YAxis tick={{ fontSize: 11, fill: tc.tickFill }} axisLine={false} tickLine={false} allowDecimals={false} />
                 <Tooltip content={<CustomTooltip />} />
-                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 6, color: tc.tickFill }} />
+                <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 11, paddingTop: 20, color: tc.tickFill }} />
                 <Bar dataKey="passed"     name="Passed"      stackId="a" fill={CHART_COLORS.emerald} />
                 <Bar dataKey="inProgress" name="In Progress" stackId="a" fill={CHART_COLORS.amber}   />
                 <Bar dataKey="assigned"   name="Not Started" stackId="a" fill={CHART_COLORS.sky} radius={[4,4,0,0]} />

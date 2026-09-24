@@ -49,3 +49,9 @@
    to this wrapper div instead */
 .cardselect.orn-filter-select,
 .cardselect.orn-select-sm { padding: 0; font-size: inherit; }
+
+@media (max-width: 480px) {
+  .cardselect-panel { max-height: 220px; padding: 5px; }
+  .cardselect-option { padding: 8px; }
+  .cardselect-trigger { padding: 8px 10px; font-size: 13px; }
+}
