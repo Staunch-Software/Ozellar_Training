@@ -99,19 +99,20 @@ export default function TestWelcome() {
       streamRef.current = stream;
       setCameraActive(true);
       setCaptureMode('camera');
-      
-      // Allow React to render the <video> element before assigning the stream
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      }, 100);
     } catch (err) {
       console.error('Camera error:', err);
       setUploadError('Failed to access camera. Please allow permissions or use upload.');
       setCaptureMode('upload');
     }
   }
+
+  useEffect(() => {
+    if (captureMode === 'camera' && videoRef.current && streamRef.current) {
+      if (videoRef.current.srcObject !== streamRef.current) {
+        videoRef.current.srcObject = streamRef.current;
+      }
+    }
+  }, [captureMode]);
 
   const stopCamera = () => {
     if (streamRef.current) {
