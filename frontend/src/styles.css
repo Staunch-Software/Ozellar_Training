@@ -75,10 +75,28 @@ img{max-width:100%;display:block}
 .iconbtn:hover{background:var(--surface-2);color:var(--text)}
 .av{width:32px;height:32px;border-radius:50%;background:var(--accent-weak);color:var(--accent);
   display:grid;place-items:center;font-size:12px;font-weight:600}
-.menu-toggle{display:none}
+.menu-toggle{display:none;align-items:center;justify-content:center;width:36px;height:36px;
+  border-radius:9px;border:1px solid transparent;background:none;color:var(--text-mut);
+  cursor:pointer;flex-shrink:0}
+.menu-toggle:hover{background:var(--surface-2);color:var(--text)}
+
+.mobile-nav-wrap{position:relative;display:none}
+
+.mobile-nav-panel{position:absolute;top:calc(100% + 10px);right:0;min-width:240px;
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;
+  box-shadow:0 16px 40px rgba(0,0,0,.18);padding:6px;z-index:200;
+  display:flex;flex-direction:column;gap:2px;
+  animation:mobileNavIn .14s cubic-bezier(.16,1,.3,1)}
+@keyframes mobileNavIn{from{opacity:0;transform:scale(.96) translateY(-4px)}to{opacity:1;transform:scale(1) translateY(0)}}
+
+.mobile-nav-link{display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:9px;
+  font-size:13.5px;font-weight:500;color:var(--text-mut);transition:background .1s,color .1s}
+.mobile-nav-link:hover{background:var(--surface-2);color:var(--text)}
+.mobile-nav-link.on{background:var(--accent-weak);color:var(--accent);font-weight:700}
 
 .page{max-width:1400px;margin:0 auto;padding:24px 22px 72px}
 .page.page-cm{max-width:none;padding:0;height:calc(100vh - 58px);overflow:hidden;display:flex;flex-direction:column}
+.page.upload-photo-page{max-width:600px;margin:40px auto}
 
 .prog{height:6px;background:var(--surface-3);border-radius:99px;overflow:hidden}
 .prog>i{display:block;height:100%;background:var(--accent);transition:width .3s}
@@ -93,7 +111,7 @@ img{max-width:100%;display:block}
 .login-top{position:fixed;top:16px;right:18px}
 .login{width:min(900px,100%);display:grid;grid-template-columns:1.05fr .95fr;
   background:var(--surface);border:1px solid var(--border);border-radius:16px;
-  box-shadow:var(--shadow);overflow:hidden}
+  box-shadow:var(--shadow);overflow:hidden;transition:width .2s ease}
 .login .art{background:linear-gradient(155deg,#153a74,#0d244a);color:#fff;padding:42px;
   display:flex;flex-direction:column;justify-content:space-between;position:relative;
   overflow:hidden;min-height:460px}
@@ -323,7 +341,8 @@ img{max-width:100%;display:block}
 }
 @media (max-width:720px){
   .navlinks{display:none}
-  .menu-toggle{display:grid}
+  .menu-toggle{display:flex}
+  .mobile-nav-wrap{display:flex}
   .login{grid-template-columns:1fr}
   .login .art{display:none}
   .hello{align-items:flex-start}
@@ -750,7 +769,23 @@ img{max-width:100%;display:block}
 @keyframes rptTipIn{from{opacity:0;transform:translateY(2px)}to{opacity:1;transform:translateY(0)}}
 
 /* page root */
+/* page root */
 .dash-root{padding:0 0 60px}
+
+/* Let the Training Dashboard use the full available width at large
+   viewports (same effect as Course Management's .page-cm override),
+   scoped only to the page that contains .dash-root so no other
+   page using .page is affected */
+.page:has(.dash-root){
+  max-width:none;
+}
+
+/* Same fix for the Assessment Management page — it also renders inside
+   the plain .page wrapper. Scoped to .am-header (already present in
+   that page's markup) so no other page using .page is affected */
+.page:has(.am-header){
+  max-width:none;
+}
 
 /* header */
 .dash-header{display:flex;align-items:flex-end;justify-content:space-between;
@@ -910,7 +945,7 @@ img{max-width:100%;display:block}
   background:var(--surface);border:1px solid var(--border);
   border-radius:var(--radius-lg);padding:8px 16px;
   margin-bottom:8px;box-shadow:var(--shadow-sm)}
-.rpt-filter-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rpt-filter-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-left:12px}
 
 /* search input */
 .rpt-search-wrap{position:relative;flex:1;min-width:200px}
@@ -984,6 +1019,7 @@ img{max-width:100%;display:block}
 .rpt-table{width:100%;border-collapse:collapse;font-size:13.5px}
 
 /* column sizing and stickiness */
+/* column sizing and stickiness */
 .rpt-table th, .rpt-table td { background: var(--surface); }
 .rpt-table thead th { background: var(--surface-2); }
 .rpt-col-sino{min-width:60px; max-width:60px; width:60px; position:sticky; left:0; z-index:2; text-align:center;}
@@ -995,6 +1031,23 @@ img{max-width:100%;display:block}
 
 .rpt-row:hover td.rpt-col-sino, .rpt-row:hover td.rpt-col-crew, .rpt-row:hover td.rpt-col-id, .rpt-row:hover td.rpt-col-rank { background: var(--surface-2); }
 .rpt-col-course{min-width:170px;text-align:center}
+
+/* Mobile: the 4 sticky columns (sino+crew+id+rank) need 520px of pinned
+   space, which exceeds the viewport itself below ~700px. Forcing sticky
+   left-offsets into a space narrower than their own combined width makes
+   the id/rank columns overlap and get painted over — "Crew ID" appears
+   to vanish. Below this width, drop stickiness entirely so all columns
+   scroll normally in sequence; nothing above this breakpoint is touched. */
+@media (max-width: 700px) {
+  .rpt-col-sino,
+  .rpt-col-crew,
+  .rpt-col-id,
+  .rpt-col-rank {
+    position: static;
+    left: auto;
+  }
+  .rpt-col-rank::after { content: none; }
+}
 
 /* header row */
 .rpt-table thead tr{
@@ -1119,9 +1172,33 @@ img{max-width:100%;display:block}
 .rpt-footer strong{color:var(--text-mut)}
 
 /* ---- responsive ---- */
+/* ---- responsive ---- */
+.rpt-header{
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:10px 0; margin-top:16px; margin-bottom:12px;
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.rpt-header-brand{
+  display:flex; align-items:center; gap:12px; flex:1 1 auto; min-width:0;
+}
+.rpt-header-actions{
+  display:flex; gap:16px; flex-wrap:wrap; align-items:center;
+}
+.rpt-download-group{
+  display:flex; gap:8px; align-items:center;
+  border-left:1px solid var(--border); padding-left:16px;
+}
+
 @media(max-width:720px){
-  .rpt-header{flex-direction:column}
-  .rpt-header-actions{width:100%}
+  .rpt-header{flex-direction:column; align-items:stretch; gap:10px; padding:12px 0 10px; margin-top:20px;}
+  .rpt-header-brand{width:100%;}
+  .rpt-header-actions{width:100%; flex-direction:column; align-items:stretch; gap:10px; margin-top:4px;}
+  .rpt-filter-row{gap:10px !important;}
+  .rpt-download-group{
+    border-left:none; padding-left:0; border-top:1px solid var(--border);
+    padding-top:10px; width:100%; justify-content:stretch;
+  }
+  .rpt-download-group .btn{ flex:1; justify-content:center; }
   .rpt-filter-row{flex-direction:column}
   .rpt-search-wrap{width:100%}
   .rpt-select-wrap{width:100%}
@@ -1132,6 +1209,73 @@ img{max-width:100%;display:block}
 @media(max-width:480px){
   .rpt-kpi{min-width:100%}
   .rpt-title{font-size:22px}
+  .rpt-header{margin-top:24px}
+}
+
+/* ============================================================
+   ASSESSMENT MANAGEMENT — responsive helpers (am-*)
+   ============================================================ */
+.am-header{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}
+
+.am-tabs{display:flex;gap:4px;background:var(--surface-2);padding:4px;border-radius:14px;
+  border:1px solid var(--border);flex-shrink:0;max-width:100%;overflow-x:auto;
+  -webkit-overflow-scrolling:touch;scrollbar-width:none}
+.am-tabs::-webkit-scrollbar{display:none}
+.am-tab-btn{display:flex;align-items:center;gap:7px;padding:9px 18px;border-radius:10px;
+  border:none;cursor:pointer;font-weight:600;font-size:13.5px;font-family:inherit;
+  white-space:nowrap;flex-shrink:0;transition:all .15s}
+
+.am-hero-row{display:flex;align-items:center;flex-wrap:wrap}
+.am-row-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+.am-settings-grid{display:grid;grid-template-columns:repeat(4,1fr)}
+.am-grid-span-all{grid-column:1/-1}
+.am-metrics-grid{display:grid;grid-template-columns:repeat(3,1fr)}
+.am-form-grid-2{display:grid;grid-template-columns:1fr 1fr}
+.am-stats-grid-3{display:grid;grid-template-columns:repeat(3,1fr)}
+.am-summary-grid-4{display:grid;grid-template-columns:repeat(4,1fr)}
+
+/* Tablet */
+@media (max-width:760px){
+  .am-settings-grid{grid-template-columns:repeat(2,1fr)}
+}
+
+/* Mobile */
+@media (max-width:640px){
+  .am-tabs{width:100%}
+  .am-tab-btn{padding:8px 13px;font-size:12.5px;gap:5px}
+  .am-hero-row{align-items:flex-start}
+  .am-row-actions{width:100%;margin-top:6px}
+  .am-metrics-grid{grid-template-columns:1fr}
+}
+
+/* Small mobile */
+@media (max-width:560px){
+  .am-form-grid-2{grid-template-columns:1fr}
+}
+@media (max-width:480px){
+  .am-stats-grid-3{grid-template-columns:1fr}
+}
+@media (max-width:420px){
+  .am-settings-grid{grid-template-columns:1fr}
+}
+@media (max-width:400px){
+  .am-summary-grid-4{grid-template-columns:1fr}
+}
+@media (max-width:700px) and (min-width:401px){
+  .am-summary-grid-4{grid-template-columns:repeat(2,1fr)}
+}
+@media (max-width:380px){
+  .am-tab-btn{padding:7px 10px;font-size:11.5px}
+}
+
+.am-header-actions{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.am-header-cta{display:flex;align-items:center;gap:7px;border-radius:11px;
+  padding:9px 18px;font-size:13.5px;font-weight:600;white-space:nowrap;flex-shrink:0}
+
+@media (max-width:640px){
+  .am-header-actions{width:100%}
+  .am-header-cta{width:100%;justify-content:center}
 }
 
 /* ============================================================
@@ -2072,3 +2216,558 @@ img{max-width:100%;display:block}
   transition:filter .12s ease, box-shadow .12s ease}
 .asg-manage-btn:hover{filter:brightness(1.08);box-shadow:0 3px 10px rgba(124,58,237,.35)}
 .asg-manage-btn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* Assignments page header — was built with hardcoded inline widths and
+   no flex-wrap, so search box + rank dropdown overflowed past the title
+   on narrow screens instead of wrapping. */
+.asg-header {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+}
+.asg-header-brand { display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+.asg-header-actions {
+  flex: 1 1 320px; display: flex; justify-content: flex-end; gap: 12px;
+  flex-wrap: wrap; min-width: 0;
+}
+.asg-header-search { flex: 1 1 240px; min-width: 200px; max-width: 400px; }
+.asg-header-rank { width: 260px; flex: 0 0 260px; }
+
+@media (max-width: 900px) {
+  .asg-header-actions { justify-content: flex-start; width: 100%; }
+  .asg-header-search { flex: 1 1 200px; max-width: none; }
+  .asg-header-rank { flex: 0 1 200px; width: auto; min-width: 160px; }
+}
+
+@media (max-width: 640px) {
+  .asg-header { flex-direction: column; align-items: stretch; }
+  /* Reset the 320px flex-basis inherited from the desktop rule — on a
+     row layout that 320px sizes width, but once the parent switches to
+     flex-direction:column the same basis sizes height instead, which
+     was reserving ~300px of empty vertical space here. */
+  .asg-header-actions { width: 100%; flex: 1 1 auto; }
+  .asg-header-search { flex: 1 1 100%; }
+  .asg-header-rank { flex: 1 1 100%; width: 100%; }
+}
+
+.builder-head{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:14px; flex-wrap:wrap; margin-bottom:18px;
+}
+.builder-title{ font-size:26px; margin:6px 0 4px; }
+.builder-actions{ display:flex; gap:12px; flex-wrap:wrap; }
+
+@media (max-width:640px){
+  .builder-head{ flex-direction:column; align-items:flex-start; }
+  .builder-actions{ width:100%; }
+  .builder-actions button{ flex:1; justify-content:center; }
+}
+@media (max-width:480px){
+  .builder-title{ font-size:21px; }
+  .builder-actions{ flex-direction:column; }
+}
+
+.builder-preview-btn{
+  background:#0f172a; border-color:#0f172a; color:#fff;
+  box-shadow:0 4px 6px -1px rgba(15,23,42,.2);
+}
+.builder-preview-btn:hover{
+  background:#1e293b; border-color:#1e293b; transform:translateY(-1px);
+}
+
+
+
+.module-row{ display:flex; align-items:center; gap:12px; padding:12px 16px; flex-wrap:wrap; }
+.module-row-title{ flex:1 1 160px; min-width:160px; }
+.module-row-actions{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-left:auto; }
+
+@media (max-width:640px){
+  .module-row-actions{ flex:1 1 100%; margin-left:0; justify-content:flex-start; }
+}
+@media (max-width:520px){
+  .module-row{ padding:10px 12px; gap:8px; }
+  .module-row .btn.sm{ padding:6px 8px; }
+  .module-row-title{ min-width:120px; }
+}
+
+.users-head{
+  background:var(--surface); border-bottom:1px solid var(--border);
+  padding:10px 0; margin-bottom:12px;
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+}
+.users-head-actions{
+  display:flex; gap:12px; align-items:center; padding-right:20px;
+  flex-wrap:wrap; width:auto;
+}
+.users-search{ min-width:280px; max-width:400px; }
+.users-rank-wrap{ position:relative; }
+.users-rank-field{ min-width:180px; background:#fff; }
+
+@media (max-width:900px){
+  .users-head-actions{ padding-right:12px; }
+  .users-search{ min-width:220px; }
+}
+
+@media (max-width:640px){
+  .users-head{ flex-wrap:wrap; padding:10px 12px; }
+  .users-head-actions{
+    width:100%; padding-right:0; order:3;
+    flex-direction:column; align-items:stretch;
+  }
+  .users-search{ min-width:0; max-width:none; width:100%; }
+  .users-rank-wrap{ width:100%; }
+  .users-rank-field{ min-width:0; width:100%; }
+  .users-head-actions .btn.primary{ width:100%; justify-content:center; }
+}
+
+@media (max-width:480px){
+  .users-head{ gap:8px; }
+}
+
+
+
+/* ============================================================
+   GLOBAL RESPONSIVE PASS — all components, all breakpoints
+   Purely additive. Nothing above this line is modified.
+   ============================================================ */
+
+/* ---------------------------------------------------------
+   Large desktop (min-width: 1280px) — a little more breathing room
+   --------------------------------------------------------- */
+@media (min-width: 1280px) {
+  .page { padding: 28px 32px 80px; }
+  .content { padding: 30px 40px; }
+}
+
+@media (min-width: 1920px) {
+  .page { max-width: 2200px; }
+  .page.upload-photo-page { max-width: none; }
+}
+
+/* ---------------------------------------------------------
+   Ultra-wide desktop (min-width: 2200px) — the 2200px cap above
+   still leaves large empty margins on 2560px+ screens, so let
+   .page grow further here. Uses vw so it also self-adjusts on
+   screens between 2200–2560px+ instead of a single hard cap.
+   --------------------------------------------------------- */
+@media (min-width: 2200px) {
+  .page { max-width: min(2500px, 96vw); padding: 32px 56px 88px; }
+}
+
+@media (min-width: 1920px) {
+  .login { width: min(1380px, 62vw); }
+  .login .art { padding: clamp(42px, 3vw, 64px); min-height: clamp(860px, 30vw, 620px); }
+  .login .art h3 { font-size: clamp(27px, 1.7vw, 38px); max-width: 17ch; }
+  .login .art p { font-size: clamp(14px, 0.85vw, 17px); max-width: 38ch; }
+  .login .form { padding: clamp(42px, 3vw, 64px); gap: clamp(15px, 1vw, 20px); }
+  .brand-lg { font-size: clamp(19px, 1.15vw, 24px); }
+  .brand-lg .logo { width: clamp(38px, 2.4vw, 48px); height: clamp(38px, 2.4vw, 48px); }
+  .field label { font-size: clamp(12.5px, 0.68vw, 15px); }
+  .field input { font-size: clamp(14px, 0.85vw, 17px); padding: clamp(11px, 0.7vw, 15px) clamp(13px, 0.8vw, 17px) clamp(11px, 0.7vw, 15px) clamp(38px, 2.3vw, 46px); }
+  .field .inputwrap svg { width: clamp(17px, 1vw, 20px); height: clamp(17px, 1vw, 20px); }
+  .segmented button { font-size: clamp(13.5px, 0.75vw, 16px); padding: clamp(8px, 0.55vw, 12px); }
+  .btn.block { padding: clamp(11px, 0.75vw, 16px); font-size: clamp(13.5px, 0.75vw, 16px); }
+}
+
+/* ---------------------------------------------------------
+   Laptop (max-width: 1279px)
+   --------------------------------------------------------- */
+@media (max-width: 1279px) {
+  .dash-chart-grid { gap: 14px; }
+  .rpt-kpi-strip { gap: 8px; }
+}
+
+/* ---------------------------------------------------------
+   Tablet landscape (max-width: 1024px)
+   --------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .page { padding: 20px 18px 64px; }
+  .content { padding: 22px 24px; }
+
+  .dash-kpi-grid-row { grid-template-columns: repeat(4, 1fr); }
+  .dash-chart-grid { grid-template-columns: 1fr; }
+  .dash-chart-card.span-2 { grid-column: span 1; }
+
+  .myc-grid { grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); }
+  .catgrid { grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); }
+
+  .stat-grid { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+  .form-grid { grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); }
+
+  .matrix th { min-width: 120px; max-width: 140px; }
+  .matrix th.sticky-col { min-width: 190px; }
+}
+
+/* ---------------------------------------------------------
+   Tablet portrait (max-width: 900px)
+   Note: reader/side layout + cm-cards already have 900px rules
+   above — those are untouched, this only adds more.
+   --------------------------------------------------------- */
+@media (max-width: 900px) {
+  .appnav { padding: 0 16px; }
+  .navlinks { gap: 2px; }
+  .navlinks a { padding: 7px 9px; font-size: 13px; }
+
+  .login { grid-template-columns: 1fr; }
+  .login .art { display: none; }
+
+  .hello { align-items: flex-start; }
+  .stats { gap: 16px; flex-wrap: wrap; }
+
+  .admin-head { flex-direction: column; align-items: flex-start; gap: 10px; }
+  .admin-head-actions { width: 100%; }
+
+  .help-grid { grid-template-columns: 1fr; }
+
+  .verify-wrap { padding: 18px; }
+
+  .q-edit-card { padding: 16px; }
+
+  .myc-hero { flex-direction: column; align-items: flex-start; padding: 24px 22px; }
+  .myc-hero-right { width: 100%; justify-content: space-between; }
+}
+
+@media (min-width: 2200px) {
+  .page { max-width: min(2500px, 96vw); padding: 32px 56px 88px; }
+}
+
+/* ---------------------------------------------------------
+   Large mobile / small tablet (max-width: 768px)
+   --------------------------------------------------------- */
+@media (max-width: 768px) {
+  .appnav { height: 58px; flex-wrap: nowrap; padding: 0 14px; }
+  .navlinks { display: none; }
+  .menu-toggle { display: flex; }
+  .mobile-nav-wrap { display: flex; }
+  .nav-right { margin-left: auto; gap: 8px; flex-wrap: nowrap; }
+
+  .stat-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .stat-card { padding: 14px; }
+  .stat-value { font-size: 24px; }
+
+  .admin-card { padding: 16px; }
+  .form-grid { grid-template-columns: 1fr; }
+
+  .admin-table th, .admin-table td { padding: 10px 12px; font-size: 12.5px; }
+
+  .cert-list { gap: 10px; }
+  .cert-item { padding: 13px 14px; flex-wrap: wrap; gap: 10px; }
+  .cert-item-actions { width: 100%; justify-content: flex-end; }
+
+  .rpt-filter-row { gap: 8px; }
+  .rpt-kpi { min-width: calc(50% - 5px); }
+
+  .myc-grid { grid-template-columns: 1fr; gap: 16px; }
+  .myc-card:hover, .myc-card:focus-visible { transform: none; }
+
+  .crew-cards-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+
+  .dash-header { flex-direction: column; align-items: flex-start; }
+  .dash-kpi-grid-row { grid-template-columns: repeat(3, 1fr); overflow-x: auto; }
+}
+
+/* ---------------------------------------------------------
+   Mobile (max-width: 640px)
+   --------------------------------------------------------- */
+@media (max-width: 640px) {
+  .page { padding: 16px 12px 56px; }
+  .content { padding: 16px 14px; }
+
+  .brand { font-size: 15px; }
+  .brand .logo { width: 28px; height: 28px; }
+
+  .nav-right { gap: 4px; }
+  .admin-profile-meta,
+  .admin-profile-chevron { display: none; }
+  #admin-profile-btn { padding: 4px; gap: 0; }
+
+  .hello h1 { font-size: 20px; }
+  .stats { gap: 12px; }
+  .stats .s b { font-size: 18px; }
+
+  .catgrid { grid-template-columns: 1fr; gap: 14px; }
+  .cards { grid-template-columns: 1fr; }
+
+  .chead { flex-direction: column; gap: 8px; }
+  .pgbtn { max-width: 100%; }
+  .pager { flex-direction: column; gap: 10px; }
+
+  .qtext { font-size: 17px; }
+  .opt { padding: 12px 13px; }
+
+  .cert-actions { flex-direction: column; align-items: stretch; }
+  .cert-inner { padding: 22px 18px; }
+  .cert-sign { padding-top: 40px; }
+
+  .stat-grid { grid-template-columns: 1fr 1fr; }
+  .admin-table-wrap { -webkit-overflow-scrolling: touch; }
+
+  .dash-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .dash-kpi-grid-row { grid-template-columns: repeat(2, 1fr); }
+  .dash-rate-grid { flex-wrap: wrap; }
+  .dash-rate-cell { flex: 1 0 calc(50% - 7px); max-width: none; }
+
+  .notif-pop {
+    position: fixed;
+    top: 64px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+  }
+  .notif-head { padding: 18px 18px 10px; font-size: 16px; }
+
+    .rpt-filter-row { flex-direction: column; align-items: center; }
+  .rpt-search-wrap, .rpt-select-wrap { width: 92%; max-width: 420px; margin: 0 auto; }
+  .rpt-select { width: 100%; }
+  .rpt-kpi { min-width: 100%; }
+  .rpt-pagination { flex-direction: column; gap: 8px; align-items: stretch; text-align: center; }
+
+  .myc-hero { padding: 20px 16px; }
+  .myc-greeting h1 { font-size: 22px; }
+  .myc-stats { flex-wrap: wrap; }
+  .myc-stat-card { min-width: calc(50% - 6px); }
+  .myc-btn-report { width: 100%; justify-content: center; }
+
+  .target-selection-container { padding: 12px; }
+  .chips-grid { gap: 8px; }
+  .premium-chip { padding: 6px 12px; font-size: 13px; }
+
+  .search-bar { padding: 7px 10px; }
+
+  .admin-page-title { font-size: 21px; }
+  .pagination { flex-direction: column; gap: 8px; align-items: stretch; text-align: center; }
+  .pagination-controls { justify-content: center; }
+}
+
+/* ---------------------------------------------------------
+   Small mobile (max-width: 480px)
+   --------------------------------------------------------- */
+@media (max-width: 480px) {
+  .page { padding: 14px 10px 48px; }
+  .content { padding: 14px 10px; }
+
+  .login .form { padding: 26px 20px; }
+  .brand-lg { font-size: 16px; }
+
+  .qtext { font-size: 16px; }
+  .result-seal { width: 62px; height: 62px; }
+
+  .cert-co { font-size: 17px; }
+  .cert-title { font-size: 17px; }
+  .cert-inner { padding: 18px 14px; }
+
+  .stat-grid { grid-template-columns: 1fr; }
+  .stat-card { padding: 12px; }
+
+  .admin-table th, .admin-table td { padding: 8px 10px; font-size: 11.5px; }
+  .pill { font-size: 10.5px; padding: 2px 7px; }
+
+  .cert-item { padding: 11px 12px; }
+  .cert-seal { width: 38px; height: 38px; }
+
+  .verify-card { padding: 22px 18px; }
+  .verify-body h1 { font-size: 19px; }
+  .verify-seal { width: 58px; height: 58px; }
+
+  .q-edit-card { padding: 14px; }
+  .q-edit-title-input { font-size: 14.5px; }
+
+  .dash-kpi { padding: 12px; }
+  .dash-kpi-value { font-size: 18px; }
+  .dash-chart-card { padding: 14px; }
+  .dash-cert-row { flex-wrap: wrap; }
+
+  .myc-grid { gap: 12px; }
+  .myc-body { padding: 16px; }
+  .myc-title { font-size: 15.5px; }
+  .myc-stat-card { min-width: 100%; }
+
+  .crew-cards-grid { grid-template-columns: 1fr 1fr; }
+  .premium-crew-card { padding: 8px; }
+  .crew-avatar { width: 30px; height: 30px; }
+
+  .admin-page-icon { width: 30px; height: 30px; }
+  .admin-page-title { font-size: 18px; gap: 8px; }
+}
+
+/* ---------------------------------------------------------
+   Extra-small phones (max-width: 380px)
+   --------------------------------------------------------- */
+@media (max-width: 380px) {
+  .stats { gap: 10px; }
+  .stats .s b { font-size: 16px; }
+
+  .catgrid, .myc-grid { gap: 10px; }
+
+  .opt { padding: 10px 11px; font-size: 13.5px; }
+
+  .cert-topics li { font-size: 11.5px; }
+
+  .rpt-kpi-value { font-size: 17px; }
+  .rpt-badge { font-size: 10.5px; padding: 3px 9px; }
+
+  .dash-kpi-grid, .dash-kpi-grid-row { grid-template-columns: 1fr; }
+  .dash-rate-cell { flex: 1 0 100%; }
+
+  .myc-avatar { width: 52px; height: 52px; font-size: 18px; }
+  .myc-greeting h1 { font-size: 19px; }
+}
+
+/* ---------------------------------------------------------
+   Very small / legacy phones (max-width: 320px)
+   --------------------------------------------------------- */
+@media (max-width: 320px) {
+  .page { padding: 10px 8px 40px; }
+  .content { padding: 10px 8px; }
+
+  .brand { font-size: 13.5px; gap: 6px; }
+  .brand .logo { width: 24px; height: 24px; }
+  .iconbtn { width: 32px; height: 32px; }
+  .av { width: 28px; height: 28px; }
+
+  .hello h1 { font-size: 17px; }
+  .stats .s b { font-size: 14px; }
+  .stats .s span { font-size: 10px; }
+
+  .btn { padding: 7px 11px; font-size: 12.5px; }
+  .btn.crew-report-btn { width: 100%; justify-content: center; }
+
+  .field input { font-size: 13px; padding: 9px 11px 9px 32px; }
+
+  .qtext { font-size: 14.5px; }
+  .opt .box { width: 19px; height: 19px; }
+
+  .cert-inner { padding: 14px 10px; }
+  .cert-co { font-size: 15px; }
+  .cert-fill { min-width: 110px; }
+
+  .stat-value { font-size: 19px; }
+  .stat-icon { width: 32px; height: 32px; }
+
+  .verify-card { padding: 16px 12px; }
+
+  .dash-title { font-size: 20px; }
+  .dash-kpi-value { font-size: 16px; }
+
+  .rpt-field, .rpt-select { font-size: 12.5px; padding: 8px 28px; }
+
+  .myc-hero { padding: 16px 12px; }
+  .myc-avatar { width: 44px; height: 44px; font-size: 15px; }
+  .myc-stat-val { font-size: 17px; }
+
+  .premium-chip { font-size: 12px; padding: 5px 10px; }
+  .crew-name { font-size: 13px; }
+  .crew-rank { font-size: 10px; }
+}
+
+/* ============================================================
+   CORRECTED — Course Management header bar (.cm-header)
+   Replaces the ≤380px rule from the previous message that hid
+   .cm-header-stat-lbl entirely (that caused the "0  0" with no
+   "Programs"/"Enrolled" text). Labels now shrink/stack instead
+   of disappearing.
+   ============================================================ */
+@media (max-width: 900px) {
+  .cm-header { padding: 0 20px; }
+  .cm-header-inner { height: auto; min-height: 68px; flex-wrap: wrap; padding: 10px 0; gap: 10px; }
+  .cm-header-stats { flex-wrap: wrap; }
+}
+
+@media (max-width: 640px) {
+  .cm-header { padding: 10px 16px; }
+  .cm-header-inner {
+    flex-direction: column;
+    align-items: flex-start;
+    height: auto;
+    gap: 10px;
+    padding: 4px 0;
+  }
+  .cm-header-brand { width: 100%; }
+  .cm-header-icon { width: 34px; height: 34px; border-radius: 9px; }
+  .cm-header-title { font-size: 15px; }
+  .cm-header-eyebrow { font-size: 9.5px; }
+
+  .cm-header-stats { width: 100%; justify-content: space-between; }
+  .cm-header-stat {
+    padding: 7px 10px; flex: 1;
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+  }
+  .cm-header-stat-val { font-size: 14px; }
+  .cm-header-stat-lbl { font-size: 9.5px; white-space: nowrap; }
+
+  .cm-content { padding: 16px; height: calc(100vh - 180px); }
+}
+
+@media (max-width: 480px) {
+  .cm-header { padding: 8px 12px; }
+  .cm-header-brand { gap: 8px; }
+  .cm-header-icon { width: 30px; height: 30px; }
+  .cm-header-title { font-size: 14px; }
+  .cm-header-stats { border-radius: 7px; }
+  .cm-header-stat { padding: 6px 8px; }
+  .cm-header-stat-lbl { font-size: 9px; }
+  .cm-header-sep { height: 20px; }
+
+  .cm-content { padding: 12px; }
+}
+
+@media (max-width: 380px) {
+  .cm-header-eyebrow { font-size: 9px; margin-bottom: 2px; }/* reclaim vertical space; title alone is enough */
+  /* .cm-header-stat-lbl is intentionally NOT hidden here anymore —
+     it now stacks under the value at 9px font instead of vanishing. */
+}
+
+/* ============================================================
+   page-cm shell (used by every Course Management / Orientation
+   Program admin page)
+   ============================================================ */
+@media (max-width: 640px) {
+  .page.page-cm { height: calc(100vh - 52px); }
+}
+
+@media (max-width: 640px) {
+  .cm-content:has(.users-table-wrap) > div {
+    flex: none !important;
+    min-height: auto !important;
+  }
+  .admin-card:has(.users-table-wrap) {
+    flex: none !important;
+    min-height: auto !important;
+  }
+  .admin-table-wrap.users-table-wrap {
+    flex: none !important;
+    min-height: 240px;
+    max-height: 50vh;
+  }
+}
+
+@media (max-width:480px){
+  .mobile-nav-panel{min-width:200px;right:-8px;max-width:calc(100vw - 24px)}
+}
+
+/* ============================================================
+   MY COURSES — filter row responsiveness (mobile → laptop)
+   Additive only. Makes the filter-actions row wrap instead of
+   overflowing, and lets the filter-chip pill scroll horizontally
+   on narrow screens instead of forcing page-wide overflow.
+   ============================================================ */
+.myc-filter-actions{
+  flex-wrap: wrap;
+  min-width: 0;
+}
+.myc-filter-wrap{
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.myc-filter-wrap::-webkit-scrollbar{ display: none; }
+.myc-filter-wrap button{
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .myc-filter-actions{ width: 100%; }
+  .myc-filter-wrap{ width: 100%; }
+  .btn.crew-report-btn{ width: 100%; justify-content: center; }
+}

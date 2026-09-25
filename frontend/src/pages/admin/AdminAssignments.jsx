@@ -374,8 +374,8 @@ function ManageCoursesModal({ row, courses, onClose, onSaved }) {
         </>
       )}
     >
-      <div style={{ padding: '14px 22px 10px', flexShrink: 0, display: 'flex', gap: 8 }}>
-        <div className="rpt-search-wrap" style={{ flex: 1, margin: 0 }}>
+            <div style={{ padding: '14px 22px 10px', flexShrink: 0, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <div className="rpt-search-wrap" style={{ flex: '1 1 180px', margin: 0, minWidth: 0 }}>
           <Search size={14} className="rpt-field-icon" />
           <input type="text" placeholder="Search courses…" className="rpt-field"
             value={courseSearch} onChange={(e) => setCourseSearch(e.target.value)} />
@@ -505,21 +505,20 @@ export default function AdminAssignments() {
     // and scrolls internally. Its minHeight keeps >= 5 rows visible on short
     // screens (the page scrolls instead of squeezing the table).
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-      <div style={{
-        background: 'var(--surface)', borderBottom: '1px solid var(--border)',
-        padding: '10px 0', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '12px',
-      }}>
-        <div style={{ width: '4px', height: '36px', background: 'linear-gradient(180deg, #7c3aed, #a855f7)', borderRadius: '0 4px 4px 0', flexShrink: 0 }}></div>
-        <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(124,58,237,0.1)', color: ACCENT, display: 'grid', placeItems: 'center' }}>
-          <Grid3x3 size={18} />
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column' }}>
-          <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: ACCENT, opacity: 0.8 }}>Fleet Training · Enrollments</span>
-          <h1 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', margin: '1px 0 0' }}>Assignments</h1>
+            <div className="asg-header">
+        <div className="asg-header-brand">
+          <div style={{ width: '4px', height: '36px', background: 'linear-gradient(180deg, #7c3aed, #a855f7)', borderRadius: '0 4px 4px 0', flexShrink: 0 }}></div>
+          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(124,58,237,0.1)', color: ACCENT, display: 'grid', placeItems: 'center' }}>
+            <Grid3x3 size={18} />
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: ACCENT, opacity: 0.8 }}>Fleet Training · Enrollments</span>
+            <h1 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', margin: '1px 0 0' }}>Assignments</h1>
+          </div>
         </div>
 
-        <div style={{ flex: 1, display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-          <div className="rpt-search-wrap" style={{ minWidth: 280, maxWidth: 400, margin: 0 }}>
+        <div className="asg-header-actions">
+          <div className="rpt-search-wrap asg-header-search" style={{ margin: 0 }}>
             <Search size={14} className="rpt-field-icon" />
             <input type="text" placeholder="Search by name, crew ID, or rank..." className="rpt-field"
               value={search} onChange={e => setSearch(e.target.value)} />
@@ -528,9 +527,9 @@ export default function AdminAssignments() {
             )}
           </div>
 
-          <div style={{ position: 'relative', width: '260px', flex: '0 0 260px' }} ref={dropdownRef}>
-            <div className="rpt-field"
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', width: '260px', background: '#fff' }}
+          <div className="asg-header-rank" style={{ position: 'relative' }} ref={dropdownRef}>
+                        <div className="rpt-field"
+              style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
               <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '13px' }}>
                 {rankFilter || 'All Ranks'}
@@ -558,7 +557,7 @@ export default function AdminAssignments() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, marginBottom: 12, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 12, marginTop: 16, marginBottom: 12, flexWrap: 'wrap' }}>
         {[
           { label: 'Crew', value: data.rows.length, Icon: ClipboardList },
           { label: 'Courses', value: totalCourses, Icon: BookOpen },

@@ -292,27 +292,19 @@ export default function AdminCourseBuilder() {
         <ArrowLeft size={15} /> All courses
       </button>
 
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-        <div>
-          <div className="eyebrow">Fleet training · Course builder</div>
-          <h1 style={{ fontSize: 26, margin: '6px 0 4px' }}>{course.title}</h1>
-          {course.subtitle && <p className="mut" style={{ margin: 0 }}>{course.subtitle}</p>}
-        </div>
-        <div style={{ display: 'flex', gap: 12 }}>
+      <div className="builder-head">
+  <div>
+    <div className="eyebrow">Fleet training · Course builder</div>
+    <h1 className="builder-title">{course.title}</h1>
+    {course.subtitle && <p className="mut" style={{ margin: 0 }}>{course.subtitle}</p>}
+  </div>
+  <div className="builder-actions">
           <button 
-            onClick={() => navigate(`/admin/courses/${id}/preview`)}
-            style={{
-              display: 'flex', alignItems: 'center', gap: 6,
-              background: '#0f172a', color: 'white', border: 'none', borderRadius: 6, padding: '0 16px',
-              height: 36, fontSize: 14, fontWeight: 600, cursor: 'pointer',
-              boxShadow: '0 4px 6px -1px rgba(15, 23, 42, 0.2)',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#1e293b'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = '#0f172a'; e.currentTarget.style.transform = 'none'; }}
-          >
-            <Play size={16} fill="white" /> Preview Course
-          </button>
+  className="btn builder-preview-btn"
+  onClick={() => navigate(`/admin/courses/${id}/preview`)}
+>
+  <Play size={16} fill="currentColor" /> <span className="label">Preview Course</span>
+</button>
           <button className="btn" onClick={() => navigate(`/admin/courses/${id}/certificate`)}>
             <Award size={16} /> Certificate
           </button>
@@ -580,7 +572,7 @@ function ModuleRow({ chapter: ch, index, total, busy, onMove, onDelete, onInsert
 
   return (
     <div style={{ borderBottom: '1px solid var(--border)' }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px' }}>
+      <div className="module-row">
         <div 
           style={{ color: '#cbd5e1', display: 'flex', alignItems: 'center', cursor: 'grab' }}
           onMouseEnter={() => setDraggable(true)}
@@ -600,36 +592,38 @@ function ModuleRow({ chapter: ch, index, total, busy, onMove, onDelete, onInsert
           </div>
         )}
 
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <b>{ch.n}. {ch.title}</b>
-          <div className="mut" style={{ fontSize: 12 }}>
-            {isQuiz ? `Checkpoint quiz · ${ch.quizQuestions.length} question${ch.quizQuestions.length === 1 ? '' : 's'}`
-              : [hasImage && 'Slide', hasVideo && `${ch.videos.length} video${ch.videos.length > 1 ? 's' : ''}`]
-                  .filter(Boolean).join(' · ') || 'Module'}
-          </div>
-        </div>
+       <div className="module-row-title">
+  <b>{ch.n}. {ch.title}</b>
+  <div className="mut" style={{ fontSize: 12 }}>
+    {isQuiz ? `Checkpoint quiz · ${ch.quizQuestions.length} question${ch.quizQuestions.length === 1 ? '' : 's'}`
+      : [hasImage && 'Slide', hasVideo && `${ch.videos.length} video${ch.videos.length > 1 ? 's' : ''}`]
+          .filter(Boolean).join(' · ') || 'Module'}
+  </div>
+</div>
 
-        {isQuiz && (
-          <button className="btn sm" onClick={onToggleQuiz}>
-            Manage quiz {quizOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-          </button>
-        )}
-        <button className="btn sm" disabled={busy} title="Insert quiz after this module"
-          onClick={() => onInsertQuiz(ch.id)}><HelpCircle size={14} /></button>
-        <button className="btn sm" disabled={busy || index === 0} title="Move up"
-          onClick={() => onMove(index, -1)}><ArrowUp size={14} /></button>
-        <button className="btn sm" disabled={busy || index === total - 1} title="Move down"
-          onClick={() => onMove(index, 1)}><ArrowDown size={14} /></button>
-        {confirmingDelete ? (
-          <>
-            <button className="btn sm" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
-              disabled={busy} onClick={() => onDelete(ch.id)}>Confirm delete</button>
-            <button className="btn sm" disabled={busy} onClick={onRequestDelete}><X size={14} /></button>
-          </>
-        ) : (
-          <button className="btn sm" disabled={busy} title="Delete module"
-            onClick={onRequestDelete}><Trash2 size={14} /></button>
-        )}
+<div className="module-row-actions">
+  {isQuiz && (
+    <button className="btn sm" onClick={onToggleQuiz}>
+      Manage quiz {quizOpen ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+    </button>
+  )}
+  <button className="btn sm" disabled={busy} title="Insert quiz after this module"
+    onClick={() => onInsertQuiz(ch.id)}><HelpCircle size={14} /></button>
+  <button className="btn sm" disabled={busy || index === 0} title="Move up"
+    onClick={() => onMove(index, -1)}><ArrowUp size={14} /></button>
+  <button className="btn sm" disabled={busy || index === total - 1} title="Move down"
+    onClick={() => onMove(index, 1)}><ArrowDown size={14} /></button>
+  {confirmingDelete ? (
+    <>
+      <button className="btn sm" style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}
+        disabled={busy} onClick={() => onDelete(ch.id)}>Confirm delete</button>
+      <button className="btn sm" disabled={busy} onClick={onRequestDelete}><X size={14} /></button>
+    </>
+  ) : (
+    <button className="btn sm" disabled={busy} title="Delete module"
+      onClick={onRequestDelete}><Trash2 size={14} /></button>
+  )}
+</div>
       </div>
 
       {isQuiz && quizOpen && (

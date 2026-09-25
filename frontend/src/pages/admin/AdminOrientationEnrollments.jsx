@@ -178,14 +178,14 @@ function EnrollModal({ programs, vessels, onClose, onDone }) {
                 autoFocus
               />
             </div>
-            <div className="orn-dept-pills orn-dept-pills--sm orn-enroll-col-pills">
+                        <div className="orn-dept-pills orn-enroll-col-pills">
               {['', 'deck', 'engine'].map((d) => {
                 const dl = d ? DEPT_LABEL[d] : null
                 return (
                   <button key={d || 'all'} type="button"
                     className={`orn-dept-pill${crewDept === d ? ' orn-dept-pill--active' : ''} orn-dept-pill--${d || 'all'}`}
                     onClick={() => setCrewDept(d)}>
-                    {dl && <dl.icon size={11} />}
+                    {dl && <dl.icon size={12} />}
                     {d ? dl.label : 'All'}
                   </button>
                 )

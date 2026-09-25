@@ -47,19 +47,19 @@ export default function MyCourses() {
             <div className="eyebrow">Welcome back</div>
             <h1>{learner.name} · {learner.rank}</h1>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap', minWidth: 0 }}>
             <div className="stats">
               <div className="s"><b>{inProgress}</b><span>In progress</span></div>
               <div className="s"><b>{completed}</b><span>Completed</span></div>
               <div className="s"><b>{certIssued}</b><span>Certificates</span></div>
             </div>
             
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div className="myc-filter-actions" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
               <div style={{
-                display: 'flex', alignItems: 'center', background: 'var(--surface-2)',
-                border: '1px solid var(--border-strong)', borderRadius: '10px',
-                padding: '4px', gap: '4px'
-              }} className="myc-filter-wrap">
+  display: 'flex', alignItems: 'center', background: 'var(--surface-2)',
+  border: '1px solid var(--border-strong)', borderRadius: '10px',
+  padding: '4px', gap: '4px', minWidth: 0
+}} className="myc-filter-wrap">
                 <div style={{ padding: '0 8px 0 6px', color: 'var(--text-mut)', display: 'flex', alignItems: 'center' }} title="Filter download">
                   <Filter size={14} />
                 </div>

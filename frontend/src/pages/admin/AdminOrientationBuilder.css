@@ -249,3 +249,42 @@
 .ob-item-actions .ob-btn-icon { width: 27px; height: 27px; display: grid; place-items: center; padding: 0; border-color: transparent; background: transparent; }
 .ob-item-actions .ob-btn-icon:hover:not(:disabled) { background: var(--ob-wash); border-color: var(--ob-line); }
 .ob-item-move { display: flex; gap: 1px; margin-right: 4px; }
+
+/* ============================================================
+   Responsive additions — Orientation Builder
+   ============================================================ */
+@media (max-width: 1024px) {
+  .ob-page { padding: 20px 20px 36px; }
+}
+
+@media (max-width: 768px) {
+  .ob-page { padding: 16px 14px 32px; gap: 14px; }
+  .ob-hero { padding: 14px 16px; gap: 10px; }
+  .ob-hero-info { min-width: 160px; }
+  .ob-editor-body { padding: 4px 16px 18px; }
+  .ob-editor-head { padding: 16px 18px 14px; }
+  .ob-editor-foot { padding: 12px 18px; }
+}
+
+@media (max-width: 640px) {
+  .ob-hero-count { margin-left: auto; }
+}
+
+@media (max-width: 480px) {
+  .ob-page { padding: 12px 10px 28px; }
+  .ob-hero { padding: 14px; gap: 10px; }
+  .ob-hero-actions { width: 100%; }
+  .ob-hero-actions .ob-btn { flex: 1 1 auto; justify-content: center; padding: 8px 10px; }
+  .ob-hero-count { flex-direction: row; gap: 6px; padding: 6px 12px; }
+
+  .ob-editor-head { padding: 14px 16px 12px; gap: 10px; }
+  .ob-editor-body { padding: 4px 16px 16px; }
+  .ob-editor-foot { padding: 12px 16px; flex-wrap: wrap; }
+  .ob-editor-foot .ob-btn { flex: 1 1 auto; justify-content: center; }
+
+  .ob-item { padding: 12px; gap: 10px; }
+  .ob-item-top { flex-wrap: wrap; row-gap: 8px; }
+  .ob-item-actions { flex-wrap: wrap; }
+
+  .ob-empty { padding: 40px 18px; }
+}

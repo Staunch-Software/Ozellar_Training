@@ -64,7 +64,7 @@ export default function UploadPhoto() {
   return (
     <>
       <TopNav />
-      <div className="page" style={{ maxWidth: 600, margin: '40px auto' }}>
+      <div className="page upload-photo-page">
         <div style={{ padding: 32, background: 'var(--surface)', borderRadius: 12, border: '1px solid var(--border)', textAlign: 'center' }}>
           <Camera size={48} style={{ color: 'var(--primary)', marginBottom: 16 }} />
           <h1 style={{ fontSize: 24, marginBottom: 8 }}>Upload Passport Photo</h1>
@@ -110,7 +110,7 @@ export default function UploadPhoto() {
 
           <button 
             className="btn primary" 
-            style={{ width: '100%', padding: '12px 0', fontSize: 16 }}
+            style={{ width: '100%', padding: '12px 0', fontSize: 16 ,justifyContent: 'center'}}
             disabled={!file || busy}
             onClick={submit}
           >

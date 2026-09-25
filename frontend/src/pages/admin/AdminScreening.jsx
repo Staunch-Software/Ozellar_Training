@@ -141,12 +141,12 @@ function CreateCandidateCard({ form, setForm, saving, allTests, onCreate, onCanc
         </div>
       </div>
       <form onSubmit={onCreate} style={{ padding:'28px 24px', display:'flex', flexDirection:'column', gap:20 }}>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        <div className="am-form-grid-2" style={{ gap:20 }}>
           <Input label="Full Name *" type="text" placeholder="e.g. Rahul Sharma" required value={form.fullName} onChange={e => setForm(f=>({...f,fullName:e.target.value}))} style={{ padding:'12px 14px', borderRadius:10 }}/>
           <Input label="Mobile Number" type="tel" inputMode="numeric" pattern="[0-9]{10}" maxLength={10} placeholder="XXXXXXXXXX" value={form.mobileNumber} onChange={e => setForm(f=>({...f,mobileNumber:e.target.value.replace(/\D/g,'').slice(0,10)}))} style={{ padding:'12px 14px', borderRadius:10 }}/>
         </div>
 
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        <div className="am-form-grid-2" style={{ gap:20 }}>
           <div style={{ display:'flex', flexDirection:'column', gap:5 }}>
             <label style={{ fontSize:12.5, fontWeight:600, color:'var(--text-mut)' }}>Password *</label>
             <div style={{ position:'relative' }}>
@@ -224,7 +224,7 @@ function EditCandidateCard({ candidate, allTests, onSave, onCancel }) {
         </div>
       </div>
       <form onSubmit={submit} style={{ padding:'28px 24px', display:'flex', flexDirection:'column', gap:20 }}>
-        <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
+        <div className="am-form-grid-2" style={{ gap:20 }}>
           <Input label="Full Name *" type="text" required value={fullName} onChange={e => setFullName(e.target.value)} style={{ padding:'12px 14px', borderRadius:10 }}/>
           <Input label="Mobile Number" type="tel" inputMode="numeric" pattern="[0-9]{10}" maxLength={10} value={mobileNumber} onChange={e => setMobileNumber(e.target.value.replace(/\D/g,'').slice(0,10))} style={{ padding:'12px 14px', borderRadius:10 }}/>
         </div>
@@ -280,6 +280,7 @@ export default function AdminScreening() {
   const [error, setError] = useState('')
   const [builderTest, setBuilderTest] = useState(null)
   const [builderSection, setBuilderSection] = useState(null)
+  const [showCreateTest, setShowCreateTest] = useState(false)
 
   const loadTests      = async () => { setLoading(true); try { setTests(await api.adminListScreeningTests()) } catch(e) { setError(e.message) } finally { setLoading(false) } }
   const loadCandidates = async () => { setLoading(true); try { setCandidates(await api.adminListScreeningCandidates()) } catch(e) { setError(e.message) } finally { setLoading(false) } }
@@ -306,7 +307,8 @@ export default function AdminScreening() {
     <div style={{ display:'flex', flexDirection:'column', gap:24 }}>
 
       {/* ── Page header + Tabs in one row ── */}
-      <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between', gap:16 }}>
+            {/* ── Page header + Tabs + contextual action, all one row ── */}
+      <div className="am-header">
         <div>
           <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', color:'var(--text-faint)', marginBottom:6 }}>Ozellar Marine</div>
           <h1 style={{ fontSize:22, fontWeight:800, margin:0, letterSpacing:'-.01em' }}>Assessment Management</h1>
@@ -315,21 +317,26 @@ export default function AdminScreening() {
           </p>
         </div>
 
-        {/* ── Tabs ── */}
-        <div style={{ display:'flex', gap:4, background:'var(--surface-2)', padding:4, borderRadius:14, border:'1px solid var(--border)', flexShrink:0 }}>
-          {TABS.map(t => (
-            <button key={t.key} onClick={() => { setTab(t.key); setBuilderTest(null); setBuilderSection(null) }}
-              style={{
-                display:'flex', alignItems:'center', gap:7, padding:'9px 18px', borderRadius:10,
-                border:'none', cursor:'pointer', fontWeight:600, fontSize:13.5,
-                background: tab === t.key ? 'var(--accent)' : 'transparent',
-                color: tab === t.key ? 'var(--on-accent)' : 'var(--text-mut)',
-                transition:'all .15s',
-                boxShadow: tab === t.key ? '0 2px 10px rgba(47,111,237,.3)' : 'none',
-              }}>
-              {t.icon} {t.label}
+        {/* ── Tabs + contextual "Create Test" action, kept together as one unit ── */}
+        <div className="am-header-actions">
+          <div className="am-tabs">
+            {TABS.map(t => (
+              <button key={t.key} className="am-tab-btn" onClick={() => { setTab(t.key); setBuilderTest(null); setBuilderSection(null) }}
+                style={{
+                  background: tab === t.key ? 'var(--accent)' : 'transparent',
+                  color: tab === t.key ? 'var(--on-accent)' : 'var(--text-mut)',
+                  boxShadow: tab === t.key ? '0 2px 10px rgba(47,111,237,.3)' : 'none',
+                }}>
+                {t.icon} <span>{t.label}</span>
+              </button>
+            ))}
+          </div>
+
+          {tab === 'tests' && !builderTest && (
+            <button className="btn primary am-header-cta" onClick={() => setShowCreateTest(v => !v)}>
+              <Plus size={15}/> {showCreateTest ? 'Cancel' : 'Create Test'}
             </button>
-          ))}
+          )}
         </div>
       </div>
 
@@ -356,7 +363,8 @@ export default function AdminScreening() {
                 onBack={() => { setBuilderTest(null); setBuilderSection(null) }}
                 onRefresh={async () => setBuilderTest(await api.adminGetScreeningTest(builderTest.id))}
                 onError={setError}/>
-            : <TestsTab tests={tests} onRefresh={loadTests} onOpenBuilder={openBuilder} onError={setError}/>
+                        : <TestsTab tests={tests} onRefresh={loadTests} onOpenBuilder={openBuilder} onError={setError}
+                showCreate={showCreateTest} setShowCreate={setShowCreateTest}/>
           )}
           {tab === 'candidates' && <CandidatesTab candidates={candidates} onRefresh={loadCandidates} onError={setError}/>}
           {tab === 'results'    && <ResultsTab results={results} onRefresh={loadResults} onError={setError}/>}
@@ -387,7 +395,7 @@ function CreateTestCard({ form, setForm, saving, onCreate, onCancel }) {
           <Input label="Assessment Title *" type="text" placeholder="e.g. Engine Cadet Assessment 2026 — Batch B" required value={form.title} onChange={e => setForm(f=>({...f, title:e.target.value}))} style={{ padding:'12px 16px', fontSize:14.5, borderRadius:12 }}/>
         </div>
         
-        <div style={{ display:'grid', gridTemplateColumns:'repeat(3, 1fr)', gap:16 }}>
+        <div className="am-metrics-grid" style={{ gap:16 }}>
           <div style={{ background:'#f8fafc', padding:16, borderRadius:14, border:'1px solid #e2e8f0' }}>
             <div style={{ fontSize:11, fontWeight:700, color:'#64748b', textTransform:'uppercase', letterSpacing:'.06em', marginBottom:10, display:'flex', alignItems:'center', gap:6 }}><Clock size={13}/> Time Limit</div>
             <Input type="number" min="1" max="300" value={form.timerMinutes} onChange={e => setForm(f=>({...f, timerMinutes:+e.target.value}))} style={{ padding:'10px 14px', background:'#fff', borderRadius:10, border:'1px solid #cbd5e1' }}/>
@@ -423,8 +431,7 @@ function CreateTestCard({ form, setForm, saving, onCreate, onCancel }) {
 // ============================================================
 // TESTS TAB
 // ============================================================
-function TestsTab({ tests, onRefresh, onOpenBuilder, onError }) {
-  const [showCreate, setShowCreate] = useState(false)
+function TestsTab({ tests, onRefresh, onOpenBuilder, onError, showCreate, setShowCreate }) {
   const [form, setForm] = useState({ title:'', timerMinutes:80, correctScore:4, wrongPenalty:1 })
   const [saving, setSaving] = useState(false)
 
@@ -445,19 +452,12 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError }) {
   if (tests.length === 1) {
     const t = tests[0]
     return (
-      <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-        {/* Create test action */}
-        <div style={{ display:'flex', justifyContent:'flex-end' }}>
-          <button className="btn primary" onClick={() => setShowCreate(v=>!v)} style={{ display:'flex', alignItems:'center', gap:7, borderRadius:11, padding:'9px 18px', fontSize:13.5, fontWeight:600 }}>
-            <Plus size={15}/> {showCreate ? 'Cancel' : 'Create Test'}
-          </button>
-        </div>
-
+            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
         {showCreate && <CreateTestCard form={form} setForm={setForm} saving={saving} onCreate={create} onCancel={() => setShowCreate(false)} />}
 
         {/* Hero card */}
         <Card style={{ overflow:'hidden' }}>
-          <div style={{ padding:'20px 24px', display:'flex', alignItems:'center', gap:20 }}>
+          <div className="am-hero-row" style={{ padding:'20px 24px', gap:20 }}>
             <div style={{ width:52, height:52, borderRadius:15, background: t.isActive ? 'var(--accent-weak)' : 'var(--surface-2)', border:`1.5px solid ${t.isActive ? 'rgba(47,111,237,.25)' : 'var(--border)'}`, display:'grid', placeItems:'center', flexShrink:0 }}>
               <ClipboardList size={22} color={t.isActive ? 'var(--accent)' : 'var(--text-faint)'} />
             </div>
@@ -475,7 +475,7 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError }) {
                 <span style={{ display:'flex', alignItems:'center', gap:5 }}><Users size={12}/> {t.candidateCount || 0} candidates ({t.submittedCount || 0} submitted)</span>
               </div>
             </div>
-            <div style={{ display:'flex', gap:8, flexShrink:0 }}>
+            <div className="am-row-actions">
               <button className="btn primary" onClick={() => onOpenBuilder(t.id)} style={{ display:'flex', alignItems:'center', gap:7, borderRadius:11, padding:'9px 18px', fontSize:13.5, fontWeight:600 }}>
                 <Edit3 size={14}/> Edit Test
               </button>
@@ -493,13 +493,8 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError }) {
   }
 
   /* ── No tests yet ── */
-  if (tests.length === 0) return (
+   if (tests.length === 0) return (
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-      <div style={{ display:'flex', justifyContent:'flex-end' }}>
-        <button className="btn primary" onClick={() => setShowCreate(v=>!v)} style={{ display:'flex', alignItems:'center', gap:7, borderRadius:11, padding:'9px 18px', fontSize:13.5, fontWeight:600 }}>
-          <Plus size={15}/> {showCreate ? 'Cancel' : 'Create Test'}
-        </button>
-      </div>
       {showCreate && <CreateTestCard form={form} setForm={setForm} saving={saving} onCreate={create} onCancel={() => setShowCreate(false)} />}
       <Card style={{ padding:'80px 0', textAlign:'center' }}>
         <ClipboardList size={44} style={{ opacity:.2, marginBottom:12, color:'var(--text-mut)' }}/>
@@ -510,17 +505,12 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError }) {
   )
 
   /* ── Multiple tests ── */
-  return (
+    return (
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-      <div style={{ display:'flex', justifyContent:'flex-end' }}>
-        <button className="btn primary" onClick={() => setShowCreate(v=>!v)} style={{ display:'flex', alignItems:'center', gap:7, borderRadius:11, padding:'9px 18px', fontSize:13.5, fontWeight:600 }}>
-          <Plus size={15}/> {showCreate ? 'Cancel' : 'Create Test'}
-        </button>
-      </div>
       {showCreate && <CreateTestCard form={form} setForm={setForm} saving={saving} onCreate={create} onCancel={() => setShowCreate(false)} />}
       <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
         {tests.map(t => (
-          <div key={t.id} style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:18, padding:'24px 28px', display:'flex', alignItems:'center', gap:24, opacity: t.isActive ? 1 : 0.7, transition:'all .2s', boxShadow:'0 4px 20px rgba(0,0,0,.03)' }}
+          <div key={t.id} className="am-hero-row" style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:18, padding:'24px 28px', gap:24, opacity: t.isActive ? 1 : 0.7, transition:'all .2s', boxShadow:'0 4px 20px rgba(0,0,0,.03)' }}
                onMouseEnter={e => e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,.06)'}
                onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,.03)'}>
             <div style={{ width:54, height:54, borderRadius:16, background: t.isActive ? 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)' : 'var(--surface-2)', border:`1px solid ${t.isActive ? 'rgba(99,102,241,.15)' : 'var(--border)'}`, display:'grid', placeItems:'center', flexShrink:0, boxShadow: t.isActive ? '0 4px 12px rgba(79,70,229,.15)' : 'none' }}>
@@ -538,7 +528,7 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError }) {
                 <span style={{ display:'flex', alignItems:'center', gap:6 }}><Users size={13} color="#f59e0b"/>{t.candidateCount} candidates ({t.submittedCount} submitted)</span>
               </div>
             </div>
-            <div style={{ display:'flex', gap:10, flexShrink:0 }}>
+            <div className="am-row-actions" style={{ gap:10 }}>
               <button className="btn sm" style={{ display:'flex', alignItems:'center', gap:6, borderRadius:10, fontWeight:700, padding:'8px 16px', fontSize:13 }} onClick={() => onOpenBuilder(t.id)}>
                 <Edit3 size={14}/> Edit
               </button>
@@ -597,7 +587,7 @@ function TestBuilder({ test, section, onSelectSection, onBack, onRefresh, onErro
 
       {/* Test meta card */}
       <Card style={{ overflow:'hidden' }}>
-        <div style={{ padding:'20px 24px', borderBottom:'1px solid var(--border)', display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div className="am-header" style={{ padding:'20px 24px', borderBottom:'1px solid var(--border)' }}>
           <div>
             <div style={{ fontWeight:700, fontSize:16 }}>{test.title}</div>
             <div style={{ display:'flex', gap:16, color:'var(--text-mut)', fontSize:12.5, marginTop:5 }}>
@@ -613,14 +603,14 @@ function TestBuilder({ test, section, onSelectSection, onBack, onRefresh, onErro
 
         {editOpen && (
           <div style={{ padding:'20px 24px', borderBottom:'1px solid var(--border)', background:'var(--surface-2)' }}>
-            <form onSubmit={saveTest} style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr 1fr', gap:12, alignItems:'end' }}>
-              <div style={{ gridColumn:'span 4' }}>
+            <form onSubmit={saveTest} className="am-settings-grid" style={{ gap:12, alignItems:'end' }}>
+              <div className="am-grid-span-all">
                 <Input label="Title" type="text" required value={form.title} onChange={e => setForm(f=>({...f,title:e.target.value}))}/>
               </div>
               <Input label="Timer (min)" type="number" min="1" value={form.timerMinutes} onChange={e => setForm(f=>({...f,timerMinutes:+e.target.value}))}/>
               <Input label="Correct" type="number" min="1" value={form.correctScore} onChange={e => setForm(f=>({...f,correctScore:+e.target.value}))}/>
               <Input label="Wrong" type="number" min="0" value={form.wrongPenalty} onChange={e => setForm(f=>({...f,wrongPenalty:+e.target.value}))}/>
-              <div style={{ display:'flex', gap:8 }}>
+              <div className="am-row-actions">
                 <button type="submit" className="btn primary sm" disabled={saving} style={{ flex:1 }}>{saving?'…':'Save'}</button>
                 <button type="button" className="btn sm" onClick={()=>setEditOpen(false)}>Cancel</button>
               </div>
@@ -631,7 +621,7 @@ function TestBuilder({ test, section, onSelectSection, onBack, onRefresh, onErro
 
       {/* Sections */}
       <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
-        <div style={{ display:'flex', alignItems:'center', justifyContent:'space-between' }}>
+        <div className="am-header">
           <SectionLabel>Sections ({test.sections?.length || 0})</SectionLabel>
           <button className="btn sm" style={{ display:'flex', alignItems:'center', gap:6, borderRadius:9 }} onClick={() => setAddSec({title:'',passage:''})}>
             <Plus size={13}/> Add Section
@@ -658,7 +648,7 @@ function TestBuilder({ test, section, onSelectSection, onBack, onRefresh, onErro
         )}
 
         {(test.sections || []).map((sec, i) => (
-          <div key={sec.id} style={{ display:'flex', alignItems:'center', gap:14, padding:'16px 22px', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:16, transition:'box-shadow .15s' }}>
+          <div key={sec.id} className="am-hero-row" style={{ gap:14, padding:'16px 22px', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:16, transition:'box-shadow .15s' }}>
             <div style={{ width:38, height:38, borderRadius:12, background: sec.type==='personal_data' ? 'rgba(99,102,241,0.1)' : 'var(--accent-weak)', border:`1px solid ${sec.type==='personal_data'?'rgba(99,102,241,0.25)':'rgba(47,111,237,0.25)'}`, display:'grid', placeItems:'center', fontWeight:800, fontSize:13.5, color: sec.type==='personal_data'?'#6366f1':'var(--accent)', flexShrink:0 }}>
               {i + 1}
             </div>
@@ -671,7 +661,7 @@ function TestBuilder({ test, section, onSelectSection, onBack, onRefresh, onErro
               </div>
             </div>
             {sec.type !== 'personal_data' && (
-              <div style={{ display:'flex', gap:8 }}>
+              <div className="am-row-actions">
                 <button className="btn sm" style={{ display:'flex', alignItems:'center', gap:5, borderRadius:9, fontWeight:600 }} onClick={() => onSelectSection(sec)}>
                   <Edit3 size={12}/> Edit Questions
                 </button>
@@ -796,7 +786,7 @@ function QuestionEditor({ test, section, onBack, onError }) {
               </button>
             </div>
 
-            <div style={{ padding:'14px 20px 18px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:8 }}>
+            <div className="am-form-grid-2" style={{ padding:'14px 20px 18px', gap:8 }}>
               {q.options.map((opt, oi) => (
                 <div key={oi} style={{ display:'flex', alignItems:'center', gap:8, padding:'8px 12px', borderRadius:10, border:`1.5px solid ${q.answer===oi ? 'var(--success)' : 'var(--border)'}`, background: q.answer===oi ? 'var(--success-weak)' : 'transparent', transition:'all .15s' }}>
                   <button type="button" onClick={() => upQ(qi,'answer',oi)}
@@ -871,12 +861,12 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
       {/* Toolbar */}
       <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
-        <div style={{ position:'relative', flex:'0 0 200px' }}>
+        <div style={{ position:'relative', flex:'1 1 180px', minWidth:160, maxWidth:280 }}>
           <Search size={14} style={{ position:'absolute', left:11, top:'50%', transform:'translateY(-50%)', color:'var(--text-faint)', pointerEvents:'none' }}/>
           <input type="text" placeholder="Search name / mobile…" value={search} onChange={e => setSearch(e.target.value)}
             style={{ width:'100%', padding:'8px 12px 8px 32px', borderRadius:10, border:'1.5px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:13.5, fontFamily:'inherit', outline:'none', boxSizing:'border-box' }}/>
         </div>
-        <div style={{ flex:'0 0 220px' }}>
+        <div style={{ flex:'1 1 180px', minWidth:160, maxWidth:280 }}>
           <CardSelect value={filterTest} onChange={setFilterTest} options={[{id:'', title:'All Tests'}, ...allTests]} placeholder="Filter by Test…" icon={<Filter size={14}/>}/>
         </div>
         <button className="iconbtn" onClick={onRefresh} title="Refresh"><RefreshCw size={15}/></button>
@@ -894,7 +884,7 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
       )}
 
       {/* Stats row */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:12 }}>
+      <div className="am-stats-grid-3" style={{ gap:12 }}>
         {[
           { label:'Total', value:filtered.length, color:'var(--accent)', bg:'var(--accent-weak)' },
           { label:'In Progress', value:filtered.filter(c=>c.status==='in_progress').length, color:'#f59e0b', bg:'rgba(245,158,11,.1)' },
@@ -1005,12 +995,12 @@ function ResultsTab({ results, onRefresh, onError }) {
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
       {/* Toolbar */}
       <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
-        <div style={{ position:'relative', flex:'0 0 200px' }}>
+        <div style={{ position:'relative', flex:'1 1 180px', minWidth:160, maxWidth:280 }}>
           <Search size={14} style={{ position:'absolute', left:11, top:'50%', transform:'translateY(-50%)', color:'var(--text-faint)', pointerEvents:'none' }}/>
           <input type="text" placeholder="Search name…" value={search} onChange={e => setSearch(e.target.value)}
             style={{ width:'100%', padding:'8px 12px 8px 32px', borderRadius:10, border:'1.5px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:13.5, fontFamily:'inherit', outline:'none', boxSizing:'border-box' }}/>
         </div>
-        <div style={{ flex:'0 0 220px' }}>
+        <div style={{ flex:'1 1 180px', minWidth:160, maxWidth:280 }}>
           <CardSelect value={filterTest} onChange={setFilterTest} options={[{id:'', title:'All Tests'}, ...allTests]} placeholder="Filter by Test…" icon={<Filter size={14}/>}/>
         </div>
         <button className="iconbtn" onClick={onRefresh} title="Refresh"><RefreshCw size={15}/></button>
@@ -1021,7 +1011,7 @@ function ResultsTab({ results, onRefresh, onError }) {
       </div>
 
       {/* Summary cards */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:12 }}>
+      <div className="am-summary-grid-4" style={{ gap:12 }}>
         {[
           { label:'Submissions', value:filtered.length, color:'var(--accent)', bg:'var(--accent-weak)', icon:<TrendingUp size={16}/> },
           { label:'Avg Score', value: filtered.length ? avg(filtered.map(r=>r.score||0)) : '—', color:'#f59e0b', bg:'rgba(245,158,11,.1)', icon:<Award size={16}/> },

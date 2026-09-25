@@ -1,6 +1,6 @@
-import { useState, useEffect, createContext, useContext } from 'react'
-import { Routes, Route, Link, NavLink, useNavigate } from 'react-router-dom'
-import { GraduationCap, Search, Sun, Moon, LogOut } from 'lucide-react'
+import { useState, useEffect, useRef, createContext, useContext } from 'react'
+import { Routes, Route, Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { GraduationCap, Search, Sun, Moon, LogOut, Menu, X } from 'lucide-react'
 import NotificationBell from './NotificationBell.jsx'
 import Login from './pages/Login.jsx'
 import MyCourses from './pages/MyCourses.jsx'
@@ -56,8 +56,20 @@ export function ThemeToggle({ className = 'iconbtn' }) {
 export function TopNav({ searchQuery, onSearch }) {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [searchOpen, setSearchOpen] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+  const mobileNavRef = useRef(null)
   const signOut = () => { logout(); navigate('/') }
+
+  useEffect(() => {
+    const onDoc = (e) => { if (mobileNavRef.current && !mobileNavRef.current.contains(e.target)) setMobileNavOpen(false) }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [])
+
+  useEffect(() => { setMobileNavOpen(false) }, [location.pathname])
+
   return (
     <nav className="appnav">
       <Link to="/my-courses" className="brand">
@@ -103,6 +115,41 @@ export function TopNav({ searchQuery, onSearch }) {
         <Link to="/profile" className="av" title={`Profile — ${user?.name || ''}${user?.rank ? ' · ' + user.rank : ''}`} style={{ textDecoration: 'none' }}>
           {user?.initials || '?'}
         </Link>
+
+        <div className="mobile-nav-wrap" ref={mobileNavRef}>
+          <button
+            className="menu-toggle"
+            aria-label={mobileNavOpen ? 'Close navigation menu' : 'Open navigation menu'}
+            aria-expanded={mobileNavOpen}
+            onClick={() => setMobileNavOpen(v => !v)}
+          >
+            {mobileNavOpen ? <X size={19} /> : <Menu size={19} />}
+          </button>
+
+          {mobileNavOpen && (
+            <div className="mobile-nav-panel">
+              <NavLink to="/my-courses" className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                My courses
+              </NavLink>
+              {user?.role === 'learner' && !user?.isVesselApprover && (
+                <NavLink to="/orientation" className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                  Orientation
+                </NavLink>
+              )}
+              {user?.isVesselApprover && (
+                <NavLink to="/approvals" className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                  Approvals
+                </NavLink>
+              )}
+              <NavLink to="/certificates" className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                Certificates
+              </NavLink>
+              <NavLink to="/help" className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                Help
+              </NavLink>
+            </div>
+          )}
+        </div>
       </div>
     </nav>
   )

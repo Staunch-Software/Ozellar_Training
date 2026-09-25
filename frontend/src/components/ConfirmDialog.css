@@ -36,3 +36,9 @@
 .cfm-btn--primary:hover { background: var(--accent-hover, var(--accent)); }
 .cfm-btn--danger { background: var(--danger); border-color: var(--danger); color: #fff; }
 .cfm-btn--danger:hover { filter: brightness(1.08); }
+
+@media (max-width: 380px) {
+  .cfm-card { padding: 18px; border-radius: 14px; }
+  .cfm-actions { flex-wrap: wrap; }
+  .cfm-btn { flex: 1 1 auto; justify-content: center; }
+}
