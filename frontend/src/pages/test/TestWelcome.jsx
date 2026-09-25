@@ -5,12 +5,12 @@ import * as api from '../../api.js'
 import {
   Camera, Clock, Target, ChevronRight, Upload, CheckCircle,
   AlertTriangle, Layers, Anchor, FileText, Wifi, RotateCcw, Undo2, Lock,
-  ShieldCheck, BookOpen, Award,
+  ShieldCheck, BookOpen, Award, Video, UserCheck, UserX, Monitor
 } from 'lucide-react'
 
 const RULES = [
   { icon: Wifi,       text: 'Ensure a stable internet connection before starting the assessment.' },
-  { icon: Camera,     text: 'Upload a clear, recent passport-size photograph for identity verification.' },
+  { icon: Camera,     text: 'Upload or capture a clear, recent passport-size photograph with your face clearly visible for identity verification.' },
   { icon: Lock,       text: 'Complete every required field in Personal Details before moving on — once you leave that section, you cannot come back to it.' },
   { icon: Undo2,      text: 'After Personal Details, you can move freely between question sections, in any order, any time before you submit.' },
   { icon: Clock,      text: 'The countdown starts immediately upon clicking "Begin Assessment".' },
@@ -32,12 +32,210 @@ export default function TestWelcome() {
   const [testData,      setTestData]      = useState(null)
   const [dragOver,      setDragOver]      = useState(false)
   const [activeTab,     setActiveTab]     = useState('Overview')
+  
+  // Camera & Face Detection State
+  const [captureMode,   setCaptureMode]   = useState('upload') // 'upload' | 'camera'
+  const [cameraActive,  setCameraActive]  = useState(false)
+  const [faceStatus,    setFaceStatus]    = useState('searching') // 'searching', 'multiple', 'off-center', 'too-far', 'good'
+  const [modelLoaded,   setModelLoaded]   = useState(false)
+  const [modelLoading,  setModelLoading]  = useState(false)
+
   const fileInputRef = useRef(null)
+  const videoRef = useRef(null)
+  const canvasRef = useRef(null)
+  const streamRef = useRef(null)
+  const detectionIntervalRef = useRef(null)
 
   useEffect(() => {
     if (user?.status === 'submitted') { navigate('/test/result', { replace: true }); return }
     api.screeningGetTest().then(d => setTestData(d)).catch(() => {})
+
+    return () => stopCamera()
   }, [])
+
+  const loadFaceApiModels = async () => {
+    if (window.faceapi && modelLoaded) return true;
+    if (modelLoading) return false;
+    setModelLoading(true);
+
+    try {
+      if (!window.faceapi) {
+        await new Promise((resolve, reject) => {
+          const script = document.createElement('script');
+          script.src = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.min.js';
+          script.onload = resolve;
+          script.onerror = reject;
+          document.body.appendChild(script);
+        });
+      }
+      
+      await window.faceapi.nets.tinyFaceDetector.loadFromUri('https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/');
+      setModelLoaded(true);
+      return true;
+    } catch (err) {
+      console.error('Failed to load face-api', err);
+      setUploadError('Failed to load face detection model. Please use upload mode.');
+      return false;
+    } finally {
+      setModelLoading(false);
+    }
+  }
+
+  const startCamera = async () => {
+    setUploadError('');
+    setPhotoUploaded(false);
+    setUserHasPhoto(false);
+    setPreview(null);
+    setPhoto(null);
+    
+    const loaded = await loadFaceApiModels();
+    if (!loaded) {
+      setCaptureMode('upload');
+      return;
+    }
+
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } });
+      streamRef.current = stream;
+      setCameraActive(true);
+      setCaptureMode('camera');
+      
+      // Allow React to render the <video> element before assigning the stream
+      setTimeout(() => {
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+        }
+      }, 100);
+    } catch (err) {
+      console.error('Camera error:', err);
+      setUploadError('Failed to access camera. Please allow permissions or use upload.');
+      setCaptureMode('upload');
+    }
+  }
+
+  const stopCamera = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+    if (detectionIntervalRef.current) {
+      if (typeof detectionIntervalRef.current.stop === 'function') {
+        detectionIntervalRef.current.stop();
+      } else {
+        clearInterval(detectionIntervalRef.current);
+      }
+      detectionIntervalRef.current = null;
+    }
+    setCameraActive(false);
+    setFaceStatus('searching');
+  }
+
+  const handleVideoPlay = () => {
+    if (!videoRef.current || !canvasRef.current || !window.faceapi) return;
+    
+    let isDetecting = true;
+    detectionIntervalRef.current = { stop: () => { isDetecting = false; } };
+    
+    const detect = async () => {
+      if (!isDetecting || !videoRef.current || videoRef.current.paused || videoRef.current.ended) return;
+
+      try {
+        const detections = await window.faceapi.detectAllFaces(videoRef.current, new window.faceapi.TinyFaceDetectorOptions());
+        
+        if (!isDetecting) return;
+
+        if (detections && detections.length > 0) {
+          if (canvasRef.current && videoRef.current) {
+            const dims = window.faceapi.matchDimensions(canvasRef.current, videoRef.current, true);
+            const resizedResults = window.faceapi.resizeResults(detections, dims);
+            const ctx = canvasRef.current.getContext('2d');
+            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+            window.faceapi.draw.drawDetections(canvasRef.current, resizedResults);
+            
+            if (detections.length > 1) {
+              setFaceStatus('multiple');
+            } else {
+              const face = resizedResults[0].box;
+              const vW = dims.width;
+              const vH = dims.height;
+              
+              const faceCenterX = face.x + (face.width / 2);
+              const faceCenterY = face.y + (face.height / 2);
+              
+              const isCenteredX = Math.abs(faceCenterX - vW/2) < vW * 0.2;
+              const isCenteredY = Math.abs(faceCenterY - vH/2) < vH * 0.2;
+              const isRightSize = face.height > vH * 0.25 && face.height < vH * 0.8;
+              
+              if (!isCenteredX || !isCenteredY) {
+                setFaceStatus('off-center');
+              } else if (!isRightSize) {
+                setFaceStatus('too-far');
+              } else {
+                setFaceStatus('good');
+              }
+            }
+          }
+        } else {
+          setFaceStatus('searching');
+          if (canvasRef.current) {
+            const ctx = canvasRef.current.getContext('2d');
+            ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+          }
+        }
+      } catch (err) {
+        console.error("Face detection error:", err);
+      }
+      
+      if (isDetecting) {
+        setTimeout(() => requestAnimationFrame(detect), 100);
+      }
+    };
+    
+    detect();
+  }
+
+  const capturePhoto = () => {
+    if (!videoRef.current || faceStatus !== 'good') return;
+    
+    const canvas = document.createElement('canvas');
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
+    const ctx = canvas.getContext('2d');
+    
+    // Draw flipped horizontally (mirror) since user-facing camera is mirrored
+    ctx.translate(canvas.width, 0);
+    ctx.scale(-1, 1);
+    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
+    
+    canvas.toBlob(blob => {
+      const file = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
+      setPhoto(file);
+      
+      // We flip the preview back so it looks right
+      const previewCanvas = document.createElement('canvas');
+      previewCanvas.width = canvas.width;
+      previewCanvas.height = canvas.height;
+      const pCtx = previewCanvas.getContext('2d');
+      pCtx.translate(previewCanvas.width, 0);
+      pCtx.scale(-1, 1);
+      pCtx.drawImage(canvas, 0, 0);
+      setPreview(previewCanvas.toDataURL('image/jpeg'));
+      
+      setCaptureMode('upload');
+      stopCamera();
+    }, 'image/jpeg', 0.9);
+  }
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Enter' && captureMode === 'camera' && faceStatus === 'good') {
+        e.preventDefault();
+        capturePhoto();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  });
 
   const handleFile = file => {
     if (!file || !file.type.startsWith('image/')) return
@@ -69,6 +267,7 @@ export default function TestWelcome() {
   const wp           = testData?.wrongPenalty || 1
 
   return (
+    <>
     <div style={{ minHeight: '100vh', height: '100%', display: 'flex', flexDirection: 'column', background: '#f0f2f5', fontFamily: '"Inter", system-ui, sans-serif', color: '#16181d', overflow: 'auto' }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
@@ -173,6 +372,24 @@ export default function TestWelcome() {
               )}
             </div>
 
+            {/* Mode Toggle */}
+            {!hasPhotoReady && (
+              <div style={{ display: 'flex', gap: 4, background: 'rgba(0,0,0,.2)', padding: 4, borderRadius: 10, marginBottom: 16 }}>
+                <button
+                  onClick={() => { setCaptureMode('upload'); stopCamera(); }}
+                  style={{ flex: 1, padding: '8px', border: 'none', background: captureMode === 'upload' ? 'rgba(255,255,255,.15)' : 'transparent', color: captureMode === 'upload' ? '#fff' : 'rgba(255,255,255,.5)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s' }}
+                >
+                  Upload File
+                </button>
+                <button
+                  onClick={startCamera}
+                  style={{ flex: 1, padding: '8px', border: 'none', background: captureMode === 'camera' ? 'rgba(255,255,255,.15)' : 'transparent', color: captureMode === 'camera' ? '#fff' : 'rgba(255,255,255,.5)', borderRadius: 8, fontSize: 12, fontWeight: 600, cursor: 'pointer', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}
+                >
+                  <Video size={14} /> Camera
+                </button>
+              </div>
+            )}
+
             {/* Photo zone */}
             {hasPhotoReady && !preview ? (
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 14px', background: 'rgba(52,211,153,.1)', border: '1px solid rgba(52,211,153,.25)', borderRadius: 12 }}>
@@ -181,9 +398,21 @@ export default function TestWelcome() {
                   <div style={{ color: '#34d399', fontWeight: 700, fontSize: 13 }}>Photo on record</div>
                   <div style={{ color: 'rgba(255,255,255,.5)', fontSize: 12, marginTop: 2 }}>Identity verified — you may proceed</div>
                 </div>
-                <button onClick={() => { setPhotoUploaded(false); setUserHasPhoto(false); setPreview(null); setPhoto(null); }}
+                <button onClick={() => { setPhotoUploaded(false); setUserHasPhoto(false); setPreview(null); setPhoto(null); setCaptureMode('upload'); }}
                   style={{ background: 'rgba(255,255,255,.1)', border: 'none', color: '#fff', fontSize: 11, fontWeight: 700, padding: '6px 12px', borderRadius: 8, cursor: 'pointer', flexShrink: 0, textTransform: 'uppercase', letterSpacing: '.05em' }}>
                   Change
+                </button>
+              </div>
+            ) : captureMode === 'camera' ? (
+              <div style={{ padding: '24px 20px', textAlign: 'center', background: 'rgba(0,0,0,0.15)', borderRadius: 14, border: '1px solid rgba(255,255,255,0.1)' }}>
+                <Video size={36} color="rgba(255,255,255,0.6)" style={{ margin: '0 auto 12px' }} />
+                <div style={{ color: '#fff', fontWeight: 700, fontSize: 15 }}>Camera is Active</div>
+                <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 13, marginTop: 4, lineHeight: 1.5 }}>Please look at the center of your screen to capture your photo.</div>
+                <button
+                  onClick={() => { stopCamera(); setCaptureMode('upload'); }}
+                  style={{ marginTop: 16, padding: '10px 20px', borderRadius: 10, border: 'none', background: 'rgba(255,255,255,.1)', color: '#fff', fontWeight: 600, fontSize: 13, cursor: 'pointer', transition: 'background 0.2s' }}
+                >
+                  Close Camera
                 </button>
               </div>
             ) : (
@@ -312,6 +541,22 @@ export default function TestWelcome() {
             </div>
           </div>
 
+          {/* Prerequisites Banner */}
+          <div style={{ display: 'flex', gap: 12, padding: '16px 20px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 14 }}>
+            <FileText size={20} color="#2563eb" style={{ flexShrink: 0, marginTop: 2 }} />
+            <div>
+              <div style={{ fontWeight: 700, color: '#1e3a8a', fontSize: 14, marginBottom: 4 }}>Information Required</div>
+              <p style={{ margin: 0, fontSize: 13, color: '#1e40af', lineHeight: 1.6 }}>
+                You will need to fill out your <strong>Personal Details</strong> before starting the exam. Please have the following information ready:
+                <ul style={{ margin: '8px 0 0 0', paddingLeft: 18, color: '#1e40af' }}>
+                  <li style={{ marginBottom: 4 }}><strong>Pre-Sea Training Details:</strong> Institute name, Year of Passing, and % or CGPA</li>
+                  <li style={{ marginBottom: 4 }}><strong>Class 12 Marks:</strong> PCM % and English %</li>
+                  <li><strong>Other:</strong> Preferred Ship Type & Family details</li>
+                </ul>
+              </p>
+            </div>
+          </div>
+
           {/* Rules */}
           <div>
             <div style={{ fontSize: 11, fontWeight: 700, color: '#6b7280', letterSpacing: '.1em', textTransform: 'uppercase', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 7 }}>
@@ -342,7 +587,90 @@ export default function TestWelcome() {
           </div>
 
         </div>
+        </div>
       </div>
-    </div>
+      {/* ── Camera Modal Overlay ── */}
+      {captureMode === 'camera' && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
+          <div style={{ background: '#111827', padding: 24, borderRadius: 24, width: '100%', maxWidth: 500, border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', animation: 'tw-in 0.3s ease-out' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div style={{ color: '#fff', fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Camera size={18} color="#60a5fa" /> Take your photo
+              </div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', background: 'rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: 12 }}>
+                Look straight at the camera
+              </div>
+            </div>
+
+            <div style={{ position: 'relative', width: '100%', borderRadius: 16, overflow: 'hidden', background: '#000', display: 'flex', flexDirection: 'column', alignItems: 'center', boxShadow: 'inset 0 0 0 1px rgba(255,255,255,0.1)' }}>
+              {modelLoading && (
+                <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: 13, fontWeight: 500, zIndex: 10 }}>
+                  Loading AI models...
+                </div>
+              )}
+              <div style={{ position: 'relative', width: '100%', paddingTop: '75%' }}>
+                <video
+                  ref={videoRef}
+                  autoPlay
+                  playsInline
+                  muted
+                  onPlay={handleVideoPlay}
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover', transform: 'scaleX(-1)' }}
+                />
+                <canvas
+                  ref={canvasRef}
+                  style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', zIndex: 5, transform: 'scaleX(-1)' }}
+                />
+                
+                {cameraActive && (() => {
+                  let text = 'Searching for face...';
+                  let color = 'rgba(239, 68, 68, 0.9)';
+                  let Icon = UserX;
+                  
+                  if (faceStatus === 'good') {
+                    text = 'Perfect! Capture Now';
+                    color = 'rgba(16, 185, 129, 0.9)';
+                    Icon = UserCheck;
+                  } else if (faceStatus === 'multiple') {
+                    text = 'Multiple faces! Only you allowed.';
+                    color = 'rgba(239, 68, 68, 0.9)';
+                  } else if (faceStatus === 'off-center') {
+                    text = 'Center your face in frame';
+                    color = 'rgba(245, 158, 11, 0.9)';
+                  } else if (faceStatus === 'too-far') {
+                    text = 'Adjust distance for passport size';
+                    color = 'rgba(245, 158, 11, 0.9)';
+                  }
+                  
+                  return (
+                    <div style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', zIndex: 10, display: 'flex', alignItems: 'center', gap: 6, background: color, color: '#fff', padding: '8px 14px', borderRadius: 20, fontSize: 12, fontWeight: 700, backdropFilter: 'blur(4px)', boxShadow: '0 4px 12px rgba(0,0,0,0.2)', transition: 'background 0.3s', whiteSpace: 'nowrap' }}>
+                      <Icon size={16} /> {text}
+                    </div>
+                  )
+                })()}
+              </div>
+            </div>
+            
+            <div style={{ marginTop: 20, display: 'flex', gap: 12 }}>
+              <button
+                onClick={() => { stopCamera(); setCaptureMode('upload'); }}
+                style={{ padding: '12px 20px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.2)', background: 'transparent', color: '#fff', fontWeight: 600, fontSize: 14, cursor: 'pointer', transition: 'background 0.2s' }}
+              >
+                Cancel
+              </button>
+              <button
+                onClick={capturePhoto}
+                disabled={faceStatus !== 'good'}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: faceStatus === 'good' ? '#2563eb' : 'rgba(255,255,255,.1)', color: faceStatus === 'good' ? '#fff' : 'rgba(255,255,255,.3)', fontWeight: 700, fontSize: 15, cursor: faceStatus === 'good' ? 'pointer' : 'not-allowed', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+              >
+                <Camera size={18} /> Capture Photo (Press Enter)
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+    </>
   )
 }

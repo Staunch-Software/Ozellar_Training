@@ -357,6 +357,7 @@ export const adminListScreeningTests = () => req('/admin/screening/tests')
 export const adminCreateScreeningTest = (body) =>
   req('/admin/screening/tests', { method: 'POST', body: JSON.stringify(body) })
 export const adminGetScreeningTest = (id) => req(`/admin/screening/tests/${id}`)
+export const adminDuplicateScreeningTest = (id) => req(`/admin/screening/tests/${id}/duplicate`, { method: 'POST' })
 export const adminUpdateScreeningTest = (id, body) =>
   req(`/admin/screening/tests/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
 export const adminToggleScreeningTest = (id) =>

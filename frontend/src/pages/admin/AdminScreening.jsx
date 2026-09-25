@@ -4,7 +4,7 @@ import {
   Download, ChevronRight, ChevronDown, CheckCircle2, Clock,
   AlertTriangle, X, Save, Eye, EyeOff, BookOpen, Layers,
   User, Phone, ToggleLeft, ToggleRight, RefreshCw,
-  TrendingUp, Award, Search, Filter, Image as ImageIcon, Upload,
+  TrendingUp, Award, Search, Filter, Image as ImageIcon, Upload, Copy
 } from 'lucide-react'
 import * as api from '../../api.js'
 
@@ -435,6 +435,8 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError, showCreate, setSho
   const [form, setForm] = useState({ title:'', timerMinutes:80, correctScore:4, wrongPenalty:1 })
   const [saving, setSaving] = useState(false)
 
+  const [confirmDialog, setConfirmDialog] = useState(null)
+
   const create = async (e) => {
     e.preventDefault(); setSaving(true)
     try { await api.adminCreateScreeningTest(form); setShowCreate(false); setForm({ title:'', timerMinutes:80, correctScore:4, wrongPenalty:1 }); onRefresh() }
@@ -443,16 +445,48 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError, showCreate, setSho
   }
 
   const toggle = async (id) => { try { await api.adminToggleScreeningTest(id); onRefresh() } catch(e) { onError(e.message) } }
-  const del = async (id) => {
-    if (!confirm('Delete this test and all its data? This cannot be undone.')) return
-    try { await api.adminDeleteScreeningTest(id); onRefresh() } catch(e) { onError(e.message) }
+  const del = (id) => {
+    setConfirmDialog({
+      title: 'Delete Assessment',
+      message: 'Are you sure you want to delete this test and all its data? This cannot be undone.',
+      isDestructive: true,
+      onConfirm: async () => {
+        try { await api.adminDeleteScreeningTest(id); onRefresh() } catch(e) { onError(e.message) }
+      }
+    })
   }
+  const duplicate = (id) => {
+    setConfirmDialog({
+      title: 'Duplicate Assessment',
+      message: 'Do you want to create a duplicate of this test?',
+      isDestructive: false,
+      onConfirm: async () => {
+        try { await api.adminDuplicateScreeningTest(id); onRefresh() } catch(e) { onError(e.message) }
+      }
+    })
+  }
+
+  const renderConfirmDialog = () => confirmDialog && (
+    <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(4px)', display:'grid', placeItems:'center' }}>
+      <div style={{ background:'var(--surface)', width:'100%', maxWidth:420, borderRadius:24, padding:28, boxShadow:'0 25px 50px -12px rgba(0,0,0,0.5)', animation:'tw-in 0.2s ease-out' }}>
+        <h3 style={{ margin:'0 0 12px', fontSize:19, fontWeight:800, color:'var(--text)' }}>{confirmDialog.title}</h3>
+        <p style={{ margin:'0 0 28px', fontSize:14.5, color:'var(--text-mut)', lineHeight:1.6 }}>{confirmDialog.message}</p>
+        <div style={{ display:'flex', gap:12, justifyContent:'flex-end' }}>
+          <button onClick={() => setConfirmDialog(null)} style={{ padding:'11px 20px', borderRadius:12, border:'none', background:'var(--surface-2)', color:'var(--text-mut)', fontWeight:700, fontSize:14, cursor:'pointer' }}>Cancel</button>
+          <button onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null) }} style={{ padding:'11px 20px', borderRadius:12, border:'none', background: confirmDialog.isDestructive ? '#ef4444' : '#4f46e5', color:'#fff', fontWeight:700, fontSize:14, cursor:'pointer' }}>
+            {confirmDialog.isDestructive ? 'Delete' : 'Confirm'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
 
   /* ── Single test: show prominent management card ── */
   if (tests.length === 1) {
     const t = tests[0]
     return (
-            <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+      <>
+      <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
         {showCreate && <CreateTestCard form={form} setForm={setForm} saving={saving} onCreate={create} onCancel={() => setShowCreate(false)} />}
 
         {/* Hero card */}
@@ -482,6 +516,9 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError, showCreate, setSho
               <button onClick={() => toggle(t.id)} style={{ display:'flex', alignItems:'center', gap:6, padding:'9px 16px', borderRadius:11, border:'1.5px solid var(--border)', background:'var(--surface-2)', cursor:'pointer', fontSize:13, fontWeight:600, color:'var(--text-mut)', fontFamily:'inherit' }}>
                 {t.isActive ? <><ToggleRight size={15} color="var(--accent)"/> Active</> : <><ToggleLeft size={15}/> Inactive</>}
               </button>
+              <button className="iconbtn" title="Duplicate test" onClick={() => duplicate(t.id)}>
+                <Copy size={15} color="var(--text-mut)" />
+              </button>
               <button className="iconbtn" title="Delete test" onClick={() => del(t.id)}>
                 <Trash2 size={15} color="var(--danger)" />
               </button>
@@ -489,11 +526,14 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError, showCreate, setSho
           </div>
         </Card>
       </div>
+      {renderConfirmDialog()}
+      </>
     )
   }
 
   /* ── No tests yet ── */
    if (tests.length === 0) return (
+    <>
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
       {showCreate && <CreateTestCard form={form} setForm={setForm} saving={saving} onCreate={create} onCancel={() => setShowCreate(false)} />}
       <Card style={{ padding:'80px 0', textAlign:'center' }}>
@@ -502,10 +542,13 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError, showCreate, setSho
         <div style={{ color:'var(--text-faint)', fontSize:13, marginTop:5 }}>Click "Create Test" to get started</div>
       </Card>
     </div>
+    {renderConfirmDialog()}
+    </>
   )
 
   /* ── Multiple tests ── */
     return (
+    <>
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
       {showCreate && <CreateTestCard form={form} setForm={setForm} saving={saving} onCreate={create} onCancel={() => setShowCreate(false)} />}
       <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
@@ -535,6 +578,9 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError, showCreate, setSho
               <button className="iconbtn" title={t.isActive ? 'Deactivate' : 'Activate'} onClick={() => toggle(t.id)} style={{ padding:8 }}>
                 {t.isActive ? <ToggleRight size={22} color="var(--success)"/> : <ToggleLeft size={22}/>}
               </button>
+              <button className="iconbtn" title="Duplicate" onClick={() => duplicate(t.id)} style={{ padding:8 }}>
+                <Copy size={16} color="var(--text-mut)"/>
+              </button>
               <button className="iconbtn" title="Delete" onClick={() => del(t.id)} style={{ padding:8 }}>
                 <Trash2 size={16} color="var(--danger)"/>
               </button>
@@ -543,6 +589,8 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError, showCreate, setSho
         ))}
       </div>
     </div>
+    {renderConfirmDialog()}
+    </>
   )
 }
 

@@ -3908,6 +3908,57 @@ def admin_get_test(test_id: str,
         raise HTTPException(404, "Test not found")
     return serialize_test(test, include_sections=True)
 
+@app.post("/api/admin/screening/tests/{test_id}/duplicate")
+def admin_duplicate_test(test_id: str,
+                       admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    test = db.get(models.ScreeningTest, test_id)
+    if not test:
+        raise HTTPException(404, "Test not found")
+    
+    import re
+    match = re.search(r' (\d+)$', test.title)
+    if match:
+        num = int(match.group(1)) + 1
+        new_title = re.sub(r' \d+$', f' {num}', test.title)
+    else:
+        new_title = f"{test.title} 1"
+    
+    new_test = models.ScreeningTest(
+        title=new_title,
+        timer_minutes=test.timer_minutes,
+        correct_score=test.correct_score,
+        wrong_penalty=test.wrong_penalty,
+        is_active=test.is_active,
+    )
+    db.add(new_test)
+    db.flush()
+    
+    for section in test.sections:
+        new_section = models.ScreeningSection(
+            test_id=new_test.id,
+            title=section.title,
+            section_type=section.section_type,
+            passage=section.passage,
+            order=section.order
+        )
+        db.add(new_section)
+        db.flush()
+        
+        for q in section.questions:
+            new_q = models.ScreeningQuestion(
+                section_id=new_section.id,
+                prompt=q.prompt,
+                options=q.options,
+                answer=q.answer,
+                image_urls=q.image_urls,
+                order=q.order
+            )
+            db.add(new_q)
+            
+    db.commit()
+    db.refresh(new_test)
+    return serialize_test(new_test, include_sections=True)
+
 
 @app.patch("/api/admin/screening/tests/{test_id}")
 def admin_update_test(test_id: str, req: CreateTestRequest,
