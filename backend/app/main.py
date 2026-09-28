@@ -3056,7 +3056,6 @@ def process_pptx_background(course_id: str, pptx_path: str, original_filename: s
                             explain="Auto-extracted from slide."
                         )]
                 
-                import uuid
                 ch = models.Chapter(
                     id=f"{course_id}-slide-{n}-{uuid.uuid4().hex[:8]}", course_id=course_id, n=n,
                     title=slide_title,
