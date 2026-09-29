@@ -1,0 +1,20 @@
+@media (max-width: 1279px) {
+  .rpt-kpi-strip { gap: 8px; } }
+@media (max-width: 768px) {
+
+  .rpt-filter-row { gap: 8px; }
+  .rpt-kpi { min-width: calc(50% - 5px); } }
+@media (max-width: 640px) {
+
+    .rpt-filter-row { flex-direction: column; align-items: center; }
+  .rpt-search-wrap, .rpt-select-wrap { width: 92%; max-width: 420px; margin: 0 auto; }
+  .rpt-select { width: 100%; }
+  .rpt-kpi { min-width: 100%; }
+  .rpt-pagination { flex-direction: column; gap: 8px; align-items: stretch; text-align: center; } }
+@media (max-width: 380px) {
+
+  .rpt-kpi-value { font-size: 17px; }
+  .rpt-badge { font-size: 10.5px; padding: 3px 9px; } }
+@media (max-width: 320px) {
+
+  .rpt-field, .rpt-select { font-size: 12.5px; padding: 8px 28px; } }

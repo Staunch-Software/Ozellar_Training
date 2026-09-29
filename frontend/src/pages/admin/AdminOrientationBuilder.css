@@ -12,11 +12,11 @@
   --ob-line-strong: #d3d9e3;
   --ob-surface: #ffffff;
   --ob-wash: #f8fafc;
-  --ob-accent: #2563eb;
-  --ob-accent-tint: rgba(37, 99, 235, .1);
+  --ob-accent: #E07820;
+  --ob-accent-tint: rgba(224, 120, 32, .1);
   --ob-danger: #dc2626;
-  --ob-proof: #7c3aed;
-  --ob-proof-tint: rgba(124, 58, 237, .1);
+  --ob-proof: #E07820;
+  --ob-proof-tint: rgba(224, 120, 32, .1);
 
   /* the shared admin layout gives Orientation routes a fixed-height,
      overflow:hidden parent (.page-cm) — become the scroll container */
@@ -38,20 +38,20 @@
     --ob-line-strong: #333b48;
     --ob-surface: #161b23;
     --ob-wash: #10141b;
-    --ob-accent: #5b8cff;
-    --ob-accent-tint: rgba(91, 140, 255, .14);
-    --ob-proof-tint: rgba(167, 139, 250, .14);
+    --ob-accent: #f08c3a;
+    --ob-accent-tint: rgba(240, 140, 58, .14);
+    --ob-proof-tint: rgba(240, 140, 58, .14);
   }
 }
 :root[data-theme="dark"] .ob-page {
   --ob-ink: #e8eaef; --ob-ink-soft: #97a1b0; --ob-line: #262c37; --ob-line-strong: #333b48;
-  --ob-surface: #161b23; --ob-wash: #10141b; --ob-accent: #5b8cff;
-  --ob-accent-tint: rgba(91, 140, 255, .14); --ob-proof-tint: rgba(167, 139, 250, .14);
+  --ob-surface: #161b23; --ob-wash: #10141b; --ob-accent: #f08c3a;
+  --ob-accent-tint: rgba(240, 140, 58, .14); --ob-proof-tint: rgba(240, 140, 58, .14);
 }
 :root[data-theme="light"] .ob-page {
   --ob-ink: #0f172a; --ob-ink-soft: #64748b; --ob-line: #e5e9f0; --ob-line-strong: #d3d9e3;
-  --ob-surface: #ffffff; --ob-wash: #f8fafc; --ob-accent: #2563eb;
-  --ob-accent-tint: rgba(37, 99, 235, .1); --ob-proof-tint: rgba(124, 58, 237, .1);
+  --ob-surface: #ffffff; --ob-wash: #f8fafc; --ob-accent: #E07820;
+  --ob-accent-tint: rgba(224, 120, 32, .1); --ob-proof-tint: rgba(224, 120, 32, .1);
 }
 .ob-page--engine { --ob-accent: #b45309; --ob-accent-tint: rgba(180, 83, 9, .1); }
 @media (prefers-color-scheme: dark) { .ob-page--engine { --ob-accent: #e0a94f; --ob-accent-tint: rgba(224, 169, 79, .14); } }

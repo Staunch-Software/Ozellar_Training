@@ -273,11 +273,11 @@ export default function TestWelcome() {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         * { box-sizing: border-box; }
-        .tw-photo-zone:hover { border-color: #60a5fa !important; background: rgba(255, 255, 255, 0.1) !important; }
+        .tw-photo-zone:hover { border-color: #fff !important; background: rgba(255, 255, 255, 0.1) !important; }
         .tw-photo-zone { transition: border-color .2s, background .2s; }
-        .tw-start-btn:hover:not(:disabled) { background: #1d4ed8 !important; box-shadow: 0 8px 24px rgba(37,99,235,.45) !important; transform: translateY(-1px); }
+        .tw-start-btn:hover:not(:disabled) { background: #ffedd5 !important; box-shadow: 0 8px 24px rgba(0,0,0,.2) !important; transform: translateY(-1px); }
         .tw-start-btn { transition: all .2s; }
-        .tw-upload-btn:hover:not(:disabled) { background: #1d4ed8 !important; }
+        .tw-upload-btn:hover:not(:disabled) { background: #ffedd5 !important; }
         .tw-upload-btn { transition: background .15s; }
         .tw-rule-row:hover { background: #f8f9fc !important; }
         .tw-rule-row { transition: background .15s; }
@@ -320,7 +320,7 @@ export default function TestWelcome() {
       <header className="tw-header" style={{ flexShrink: 0, background: '#fff', borderBottom: '1px solid #e5e7eb', minHeight: 58, display: 'flex', alignItems: 'center', padding: '0 32px', flexWrap: 'wrap', gap: 0, boxShadow: '0 1px 4px rgba(0,0,0,.06)' }}>
         {/* Brand */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 'auto', minWidth: 0, overflow: 'hidden' }}>
-  <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, #2563eb, #1e40af)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+  <div style={{ width: 34, height: 34, borderRadius: 9, background: 'linear-gradient(135deg, #f97316, #ea580c)', display: 'grid', placeItems: 'center', flexShrink: 0 }}>
     <Anchor size={17} color="#fff" />
   </div>
   <div style={{ minWidth: 0, overflow: 'hidden' }}>
@@ -335,7 +335,7 @@ export default function TestWelcome() {
 
         {/* User chip */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '5px 12px', borderRadius: 99, border: '1px solid #e5e7eb', background: '#f9fafb', flexShrink: 0 }}>
-          <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #2563eb, #1e40af)', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 800, color: '#fff' }}>
+          <div style={{ width: 26, height: 26, borderRadius: '50%', background: 'linear-gradient(135deg, #f97316, #ea580c)', display: 'grid', placeItems: 'center', fontSize: 11, fontWeight: 800, color: '#fff' }}>
             {user?.name?.charAt(0)?.toUpperCase() || 'C'}
           </div>
           <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{user?.name || 'Candidate'}</span>
@@ -346,12 +346,12 @@ export default function TestWelcome() {
        <div className="tw-body" style={{ flex: 1, overflow: 'hidden', display: 'flex' }}>
 
         {/* ════ LEFT PANEL — Identity + Stats ════ */}
-        <div className="tw-left-panel" style={{ width: 400, flexShrink: 0, background: 'linear-gradient(160deg, #1e3a8a 0%, #1e40af 45%, #2563eb 100%)', display: 'flex', flexDirection: 'column', padding: '36px 32px', gap: 0, overflowY: 'auto', position: 'relative' }}>
+        <div className="tw-left-panel" style={{ width: 400, flexShrink: 0, background: 'linear-gradient(160deg, #c2410c 0%, #ea580c 45%, #f97316 100%)', display: 'flex', flexDirection: 'column', padding: '36px 32px', gap: 0, overflowY: 'auto', position: 'relative' }}>
           {/* Subtle grid pattern */}
           <div style={{ position: 'absolute', inset: 0, backgroundImage: 'radial-gradient(circle at 1px 1px, rgba(255,255,255,.06) 1px, transparent 0)', backgroundSize: '28px 28px', pointerEvents: 'none' }} />
           
           {/* Welcome text */}
-          <div style={{ position: 'relative', marginBottom: 28, animation: 'tw-in .5s ease-out' }}>
+          <div style={{ position: 'relative', marginBottom: 28, animation: 'tw-in .5s ease-out', flexShrink: 0 }}>
             <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.5)', letterSpacing: '.12em', textTransform: 'uppercase', marginBottom: 8 }}>Engine Cadet Assessment</div>
             <h2 style={{ fontSize: 24, fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-.02em', lineHeight: 1.25 }}>
               Welcome,<br />{user?.name?.split(' ')[0] || 'Candidate'}
@@ -362,7 +362,7 @@ export default function TestWelcome() {
           </div>
 
           {/* ── Photo Upload ── */}
-          <div style={{ position: 'relative', background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 18, padding: 22, marginBottom: 20, backdropFilter: 'blur(8px)', animation: 'tw-in .55s ease-out' }}>
+          <div style={{ position: 'relative', flexShrink: 0, background: 'rgba(255,255,255,.08)', border: '1px solid rgba(255,255,255,.15)', borderRadius: 18, padding: 22, marginBottom: 20, backdropFilter: 'blur(8px)', animation: 'tw-in .55s ease-out' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
               <Camera size={15} color="rgba(255,255,255,.7)" />
               <span style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,.7)', textTransform: 'uppercase', letterSpacing: '.08em' }}>Identity Photo</span>
@@ -428,7 +428,7 @@ export default function TestWelcome() {
                   onDragLeave={() => setDragOver(false)}
                   onDrop={e => { e.preventDefault(); setDragOver(false); handleFile(e.dataTransfer.files[0]) }}
                   style={{
-                    border: `2px dashed ${dragOver ? '#60a5fa' : preview ? '#60a5fa' : 'rgba(255,255,255,.3)'}`,
+                    border: `2px dashed ${dragOver ? '#fff' : preview ? '#fff' : 'rgba(255,255,255,.3)'}`,
                     borderRadius: 14, cursor: 'pointer', textAlign: 'center',
                     background: dragOver ? 'rgba(96,165,250,.1)' : 'rgba(255,255,255,.04)',
                     padding: preview ? 14 : '28px 16px',
@@ -437,7 +437,7 @@ export default function TestWelcome() {
                 >
                   {preview ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                      <img src={preview} alt="Preview" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid #60a5fa', boxShadow: '0 0 0 4px rgba(96,165,250,.2)', flexShrink: 0 }} />
+                      <img src={preview} alt="Preview" style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: '3px solid #fff', boxShadow: '0 0 0 4px rgba(255,255,255,.2)', flexShrink: 0 }} />
                       <div style={{ textAlign: 'left' }}>
                         <div style={{ fontWeight: 700, fontSize: 13.5, color: '#fff' }}>Photo ready</div>
                         <div style={{ fontSize: 12, color: 'rgba(255,255,255,.5)', marginTop: 3 }}>Click to change image</div>
@@ -456,7 +456,7 @@ export default function TestWelcome() {
 
                 {preview && !photoUploaded && (
                   <button className="tw-upload-btn" onClick={uploadPhoto} disabled={uploading}
-                    style={{ width: '100%', marginTop: 12, padding: '11px', borderRadius: 11, border: 'none', background: '#2563eb', color: '#fff', fontWeight: 700, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit' }}>
+                    style={{ width: '100%', marginTop: 12, padding: '11px', borderRadius: 11, border: 'none', background: '#fff', color: '#ea580c', fontWeight: 800, fontSize: 14, cursor: 'pointer', fontFamily: 'inherit', boxShadow: '0 4px 12px rgba(0,0,0,.1)' }}>
                     {uploading ? 'Uploading…' : 'Confirm & Upload Photo'}
                   </button>
                 )}
@@ -475,43 +475,44 @@ export default function TestWelcome() {
           </div>
 
           {/* ── Stats grid ── */}
-          <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, animation: 'tw-in .6s ease-out' }}>
+          <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, animation: 'tw-in .6s ease-out', flexShrink: 0 }}>
             {[
-              { label: 'Duration',  value: `${timerMins} min`,   icon: Clock,  color: '#60a5fa' },
-              { label: 'Sections',  value: sectionCount,          icon: Layers, color: '#a78bfa' },
-              { label: 'Correct',   value: `+${cs} pts`,          icon: Target, color: '#34d399' },
-              { label: 'Incorrect', value: `−${wp} pt`,           icon: AlertTriangle, color: '#f87171' },
+              { label: 'Duration',  value: `${timerMins} min`,   icon: Clock },
+              { label: 'Sections',  value: sectionCount,          icon: Layers },
+              { label: 'Correct',   value: `+${cs} pts`,          icon: Target },
+              { label: 'Incorrect', value: `−${wp} pt`,           icon: AlertTriangle },
             ].map(s => (
-              <div key={s.label} style={{ background: 'rgba(255,255,255,.07)', border: '1px solid rgba(255,255,255,.12)', borderRadius: 14, padding: '14px 16px', backdropFilter: 'blur(4px)' }}>
+              <div key={s.label} style={{ background: 'rgba(255,255,255,.1)', border: '1px solid rgba(255,255,255,.2)', borderRadius: 14, padding: '14px 16px', backdropFilter: 'blur(4px)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 8 }}>
-                  <s.icon size={13} color={s.color} />
-                  <span style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,.45)', textTransform: 'uppercase', letterSpacing: '.07em' }}>{s.label}</span>
+                  <s.icon size={13} color="rgba(255,255,255,0.7)" />
+                  <span style={{ fontSize: 10.5, fontWeight: 700, color: 'rgba(255,255,255,.7)', textTransform: 'uppercase', letterSpacing: '.07em' }}>{s.label}</span>
                 </div>
-                <div style={{ fontSize: 20, fontWeight: 800, color: s.color, letterSpacing: '-.01em' }}>{s.value}</div>
+                <div style={{ fontSize: 20, fontWeight: 800, color: '#fff', letterSpacing: '-.01em' }}>{s.value}</div>
               </div>
             ))}
           </div>
 
           {/* ── Spacer + Begin button ── */}
-          <div style={{ position: 'relative', marginTop: 'auto', paddingTop: 24 }}>
+          <div style={{ flexGrow: 1, minHeight: 24 }} />
+          <div style={{ position: 'relative', flexShrink: 0 }}>
             <button
               className="tw-start-btn"
               onClick={handleStart}
               disabled={!hasPhotoReady || starting}
               style={{
                 width: '100%', padding: '15px 24px', borderRadius: 14, border: 'none', fontFamily: 'inherit',
-                background: hasPhotoReady ? '#2563eb' : 'rgba(255,255,255,.12)',
-                color: hasPhotoReady ? '#fff' : 'rgba(255,255,255,.35)',
+                background: hasPhotoReady ? '#fff' : 'rgba(255,255,255,.25)',
+                color: hasPhotoReady ? '#ea580c' : 'rgba(255,255,255,.9)',
                 fontWeight: 800, fontSize: 16, cursor: hasPhotoReady ? 'pointer' : 'not-allowed',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                boxShadow: hasPhotoReady ? '0 4px 20px rgba(37,99,235,.5)' : 'none',
+                boxShadow: hasPhotoReady ? '0 4px 20px rgba(0,0,0,.15)' : 'none',
               }}>
               {starting ? 'Starting Assessment…' : hasPhotoReady
                 ? <><span>Begin Assessment</span><ChevronRight size={20} /></>
                 : 'Upload Photo to Continue'}
             </button>
             {!hasPhotoReady && (
-              <p style={{ textAlign: 'center', color: 'rgba(255,255,255,.35)', fontSize: 12, margin: '10px 0 0' }}>
+              <p style={{ textAlign: 'center', color: 'rgba(255,255,255,.7)', fontSize: 12, margin: '10px 0 0', fontWeight: 500 }}>
                 Identity photo required to unlock the assessment
               </p>
             )}
@@ -543,13 +544,13 @@ export default function TestWelcome() {
           </div>
 
           {/* Prerequisites Banner */}
-          <div style={{ display: 'flex', gap: 12, padding: '16px 20px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: 14 }}>
-            <FileText size={20} color="#2563eb" style={{ flexShrink: 0, marginTop: 2 }} />
+          <div style={{ display: 'flex', gap: 12, padding: '16px 20px', background: '#fff7ed', border: '1px solid #fed7aa', borderRadius: 14 }}>
+            <FileText size={20} color="#ea580c" style={{ flexShrink: 0, marginTop: 2 }} />
             <div>
-              <div style={{ fontWeight: 700, color: '#1e3a8a', fontSize: 14, marginBottom: 4 }}>Information Required</div>
-              <p style={{ margin: 0, fontSize: 13, color: '#1e40af', lineHeight: 1.6 }}>
+              <div style={{ fontWeight: 700, color: '#c2410c', fontSize: 14, marginBottom: 4 }}>Information Required</div>
+              <p style={{ margin: 0, fontSize: 13, color: '#c2410c', lineHeight: 1.6 }}>
                 You will need to fill out your <strong>Personal Details</strong> before starting the exam. Please have the following information ready:
-                <ul style={{ margin: '8px 0 0 0', paddingLeft: 18, color: '#1e40af' }}>
+                <ul style={{ margin: '8px 0 0 0', paddingLeft: 18, color: '#c2410c' }}>
                   <li style={{ marginBottom: 4 }}><strong>Pre-Sea Training Details:</strong> Institute name, Year of Passing, and % or CGPA</li>
                   <li style={{ marginBottom: 4 }}><strong>Class 12 Marks:</strong> PCM % and English %</li>
                   <li><strong>Other:</strong> Preferred Ship Type & Family details</li>
@@ -567,8 +568,8 @@ export default function TestWelcome() {
               {RULES.map((r, i) => (
                 <div key={i} className="tw-rule-row"
                   style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: '14px 20px', borderBottom: i < RULES.length - 1 ? '1px solid #f3f4f6' : 'none' }}>
-                  <div style={{ width: 30, height: 30, borderRadius: 9, background: '#eff6ff', display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: 1 }}>
-                    <r.icon size={14} color="#2563eb" />
+                  <div style={{ width: 30, height: 30, borderRadius: 9, background: '#fff7ed', display: 'grid', placeItems: 'center', flexShrink: 0, marginTop: 1 }}>
+                    <r.icon size={14} color="#ea580c" />
                   </div>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, flex: 1 }}>
                     <div style={{ width: 20, height: 20, borderRadius: '50%', background: '#f0f2f5', display: 'grid', placeItems: 'center', fontSize: 10, fontWeight: 800, color: '#6b7280', flexShrink: 0, marginTop: 2 }}>{i + 1}</div>
@@ -597,7 +598,7 @@ export default function TestWelcome() {
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div style={{ color: '#fff', fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                <Camera size={18} color="#60a5fa" /> Take your photo
+                <Camera size={18} color="#ea580c" /> Take your photo
               </div>
               <div style={{ fontSize: 12, fontWeight: 600, color: '#9ca3af', background: 'rgba(255,255,255,0.1)', padding: '4px 10px', borderRadius: 12 }}>
                 Look straight at the camera
@@ -663,7 +664,7 @@ export default function TestWelcome() {
               <button
                 onClick={capturePhoto}
                 disabled={faceStatus !== 'good'}
-                style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: faceStatus === 'good' ? '#2563eb' : 'rgba(255,255,255,.1)', color: faceStatus === 'good' ? '#fff' : 'rgba(255,255,255,.3)', fontWeight: 700, fontSize: 15, cursor: faceStatus === 'good' ? 'pointer' : 'not-allowed', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+                style={{ flex: 1, padding: '12px', borderRadius: 12, border: 'none', background: faceStatus === 'good' ? '#ea580c' : 'rgba(255,255,255,.1)', color: faceStatus === 'good' ? '#fff' : 'rgba(255,255,255,.3)', fontWeight: 700, fontSize: 15, cursor: faceStatus === 'good' ? 'pointer' : 'not-allowed', transition: 'all 0.2s', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}
               >
                 <Camera size={18} /> Capture Photo (Press Enter)
               </button>

@@ -1,3 +1,4 @@
+import './components/Navbar.css';
 import { useState, useEffect, useRef, createContext, useContext } from 'react'
 import { Routes, Route, Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { GraduationCap, Search, Sun, Moon, LogOut, Menu, X } from 'lucide-react'
@@ -73,7 +74,8 @@ export function TopNav({ searchQuery, onSearch }) {
   return (
     <nav className="appnav">
       <Link to="/my-courses" className="brand">
-        <span className="logo"><GraduationCap size={19} /></span> Ozellar Marine
+        <span className="logo"><GraduationCap size={19} /></span>
+        <span className="brand-text">Ozellar<span className="brand-light">Marine</span></span>
       </Link>
       <div className="navlinks">
         <NavLink to="/my-courses" className={({ isActive }) => (isActive ? 'on' : '')}>My courses</NavLink>

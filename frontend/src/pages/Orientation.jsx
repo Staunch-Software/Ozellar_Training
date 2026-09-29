@@ -233,6 +233,9 @@ export default function Orientation() {
                             {enrollment.status === 'approved' && (
                 <div className="cnd-banner cnd-banner--approved"><Check size={15} /> Approved — congratulations!</div>
               )}
+              {enrollment.status === 'master_approved' && (
+                <div className="cnd-banner cnd-banner--pending"><Check size={15} /> Approved by Master/CE — awaiting final admin approval.</div>
+              )}
               
               {error && <div className="form-error" style={{ marginBottom: 16 }}><AlertCircle size={15} /> {error}</div>}
 

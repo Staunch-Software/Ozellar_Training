@@ -688,17 +688,17 @@ export default function AdminReport() {
 /* ------------------------------------------------------------------ */
 function KpiCard({ icon, value, label, color, highlight }) {
   const bg = {
-    accent:  ['var(--accent-weak)',  'var(--accent)'],
-    success: ['var(--success-weak)', 'var(--success)'],
-    warn:    ['var(--warn-weak)',     'var(--warn)'],
-    faint:   ['var(--surface-3)',    'var(--text-faint)'],
-  }[color] || ['var(--surface-3)', 'var(--text-mut)']
+    accent:  ['rgba(18,60,58,0.08)',  '#123C3A'],
+    success: ['rgba(15,118,110,0.08)', '#0F766E'],
+    warn:    ['rgba(249,115,22,0.1)',   '#F97316'],
+    faint:   ['rgba(71,85,105,0.08)',   '#475569'],
+  }[color] || ['rgba(71,85,105,0.08)', '#475569']
 
   const borderColors = {
-    accent: '#6366f1',
-    success: '#10b981',
-    warn: '#f59e0b',
-    faint: '#9ca3af'
+    accent: '#123C3A',
+    success: '#0F766E',
+    warn: '#F97316',
+    faint: '#475569'
   }
   const borderColor = borderColors[color] || '#9ca3af'
 
@@ -708,7 +708,7 @@ function KpiCard({ icon, value, label, color, highlight }) {
         {icon}
       </div>
       <div>
-        <div className="rpt-kpi-value" style={{ fontSize: '24px', fontWeight: 700, ...(highlight ? { color: 'var(--accent)' } : {}) }}>
+        <div className="rpt-kpi-value" style={{ fontSize: '24px', fontWeight: 700, ...(highlight ? { color: '#123C3A' } : {}) }}>
           {value}
         </div>
         <div className="rpt-kpi-label">{label}</div>

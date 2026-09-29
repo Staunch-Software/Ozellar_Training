@@ -1,0 +1,187 @@
+
+
+/* ---------- LOGIN ---------- */
+.login-wrap{min-height:100%;display:grid;place-items:center;padding:24px;background:#ffffff}
+.login-top{position:fixed;top:16px;right:18px}
+.login{width:min(1000px,100%);display:grid;grid-template-columns:1.05fr .95fr;
+  background:var(--surface);border:1px solid var(--border);border-radius:16px;
+  box-shadow:var(--shadow);overflow:hidden;transition:width .2s ease}
+.login .art {
+  background: url('/hero-bg.jpg') center/cover no-repeat;
+  color: #fff;
+  padding: 42px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  position: relative;
+  overflow: hidden;
+  min-height: 460px;
+}
+.login .art::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(170deg, rgba(13,15,18,0.3) 0%, rgba(13,15,18,0.9) 100%);
+  z-index: 1;
+}
+.login .art::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 0; right: 0; height: 100%;
+  background: radial-gradient(circle at -10% 110%, rgba(249, 115, 22, 0.2) 0%, transparent 50%),
+              radial-gradient(circle at 110% 110%, rgba(22, 134, 106, 0.25) 0%, transparent 50%);
+  z-index: 1;
+  pointer-events: none;
+}
+.login .art > * {
+  position: relative;
+  z-index: 2;
+}
+.login .art .badge {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.9);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.login .art-content {
+  margin: auto 0;
+}
+.login .art-accent-line {
+  width: 36px;
+  height: 3px;
+  background: var(--accent-gradient, var(--accent));
+  border-radius: 2px;
+  margin-bottom: 20px;
+}
+.login .art h3 {
+  color: #fff;
+  font-size: 32px;
+  line-height: 1.25;
+  max-width: 15ch;
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+.login .art h3 .highlight {
+  background: var(--accent-gradient, var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+  filter: drop-shadow(0 2px 8px rgba(249, 115, 22, 0.3));
+}
+.login .art p {
+  font-size: 15px;
+  color: rgba(255,255,255,0.85);
+  max-width: 34ch;
+  margin: 16px 0 0;
+  line-height: 1.5;
+}
+.login .art-compliance {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+.login .art-compliance-item {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 4px;
+  font-size: 8.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  background: rgba(22, 134, 106, 0.3);
+  border: 1px solid rgba(22, 134, 106, 0.5);
+  padding: 6px 8px;
+  border-radius: 20px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  white-space: nowrap;
+  transition: background 0.2s, border-color 0.2s;
+}
+.login .art-compliance-item:hover {
+  background: rgba(22, 134, 106, 0.5);
+  border-color: rgba(22, 134, 106, 0.8);
+}
+.login .form{padding:42px;display:flex;flex-direction:column;justify-content:center;gap:15px}
+.brand-lg{display:flex;align-items:center;gap:11px;font-size:20px;letter-spacing:-0.02em}
+.brand-lg .brand-text{font-weight:800;color:var(--text)}
+.brand-lg .brand-light{font-weight:400;color:var(--text-mut);margin-left:2px}
+.brand-lg .logo{width:38px;height:38px;border-radius:10px;background:var(--accent-gradient, var(--accent));
+  color:var(--on-accent);display:grid;place-items:center;box-shadow:0 4px 12px rgba(249,115,22,.2)}
+.field label{display:block;font-size:12.5px;color:var(--text-mut);margin-bottom:6px;font-weight:500}
+.field .inputwrap{position:relative;display:flex;align-items:center}
+.field .inputwrap svg{position:absolute;left:12px;color:var(--text-faint);width:17px;height:17px}
+.field input{width:100%;border:1px solid var(--border-strong);border-radius:9px;
+  background:var(--bg);padding:11px 13px 11px 38px;font-size:14px;color:var(--text);font-family:inherit}
+.field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
+.segmented{display:flex;background:var(--bg);border:1px solid var(--border);
+  border-radius:12px;padding:4px;gap:4px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.02)}
+.segmented button{flex:1;border:none;background:transparent;padding:10px 8px;border-radius:8px;
+  font-size:13.5px;font-weight:600;color:var(--text-mut);transition:all 0.2s ease;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;gap:6px}
+.segmented button:hover:not(.on){color:var(--text);background:var(--surface-2)}
+.segmented button.on{background:var(--surface);color:var(--accent);box-shadow:0 0 0 1px var(--border), 0 2px 6px rgba(0,0,0,0.06)}
+.field .hint{font-size:11.5px;color:var(--text-faint);margin-top:6px}
+.ac-pop{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--surface);
+  border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);
+  max-height:240px;overflow-y:auto;z-index:20}
+.ac-item{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  width:100%;text-align:left;padding:9px 13px;border:none;background:none;
+  font-size:13.5px;color:var(--text);border-bottom:1px solid var(--border)}
+.ac-item:last-child{border-bottom:none}
+.ac-item:hover,.ac-item.active{background:var(--surface-2)}
+.ac-name{font-weight:500}
+.ac-rank{font-size:12px;color:var(--text-faint);white-space:nowrap}
+.form-error{display:flex;align-items:center;gap:7px;font-size:13px;color:var(--danger);
+  background:var(--danger-weak);border-radius:var(--radius);padding:10px 12px}
+.form-error svg{flex:none}
+.linkline{font-size:12.5px;color:var(--accent);text-align:center}
+.helpline{font-size:12.5px;color:var(--text-faint);text-align:center;
+  border-top:1px solid var(--border);padding-top:13px;margin-top:2px}
+@media (min-width: 2560px){
+  .login { width: 1480px; min-height: 780px; }
+  .login .art { padding: 72px; }
+  .login .art h3 { font-size: 44px; max-width: 16ch; }
+  .login .art p { font-size: 18px; max-width: 34ch; margin-top: 24px; }
+  .login .art-compliance { gap: 14px; }
+  .login .art-compliance-item { font-size: 12px; padding: 8px 14px; }
+  .login .form { padding: 72px; gap: 24px; }
+  .login .brand-lg { font-size: 26px; gap: 14px; }
+  .login .brand-lg .logo { width: 48px; height: 48px; border-radius: 14px; }
+  .login .segmented { padding: 6px; border-radius: 14px; gap: 6px; }
+  .login .segmented button { font-size: 16px; padding: 14px; gap: 8px; border-radius: 10px; }
+  .login .field label { font-size: 17px; margin-bottom: 10px; }
+  .login .field input { padding: 20px 24px 20px 60px; font-size: 20px; border-radius: 14px; }
+  .login .field .inputwrap svg { width: 26px; height: 26px; left: 20px; }
+  .login .field .hint { font-size: 15px; margin-top: 10px; }
+  .login .btn.primary { padding: 20px; font-size: 20px; border-radius: 14px; }
+  .login .linkline, .helpline { font-size: 16px; }
+  .login .form-error { font-size: 17px; padding: 18px 20px; }
+  .login .form-error svg { width: 22px; height: 22px; }}
+@media (max-width: 900px){
+
+  .login { grid-template-columns: 1fr; }
+  .login .art { display: flex; min-height: 340px; padding: 32px 28px; }
+  .login .art h3 { font-size: 26px; }}
+@media (max-width: 480px){
+
+  .login .form { padding: 26px 20px; }}
+@media (min-width: 1440px) and (max-width: 1919px) {
+  .login { width: 1100px; min-height: 600px; }
+  .login .art { padding: 54px; }
+  .login .art h3 { font-size: 34px; max-width: 16ch; }
+  .login .art p { font-size: 16px; max-width: 36ch; margin-top: 16px; }
+  .login .form { padding: 54px; gap: 20px; }
+  .login .field label { font-size: 14px; margin-bottom: 6px; }
+  .login .field input { padding: 14px 18px 14px 44px; font-size: 16px; border-radius: 10px; }
+  .login .field .inputwrap svg { width: 20px; height: 20px; left: 14px; }
+  .login .btn.primary { padding: 16px; font-size: 16px; border-radius: 10px; }
+}

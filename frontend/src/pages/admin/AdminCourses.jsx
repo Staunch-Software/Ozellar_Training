@@ -1,3 +1,4 @@
+import './AdminCourses.css';
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { BookOpen, Plus, AlertCircle, X, ChevronRight, Search, GraduationCap } from 'lucide-react'

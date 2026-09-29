@@ -1,3 +1,4 @@
+import './AdminDashboard.css';
 import { useEffect, useState, useCallback } from 'react'
 import {
   Users, GraduationCap, Award, BarChart3, TrendingUp, Ship,
@@ -12,18 +13,18 @@ import { useTheme } from '../../App.jsx'
 import AdminHeader from '../../components/AdminHeader.jsx'
 
 const CHART_COLORS = {
-  blue:    '#4c8dff',
-  teal:    '#0d9488',
-  emerald: '#10b981',
-  amber:   '#f59e0b',
-  rose:    '#f43f5e',
-  purple:  '#8b5cf6',
-  indigo:  '#6366f1',
-  sky:     '#38bdf8',
-  orange:  '#fb923c',
-  lime:    '#84cc16',
-  pink:    '#ec4899',
-  cyan:    '#06b6d4',
+  blue:    '#123C3A',
+  teal:    '#16866A',
+  emerald: '#16866A',
+  amber:   '#F97316',
+  rose:    '#ef4444',
+  purple:  '#1e293b',
+  indigo:  '#0f172a',
+  sky:     '#94a3b8',
+  orange:  '#F97316',
+  lime:    '#059669',
+  pink:    '#475569',
+  cyan:    '#64748b',
 }
 const PIE_COLORS = Object.values(CHART_COLORS)
 
@@ -51,14 +52,14 @@ function timeAgo(iso) {
 
 function KpiCard({ icon: Icon, label, value, note, color }) {
   const colorMap = {
-    blue:    { bg: 'rgba(76,141,255,.13)',   fg: '#4c8dff'  },
-    emerald: { bg: 'rgba(16,185,129,.13)',   fg: '#10b981'  },
-    amber:   { bg: 'rgba(245,158,11,.13)',   fg: '#f59e0b'  },
-    rose:    { bg: 'rgba(244,63,94,.13)',    fg: '#f43f5e'  },
-    purple:  { bg: 'rgba(139,92,246,.13)',   fg: '#8b5cf6'  },
-    teal:    { bg: 'rgba(13,148,136,.13)',   fg: '#0d9488'  },
-    indigo:  { bg: 'rgba(99,102,241,.13)',   fg: '#6366f1'  },
-    sky:     { bg: 'rgba(56,189,248,.13)',   fg: '#38bdf8'  },
+    blue:    { bg: 'var(--surface-2)',   fg: '#123C3A'  },
+    emerald: { bg: 'rgba(22, 134, 106, 0.1)',   fg: '#16866A'  },
+    amber:   { bg: 'rgba(249, 115, 22, 0.1)',   fg: '#F97316'  },
+    rose:    { bg: 'rgba(239, 68, 68, 0.1)',    fg: '#ef4444'  },
+    purple:  { bg: 'rgba(249, 115, 22, 0.1)',   fg: '#1e293b'  },
+    teal:    { bg: 'var(--surface-2)',   fg: '#16866A'  },
+    indigo:  { bg: 'var(--surface-2)',   fg: '#0f172a'  },
+    sky:     { bg: 'var(--surface-2)',   fg: '#94a3b8'  },
   }
   const c = colorMap[color] || colorMap.blue
   return (

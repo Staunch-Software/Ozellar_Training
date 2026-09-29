@@ -1377,6 +1377,8 @@ class UpdateUserRequest(BaseModel):
     rank: str | None = None
     ppNo: str | None = None
     role: str | None = None
+    password: str | None = None
+    currentPassword: str | None = None
 
 
 class AssignRequest(BaseModel):
@@ -1546,6 +1548,13 @@ def admin_panel_update_admin(user_id: str, req: UpdateUserRequest,
         if user.id == admin.id and req.role != user.role:
             raise HTTPException(400, "You cannot change your own role")
         user.role = req.role
+    if req.password is not None:
+        if req.currentPassword:
+            if not verify_password(req.currentPassword, user.password_hash):
+                raise HTTPException(400, "Incorrect current password")
+        elif user.id == admin.id:
+            raise HTTPException(400, "Current password is required to change your password")
+        user.password_hash = hash_password(req.password)
     db.commit()
     return {
         "id": user.id, "role": user.role, "name": user.full_name,
@@ -5019,7 +5028,7 @@ def orientation_enrollment_detail(e):
 def get_my_orientation_enrollment(user: models.User = Depends(get_current_user), db: Session = Depends(get_db)):
     enrollment = (db.query(models.OrientationEnrollment)
                   .filter(models.OrientationEnrollment.learner_id == user.id,
-                         models.OrientationEnrollment.status.in_(["in_progress", "submitted", "rejected", "approved"]))
+                         models.OrientationEnrollment.status.in_(["in_progress", "submitted", "rejected", "approved", "master_approved"]))
                   .order_by(models.OrientationEnrollment.created_at.desc()).first())
     if not enrollment:
         return None
@@ -5217,6 +5226,11 @@ def orientation_submission_detail(db, enrollment):
     
     if enrollment.status in ("approved", "rejected"):
         computed_status = enrollment.status
+    elif enrollment.status == "master_approved":
+        # Master/CE has approved; awaiting Super Admin final sign-off.
+        # Show the submission as decided (approved) to the approver so
+        # the Final Approve button is hidden.
+        computed_status = "approved"
     elif has_pending_tasks or (total_tasks > 0 and approved_tasks == total_tasks):
         computed_status = "pending"
     else:
@@ -5336,26 +5350,27 @@ def approver_decide_submission(submission_id: str, req: OrientationDecideRequest
         if not all_approved:
             raise HTTPException(400, "Cannot approve until all tasks are verified")
             
-        enrollment.status = "approved"
+        # Master/CE approval moves to intermediate status awaiting Super Admin sign-off
+        enrollment.status = "master_approved"
         db.commit()
         
-        # Notify learner
+        # Notify learner that it is pending admin approval
         if enrollment.learner_id:
-            notify(db, enrollment.learner_id, "orientation_approved", "Orientation completed",
-                   body=f"All tasks approved! Your {enrollment.program.title} is now complete.",
+            notify(db, enrollment.learner_id, "orientation_pending_admin", "Orientation pending final approval",
+                   body=f"All tasks have been approved by {approver.full_name}. Your {enrollment.program.title} is now awaiting final approval from the admin.",
                    link="/orientation")
                    
-        # Notify all admins
+        # Notify all admins — they need to take action
         admins = db.query(models.User).filter(
             models.User.role.in_(["super_admin", "office_admin", "admin"]),
             models.User.is_active == True
         ).all()
+        learner = db.get(models.User, enrollment.learner_id)
+        learner_name = learner.full_name if learner else "A crew member"
         for admin in admins:
-            learner = db.get(models.User, enrollment.learner_id)
-            learner_name = learner.full_name if learner else "A crew member"
-            notify(db, admin.id, "orientation_master_approved", "Orientation fully approved by Master",
-                   body=f"{approver.full_name} has fully approved the {enrollment.program.title} orientation for {learner_name} on {info['vessel']}.",
-                   link="/admin/orientation/results")
+            notify(db, admin.id, "orientation_master_approved", "Orientation awaiting your approval",
+                   body=f"{approver.full_name} (Master/CE) has approved all tasks for {learner_name}'s {enrollment.program.title} on {info['vessel']}. Please give final approval.",
+                   link="/admin/orientation-program/enrollments")
                    
         db.commit()
                    
@@ -5370,5 +5385,44 @@ def approver_decide_submission(submission_id: str, req: OrientationDecideRequest
     else:
         raise HTTPException(400, "Invalid action")
         
+    db.commit()
+    return orientation_submission_detail(db, enrollment)
+
+
+# ── Super Admin final approval of orientation ──────────────────────────────
+class AdminOrientationDecideRequest(BaseModel):
+    action: str  # 'approve' | 'reject'
+
+@app.post("/api/admin/orientation/enrollments/{enrollment_id}/decide")
+def admin_decide_orientation_enrollment(
+    enrollment_id: str,
+    req: AdminOrientationDecideRequest,
+    admin: models.User = Depends(require_super_admin),
+    db: Session = Depends(get_db)
+):
+    """Super Admin gives the final approval (or rejection) after the Master/CE has approved."""
+    enrollment = db.get(models.OrientationEnrollment, enrollment_id)
+    if not enrollment:
+        raise HTTPException(404, "Enrollment not found")
+    if enrollment.status != "master_approved":
+        raise HTTPException(400, "Enrollment is not awaiting admin approval")
+
+    if req.action == 'approve':
+        enrollment.status = "approved"
+        db.commit()
+        if enrollment.learner_id:
+            notify(db, enrollment.learner_id, "orientation_approved", "Orientation fully approved!",
+                   body=f"Congratulations! Your {enrollment.program.title} has been fully approved by the admin. You are now promoted!",
+                   link="/orientation")
+    elif req.action == 'reject':
+        enrollment.status = "rejected"
+        db.commit()
+        if enrollment.learner_id:
+            notify(db, enrollment.learner_id, "orientation_rejected", "Orientation rejected",
+                   body=f"Your {enrollment.program.title} was rejected by the admin. Please contact your training officer.",
+                   link="/orientation")
+    else:
+        raise HTTPException(400, "Invalid action")
+
     db.commit()
     return orientation_submission_detail(db, enrollment)

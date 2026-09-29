@@ -1,3 +1,4 @@
+import './AdminUsers.css';
 import { useEffect, useState, useRef } from 'react'
 import { UserPlus, Check, Ban, AlertCircle, X, Search, Users, ChevronDown } from 'lucide-react'
 import { adminListUsers, adminCreateUser, adminUpdateUser } from '../../api.js'
@@ -230,7 +231,7 @@ export default function AdminUsers() {
                 <tr key={u.id} className={`${u.isActive ? '' : 'row-inactive'} premium-table-row`}>
                   <td className="mut" style={{ fontSize: 12 }}>{(currentPage - 1) * itemsPerPage + index + 1}</td>
                   <td>
-                    <div className="users-name-cell">
+                    <div className="users-name-cell" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
   <div style={{
     width: '32px',
     height: '32px',

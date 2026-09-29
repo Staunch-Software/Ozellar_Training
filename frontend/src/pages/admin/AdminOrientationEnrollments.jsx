@@ -1,9 +1,11 @@
-﻿import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
+import { useAuth } from '../../auth.jsx'
 import { ClipboardList, Ship, Cog, Trash2, AlertCircle, Search, UserPlus, X, Anchor, ShieldCheck, ShieldAlert, Users, Check } from 'lucide-react'
 import {
   adminListOrientationEnrollments, adminListOrientationPrograms,
   adminDeleteOrientationEnrollment, adminListOrientationCandidates,
   adminCreateOrientationEnrollment, adminListOrientationVessels,
+  adminDecideOrientationEnrollment,
 } from '../../api.js'
 import CardSelect from '../../components/CardSelect.jsx'
 import { useConfirm } from '../../components/ConfirmDialog.jsx'
@@ -14,10 +16,11 @@ const DEPT_LABEL = {
 }
 
 const STATUS_LABEL = {
-  in_progress: { label: 'In Progress', cls: 'orn-badge-status-in_progress' },
-  submitted:   { label: 'Submitted',   cls: 'orn-badge-status-submitted' },
-  approved:    { label: 'Approved',    cls: 'orn-badge-status-approved' },
-  rejected:    { label: 'Rejected',    cls: 'orn-badge-status-rejected' },
+  in_progress:      { label: 'In Progress',      cls: 'orn-badge-status-in_progress' },
+  submitted:        { label: 'Submitted',         cls: 'orn-badge-status-submitted' },
+  master_approved:  { label: 'Pending Admin',     cls: 'orn-badge-status-master_approved' },
+  approved:         { label: 'Approved',          cls: 'orn-badge-status-approved' },
+  rejected:         { label: 'Rejected',          cls: 'orn-badge-status-rejected' },
 }
 
 function initials(name) {
@@ -340,6 +343,8 @@ function EnrollModal({ programs, vessels, onClose, onDone }) {
 
 // ---- Main Page ----
 export default function AdminOrientationEnrollments() {
+  const { user: me } = useAuth()
+  const isSuperAdmin = me?.role === 'super_admin'
   const [enrollments, setEnrollments] = useState(null)
   const [programs, setPrograms] = useState([])
   const [vessels, setVessels] = useState([])
@@ -376,6 +381,18 @@ export default function AdminOrientationEnrollments() {
     }
   }
 
+  const decide = async (id, action) => {
+    setBusyId(id)
+    try {
+      await adminDecideOrientationEnrollment(id, action)
+      load()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setBusyId(null)
+    }
+  }
+
   const visible = useMemo(() => {
     if (!enrollments) return []
     if (!q.trim()) return enrollments
@@ -393,6 +410,7 @@ export default function AdminOrientationEnrollments() {
       total: all.length,
       in_progress: all.filter((e) => e.status === 'in_progress').length,
       submitted: all.filter((e) => e.status === 'submitted').length,
+      master_approved: all.filter((e) => e.status === 'master_approved').length,
       approved: all.filter((e) => e.status === 'approved').length,
     }
   }, [enrollments])
@@ -449,6 +467,11 @@ export default function AdminOrientationEnrollments() {
               <span className="orn-prog-stat-val" style={{ color: 'var(--orn-status-approved)' }}>{stats.approved}</span>
               <span className="orn-prog-stat-lbl">Approved</span>
             </div>
+            <div className="orn-prog-stat-sep" />
+            <div className="orn-prog-stat">
+              <span className="orn-prog-stat-val" style={{ color: 'var(--orn-status-master_approved, #f59e0b)' }}>{stats.master_approved}</span>
+              <span className="orn-prog-stat-lbl">Pending Admin</span>
+            </div>
           </div>
 
           <div className="orn-prog-stats-filters">
@@ -465,6 +488,7 @@ export default function AdminOrientationEnrollments() {
                 { value: '', label: 'All statuses' },
                 { value: 'in_progress', label: 'In Progress' },
                 { value: 'submitted', label: 'Submitted' },
+                { value: 'master_approved', label: 'Pending Admin' },
                 { value: 'approved', label: 'Approved' },
                 { value: 'rejected', label: 'Rejected' },
               ]} />
@@ -535,9 +559,22 @@ export default function AdminOrientationEnrollments() {
                         {e.createdAt ? new Date(e.createdAt).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
                       </td>
                       <td>
-                        <button className="btn sm" title="Remove enrollment" disabled={busyId === e.id} onClick={() => remove(e.id, e.learnerName)}>
-                          <Trash2 size={13} />
-                        </button>
+                        {e.status === 'master_approved' && isSuperAdmin ? (
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <button className="btn sm primary" title="Final Approve" disabled={busyId === e.id}
+                              onClick={() => decide(e.id, 'approve')}>
+                              <Check size={13} /> Approve
+                            </button>
+                            <button className="btn sm danger" title="Reject" disabled={busyId === e.id}
+                              onClick={() => decide(e.id, 'reject')}>
+                              <X size={13} /> Reject
+                            </button>
+                          </div>
+                        ) : (
+                          <button className="btn sm" title="Remove enrollment" disabled={busyId === e.id} onClick={() => remove(e.id, e.learnerName)}>
+                            <Trash2 size={13} />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   )

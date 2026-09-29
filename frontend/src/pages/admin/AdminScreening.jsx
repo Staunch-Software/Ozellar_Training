@@ -8,6 +8,13 @@ import {
 } from 'lucide-react'
 import * as api from '../../api.js'
 
+const getInitials = (name) => {
+  if (!name) return '?'
+  const p = name.trim().split(/\s+/)
+  if (p.length === 1) return p[0].substring(0, 2).toUpperCase()
+  return (p[0][0] + p[p.length - 1][0]).toUpperCase()
+}
+
 /* ── Design Tokens ── */
 const C = {
   surface: 'var(--surface)',
@@ -19,7 +26,7 @@ const C = {
 }
 
 const STATUS = {
-  pending:     { label:'Pending',     color:'#6366f1', bg:'rgba(99,102,241,0.1)', border:'rgba(99,102,241,0.25)' },
+  pending:     { label:'Pending',     color:'#0F766E', bg:'rgba(15,118,110,0.1)', border:'rgba(15,118,110,0.25)' },
   in_progress: { label:'In Progress', color:'#f59e0b', bg:'rgba(245,158,11,0.1)', border:'rgba(245,158,11,0.25)' },
   submitted:   { label:'Submitted',   color:'#10b981', bg:'rgba(16,185,129,0.1)', border:'rgba(16,185,129,0.25)' },
 }
@@ -130,14 +137,14 @@ function CardSelect({ value, onChange, options, placeholder, icon, required }) {
 function CreateCandidateCard({ form, setForm, saving, allTests, onCreate, onCancel }) {
   const [showPw, setShowPw] = useState(false)
   return (
-    <div style={{ background:'#fff', borderRadius:16, border:'1px solid var(--border)', boxShadow:'0 12px 32px rgba(0,0,0,.08), 0 4px 12px rgba(99,102,241,.06)', animation:'tw-in .3s ease-out' }}>
-      <div style={{ background:'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)', padding:'20px 24px', borderRadius:'16px 16px 0 0', borderBottom:'1px solid rgba(99,102,241,.15)', display:'flex', alignItems:'center', gap:14 }}>
-        <div style={{ width:40, height:40, borderRadius:12, background:'#4f46e5', display:'grid', placeItems:'center', flexShrink:0, boxShadow:'0 4px 12px rgba(79,70,229,.3)' }}>
-          <User size={18} color="#fff" />
+    <div style={{ background:'#fff', borderRadius:20, border:'1px solid var(--border)', boxShadow:'0 16px 40px rgba(0,0,0,.06), 0 4px 12px rgba(224,120,32,.04)', animation:'tw-in .3s ease-out', position: 'relative' }}>
+      <div style={{ background:'var(--accent)', padding:'24px 28px', borderRadius:'19px 19px 0 0', display:'flex', alignItems:'center', gap:16 }}>
+        <div style={{ width:44, height:44, borderRadius:14, background:'rgba(255,255,255,0.15)', display:'grid', placeItems:'center', flexShrink:0, border:'1px solid rgba(255,255,255,0.1)' }}>
+          <User size={20} color="#fff" />
         </div>
         <div>
-          <div style={{ fontSize:15, fontWeight:800, color:'#312e81', letterSpacing:'-.01em' }}>Add New Candidate</div>
-          <div style={{ fontSize:12.5, color:'#4f46e5', marginTop:3, fontWeight:600 }}>Create an account and assign a test</div>
+          <div style={{ fontSize:16.5, fontWeight:800, color:'#fff', letterSpacing:'-.01em' }}>Add New Candidate</div>
+          <div style={{ fontSize:13, color:'rgba(255,255,255,0.8)', marginTop:4, fontWeight:500 }}>Create an account and assign a test</div>
         </div>
       </div>
       <form onSubmit={onCreate} style={{ padding:'28px 24px', display:'flex', flexDirection:'column', gap:20 }}>
@@ -172,7 +179,7 @@ function CreateCandidateCard({ form, setForm, saving, allTests, onCreate, onCanc
           <button type="button" onClick={onCancel} style={{ padding:'11px 24px', borderRadius:12, border:'1px solid #d1d5db', background:'#fff', fontWeight:600, color:'#4b5563', cursor:'pointer', fontSize:14, transition:'all .2s' }}>
             Cancel
           </button>
-          <button type="submit" disabled={saving} style={{ padding:'11px 28px', borderRadius:12, border:'none', background: saving ? '#a5b4fc' : '#4f46e5', color:'#fff', fontWeight:700, fontSize:14, cursor: saving ? 'not-allowed' : 'pointer', transition:'all .2s', boxShadow:'0 4px 14px rgba(79,70,229,.25)' }}>
+          <button type="submit" disabled={saving} style={{ padding:'11px 28px', borderRadius:12, border:'none', background: saving ? '#fcd34d' : 'var(--accent)', color:'#fff', fontWeight:700, fontSize:14, cursor: saving ? 'not-allowed' : 'pointer', transition:'all .2s', boxShadow:'0 4px 14px rgba(224,120,32,.25)' }}>
             {saving ? 'Adding Candidate…' : 'Add Candidate'}
           </button>
         </div>
@@ -213,14 +220,14 @@ function EditCandidateCard({ candidate, allTests, onSave, onCancel }) {
   }
 
   return (
-    <div style={{ background:'#fff', borderRadius:16, border:'1px solid var(--border)', boxShadow:'0 12px 32px rgba(0,0,0,.08), 0 4px 12px rgba(79,70,229,.06)', animation:'tw-in .3s ease-out' }}>
-      <div style={{ background:'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)', padding:'20px 24px', borderRadius:'16px 16px 0 0', borderBottom:'1px solid rgba(99,102,241,.15)', display:'flex', alignItems:'center', gap:14 }}>
-        <div style={{ width:40, height:40, borderRadius:12, background:'#4f46e5', display:'grid', placeItems:'center', flexShrink:0, boxShadow:'0 4px 12px rgba(79,70,229,.3)' }}>
+    <div style={{ background:'#fff', borderRadius:16, border:'1px solid var(--border)', boxShadow:'0 12px 32px rgba(0,0,0,.08), 0 4px 12px rgba(15,118,110,.06)', animation:'tw-in .3s ease-out' }}>
+      <div style={{ background:'linear-gradient(135deg, #f0fdf4 0%, #ccfbf1 100%)', padding:'20px 24px', borderRadius:'16px 16px 0 0', borderBottom:'1px solid rgba(15,118,110,.15)', display:'flex', alignItems:'center', gap:14 }}>
+        <div style={{ width:40, height:40, borderRadius:12, background:'#0F766E', display:'grid', placeItems:'center', flexShrink:0, boxShadow:'0 4px 12px rgba(15,118,110,.3)' }}>
           <Edit3 size={18} color="#fff" />
         </div>
         <div>
-          <div style={{ fontSize:15, fontWeight:800, color:'#312e81', letterSpacing:'-.01em' }}>Edit Candidate</div>
-          <div style={{ fontSize:12.5, color:'#4f46e5', marginTop:3, fontWeight:600 }}>{candidate.testTitle}</div>
+          <div style={{ fontSize:15, fontWeight:800, color:'#0a2221', letterSpacing:'-.01em' }}>Edit Candidate</div>
+          <div style={{ fontSize:12.5, color:'#0F766E', marginTop:3, fontWeight:600 }}>{candidate.testTitle}</div>
         </div>
       </div>
       <form onSubmit={submit} style={{ padding:'28px 24px', display:'flex', flexDirection:'column', gap:20 }}>
@@ -261,7 +268,7 @@ function EditCandidateCard({ candidate, allTests, onSave, onCancel }) {
           <button type="button" onClick={onCancel} style={{ padding:'11px 24px', borderRadius:12, border:'1px solid #d1d5db', background:'#fff', fontWeight:600, color:'#4b5563', cursor:'pointer', fontSize:14, transition:'all .2s' }}>
             Cancel
           </button>
-          <button type="submit" disabled={saving} style={{ padding:'11px 28px', borderRadius:12, border:'none', background: saving ? '#a5b4fc' : '#4f46e5', color:'#fff', fontWeight:700, fontSize:14, cursor: saving ? 'not-allowed' : 'pointer', transition:'all .2s', boxShadow:'0 4px 14px rgba(79,70,229,.25)' }}>
+          <button type="submit" disabled={saving} style={{ padding:'11px 28px', borderRadius:12, border:'none', background: saving ? '#99f6e4' : '#0F766E', color:'#fff', fontWeight:700, fontSize:14, cursor: saving ? 'not-allowed' : 'pointer', transition:'all .2s', boxShadow:'0 4px 14px rgba(15,118,110,.25)' }}>
             {saving ? 'Saving…' : 'Save Changes'}
           </button>
         </div>
@@ -308,7 +315,7 @@ export default function AdminScreening() {
 
       {/* ── Page header + Tabs in one row ── */}
             {/* ── Page header + Tabs + contextual action, all one row ── */}
-      <div className="am-header">
+      <div className="am-page-header">
         <div>
           <div style={{ fontSize:11, fontWeight:700, letterSpacing:'.08em', textTransform:'uppercase', color:'var(--text-faint)', marginBottom:6 }}>Ozellar Marine</div>
           <h1 style={{ fontSize:22, fontWeight:800, margin:0, letterSpacing:'-.01em' }}>Assessment Management</h1>
@@ -317,26 +324,20 @@ export default function AdminScreening() {
           </p>
         </div>
 
-        {/* ── Tabs + contextual "Create Test" action, kept together as one unit ── */}
+        {/* ── Tabs ── */}
         <div className="am-header-actions">
           <div className="am-tabs">
             {TABS.map(t => (
               <button key={t.key} className="am-tab-btn" onClick={() => { setTab(t.key); setBuilderTest(null); setBuilderSection(null) }}
                 style={{
-                  background: tab === t.key ? 'var(--accent)' : 'transparent',
-                  color: tab === t.key ? 'var(--on-accent)' : 'var(--text-mut)',
-                  boxShadow: tab === t.key ? '0 2px 10px rgba(47,111,237,.3)' : 'none',
+                  background: tab === t.key ? '#0F766E' : 'transparent',
+                  color: tab === t.key ? '#fff' : 'var(--text-mut)',
+                  boxShadow: tab === t.key ? '0 2px 10px rgba(15,118,110,.3)' : 'none',
                 }}>
                 {t.icon} <span>{t.label}</span>
               </button>
             ))}
           </div>
-
-          {tab === 'tests' && !builderTest && (
-            <button className="btn primary am-header-cta" onClick={() => setShowCreateTest(v => !v)}>
-              <Plus size={15}/> {showCreateTest ? 'Cancel' : 'Create Test'}
-            </button>
-          )}
         </div>
       </div>
 
@@ -379,15 +380,15 @@ export default function AdminScreening() {
 // ============================================================
 function CreateTestCard({ form, setForm, saving, onCreate, onCancel }) {
   return (
-    <div style={{ background:'#fff', borderRadius:16, border:'1px solid var(--border)', overflow:'hidden', boxShadow:'0 12px 32px rgba(0,0,0,.08), 0 4px 12px rgba(37,99,235,.06)', animation:'tw-in .3s ease-out' }}>
+    <div style={{ background:'#fff', borderRadius:20, border:'1px solid var(--border)', overflow:'hidden', boxShadow:'0 16px 40px rgba(0,0,0,.06), 0 4px 12px rgba(224,120,32,.04)', animation:'tw-in .3s ease-out' }}>
       <style>{`@keyframes tw-in { from { opacity:0; transform:translateY(-8px) } to { opacity:1; transform:translateY(0) } }`}</style>
-      <div style={{ background:'linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%)', padding:'20px 24px', borderBottom:'1px solid rgba(37,99,235,.15)', display:'flex', alignItems:'center', gap:14 }}>
-        <div style={{ width:40, height:40, borderRadius:12, background:'#2563eb', display:'grid', placeItems:'center', flexShrink:0, boxShadow:'0 4px 12px rgba(37,99,235,.3)' }}>
-          <ClipboardList size={18} color="#fff" />
+      <div style={{ background:'var(--accent)', padding:'24px 28px', display:'flex', alignItems:'center', gap:16 }}>
+        <div style={{ width:44, height:44, borderRadius:14, background:'rgba(255,255,255,0.15)', display:'grid', placeItems:'center', flexShrink:0, border:'1px solid rgba(255,255,255,0.1)' }}>
+          <ClipboardList size={20} color="#fff" />
         </div>
         <div>
-          <div style={{ fontSize:15, fontWeight:800, color:'#1e3a8a', letterSpacing:'-.01em' }}>Create New Assessment</div>
-          <div style={{ fontSize:12.5, color:'#3b82f6', marginTop:3, fontWeight:600 }}>Configure the core parameters for the new test</div>
+          <div style={{ fontSize:16.5, fontWeight:800, color:'#fff', letterSpacing:'-.01em' }}>Create New Assessment</div>
+          <div style={{ fontSize:13, color:'rgba(255,255,255,0.8)', marginTop:4, fontWeight:500 }}>Configure the core parameters for the new test</div>
         </div>
       </div>
       <form onSubmit={onCreate} style={{ padding:'28px 24px', display:'flex', flexDirection:'column', gap:24 }}>
@@ -419,7 +420,7 @@ function CreateTestCard({ form, setForm, saving, onCreate, onCancel }) {
           <button type="button" onClick={onCancel} style={{ padding:'11px 24px', borderRadius:12, border:'1px solid #d1d5db', background:'#fff', fontWeight:600, color:'#4b5563', cursor:'pointer', fontSize:14, transition:'all .2s' }}>
             Cancel
           </button>
-          <button type="submit" disabled={saving} style={{ padding:'11px 28px', borderRadius:12, border:'none', background: saving ? '#93c5fd' : '#2563eb', color:'#fff', fontWeight:700, fontSize:14, cursor: saving ? 'not-allowed' : 'pointer', transition:'all .2s', boxShadow:'0 4px 14px rgba(37,99,235,.25)' }}>
+          <button type="submit" disabled={saving} style={{ padding:'11px 28px', borderRadius:12, border:'none', background: saving ? 'var(--accent-weak)' : 'var(--accent)', color:'#fff', fontWeight:700, fontSize:14, cursor: saving ? 'not-allowed' : 'pointer', transition:'all .2s', boxShadow:'0 4px 14px rgba(224,120,32,.25)' }}>
             {saving ? 'Creating Assessment…' : 'Create Assessment'}
           </button>
         </div>
@@ -473,7 +474,7 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError, showCreate, setSho
         <p style={{ margin:'0 0 28px', fontSize:14.5, color:'var(--text-mut)', lineHeight:1.6 }}>{confirmDialog.message}</p>
         <div style={{ display:'flex', gap:12, justifyContent:'flex-end' }}>
           <button onClick={() => setConfirmDialog(null)} style={{ padding:'11px 20px', borderRadius:12, border:'none', background:'var(--surface-2)', color:'var(--text-mut)', fontWeight:700, fontSize:14, cursor:'pointer' }}>Cancel</button>
-          <button onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null) }} style={{ padding:'11px 20px', borderRadius:12, border:'none', background: confirmDialog.isDestructive ? '#ef4444' : '#4f46e5', color:'#fff', fontWeight:700, fontSize:14, cursor:'pointer' }}>
+          <button onClick={() => { confirmDialog.onConfirm(); setConfirmDialog(null) }} style={{ padding:'11px 20px', borderRadius:12, border:'none', background: confirmDialog.isDestructive ? '#ef4444' : '#0F766E', color:'#fff', fontWeight:700, fontSize:14, cursor:'pointer' }}>
             {confirmDialog.isDestructive ? 'Delete' : 'Confirm'}
           </button>
         </div>
@@ -492,7 +493,7 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError, showCreate, setSho
         {/* Hero card */}
         <Card style={{ overflow:'hidden' }}>
           <div className="am-hero-row" style={{ padding:'20px 24px', gap:20 }}>
-            <div style={{ width:52, height:52, borderRadius:15, background: t.isActive ? 'var(--accent-weak)' : 'var(--surface-2)', border:`1.5px solid ${t.isActive ? 'rgba(47,111,237,.25)' : 'var(--border)'}`, display:'grid', placeItems:'center', flexShrink:0 }}>
+            <div style={{ width:52, height:52, borderRadius:15, background: t.isActive ? 'var(--accent-weak)' : 'var(--surface-2)', border:`1.5px solid ${t.isActive ? 'rgba(15,118,110,.25)' : 'var(--border)'}`, display:'grid', placeItems:'center', flexShrink:0 }}>
               <ClipboardList size={22} color={t.isActive ? 'var(--accent)' : 'var(--text-faint)'} />
             </div>
             <div style={{ flex:1, minWidth:0 }}>
@@ -535,6 +536,19 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError, showCreate, setSho
    if (tests.length === 0) return (
     <>
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+      {/* TOOLBAR */}
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 12, flex: 1, minWidth: 280 }}>
+          <div style={{ position: 'relative', flex: 1, maxWidth: 360 }}>
+            <Search size={16} color="var(--text-mut)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+            <input type="text" placeholder="Search tests..." style={{ width: '100%', padding: '10px 14px 10px 40px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--surface)', outline: 'none', fontSize: 13.5 }} />
+          </div>
+        </div>
+        <button style={{ background: showCreate ? 'transparent' : 'var(--accent)', display: 'flex', alignItems: 'center', gap: 7, borderRadius: 12, padding: '9px 20px', fontSize: 13.5, fontWeight: 700, border: showCreate ? '1px solid var(--border)' : 'none', color: showCreate ? 'var(--text)' : '#fff', boxShadow: showCreate ? 'none' : '0 4px 12px rgba(224,120,32,.25)', cursor: 'pointer', transition: 'all .2s' }} onClick={() => setShowCreate(v => !v)}>
+          {showCreate ? <><X size={15}/> Cancel</> : <><Plus size={15}/> Create Test</>}
+        </button>
+      </div>
+
       {showCreate && <CreateTestCard form={form} setForm={setForm} saving={saving} onCreate={create} onCancel={() => setShowCreate(false)} />}
       <Card style={{ padding:'80px 0', textAlign:'center' }}>
         <ClipboardList size={44} style={{ opacity:.2, marginBottom:12, color:'var(--text-mut)' }}/>
@@ -550,14 +564,27 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError, showCreate, setSho
     return (
     <>
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
+      {/* TOOLBAR */}
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 12, flex: 1, minWidth: 280 }}>
+          <div style={{ position: 'relative', flex: 1, maxWidth: 360 }}>
+            <Search size={16} color="var(--text-mut)" style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)' }} />
+            <input type="text" placeholder="Search tests..." style={{ width: '100%', padding: '10px 14px 10px 40px', borderRadius: 12, border: '1.5px solid var(--border)', background: 'var(--surface)', outline: 'none', fontSize: 13.5 }} />
+          </div>
+        </div>
+        <button style={{ background: showCreate ? 'transparent' : 'var(--accent)', display: 'flex', alignItems: 'center', gap: 7, borderRadius: 12, padding: '9px 20px', fontSize: 13.5, fontWeight: 700, border: showCreate ? '1px solid var(--border)' : 'none', color: showCreate ? 'var(--text)' : '#fff', boxShadow: showCreate ? 'none' : '0 4px 12px rgba(224,120,32,.25)', cursor: 'pointer', transition: 'all .2s' }} onClick={() => setShowCreate(v => !v)}>
+          {showCreate ? <><X size={15}/> Cancel</> : <><Plus size={15}/> Create Test</>}
+        </button>
+      </div>
+
       {showCreate && <CreateTestCard form={form} setForm={setForm} saving={saving} onCreate={create} onCancel={() => setShowCreate(false)} />}
       <div style={{ display:'flex', flexDirection:'column', gap:12 }}>
         {tests.map(t => (
           <div key={t.id} className="am-hero-row" style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:18, padding:'24px 28px', gap:24, opacity: t.isActive ? 1 : 0.7, transition:'all .2s', boxShadow:'0 4px 20px rgba(0,0,0,.03)' }}
                onMouseEnter={e => e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,.06)'}
                onMouseLeave={e => e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,.03)'}>
-            <div style={{ width:54, height:54, borderRadius:16, background: t.isActive ? 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)' : 'var(--surface-2)', border:`1px solid ${t.isActive ? 'rgba(99,102,241,.15)' : 'var(--border)'}`, display:'grid', placeItems:'center', flexShrink:0, boxShadow: t.isActive ? '0 4px 12px rgba(79,70,229,.15)' : 'none' }}>
-              <ClipboardList size={22} color={t.isActive ? '#4f46e5' : 'var(--text-mut)'}/>
+            <div style={{ width:54, height:54, borderRadius:16, background: t.isActive ? 'linear-gradient(135deg, #f0fdf4 0%, #ccfbf1 100%)' : 'var(--surface-2)', border:`1px solid ${t.isActive ? 'rgba(15,118,110,.15)' : 'var(--border)'}`, display:'grid', placeItems:'center', flexShrink:0, boxShadow: t.isActive ? '0 4px 12px rgba(15,118,110,.15)' : 'none' }}>
+              <ClipboardList size={22} color={t.isActive ? '#0F766E' : 'var(--text-mut)'}/>
             </div>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:8 }}>
@@ -567,7 +594,7 @@ function TestsTab({ tests, onRefresh, onOpenBuilder, onError, showCreate, setSho
               <div style={{ display:'flex', flexWrap:'wrap', gap:18, color:'var(--text-mut)', fontSize:13, fontWeight:500 }}>
                 <span style={{ display:'flex', alignItems:'center', gap:6 }}><Clock size={13} color="var(--accent)"/>{t.timerMinutes} min</span>
                 <span style={{ display:'flex', alignItems:'center', gap:6 }}><CheckCircle2 size={13} color="var(--success)"/>+{t.correctScore} / −{t.wrongPenalty} marks</span>
-                <span style={{ display:'flex', alignItems:'center', gap:6 }}><Layers size={13} color="#8b5cf6"/>{t.totalQuestions} questions</span>
+                <span style={{ display:'flex', alignItems:'center', gap:6 }}><Layers size={13} color="#123C3A"/>{t.totalQuestions} questions</span>
                 <span style={{ display:'flex', alignItems:'center', gap:6 }}><Users size={13} color="#f59e0b"/>{t.candidateCount} candidates ({t.submittedCount} submitted)</span>
               </div>
             </div>
@@ -697,7 +724,7 @@ function TestBuilder({ test, section, onSelectSection, onBack, onRefresh, onErro
 
         {(test.sections || []).map((sec, i) => (
           <div key={sec.id} className="am-hero-row" style={{ gap:14, padding:'16px 22px', background:'var(--surface)', border:'1px solid var(--border)', borderRadius:16, transition:'box-shadow .15s' }}>
-            <div style={{ width:38, height:38, borderRadius:12, background: sec.type==='personal_data' ? 'rgba(99,102,241,0.1)' : 'var(--accent-weak)', border:`1px solid ${sec.type==='personal_data'?'rgba(99,102,241,0.25)':'rgba(47,111,237,0.25)'}`, display:'grid', placeItems:'center', fontWeight:800, fontSize:13.5, color: sec.type==='personal_data'?'#6366f1':'var(--accent)', flexShrink:0 }}>
+            <div style={{ width:38, height:38, borderRadius:12, background: sec.type==='personal_data' ? 'rgba(15,118,110,0.1)' : 'var(--accent-weak)', border:`1px solid ${sec.type==='personal_data'?'rgba(15,118,110,0.25)':'rgba(15,118,110,0.25)'}`, display:'grid', placeItems:'center', fontWeight:800, fontSize:13.5, color: sec.type==='personal_data'?'#0F766E':'var(--accent)', flexShrink:0 }}>
               {i + 1}
             </div>
             <div style={{ flex:1, minWidth:0 }}>
@@ -908,18 +935,20 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
       {/* Toolbar */}
-      <div style={{ display:'flex', gap:10, alignItems:'center', flexWrap:'wrap' }}>
-        <div style={{ position:'relative', flex:'1 1 180px', minWidth:160, maxWidth:280 }}>
-          <Search size={14} style={{ position:'absolute', left:11, top:'50%', transform:'translateY(-50%)', color:'var(--text-faint)', pointerEvents:'none' }}/>
-          <input type="text" placeholder="Search name / mobile…" value={search} onChange={e => setSearch(e.target.value)}
-            style={{ width:'100%', padding:'8px 12px 8px 32px', borderRadius:10, border:'1.5px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:13.5, fontFamily:'inherit', outline:'none', boxSizing:'border-box' }}/>
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'space-between', marginBottom: 8, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 12, flex: 1, minWidth: 280 }}>
+          <div style={{ position:'relative', flex:1, maxWidth:360 }}>
+            <Search size={16} color="var(--text-mut)" style={{ position:'absolute', left:14, top:'50%', transform:'translateY(-50%)' }}/>
+            <input type="text" placeholder="Search name / mobile…" value={search} onChange={e => setSearch(e.target.value)}
+              style={{ width:'100%', padding:'10px 14px 10px 40px', borderRadius:12, border:'1.5px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:13.5, fontFamily:'inherit', outline:'none', boxSizing:'border-box' }}/>
+          </div>
+          <div style={{ flex:'1 1 180px', minWidth:160, maxWidth:280 }}>
+            <CardSelect value={filterTest} onChange={setFilterTest} options={[{id:'', title:'All Tests'}, ...allTests]} placeholder="Filter by Test…" icon={<Filter size={14}/>}/>
+          </div>
+          <button className="iconbtn" onClick={onRefresh} title="Refresh" style={{ padding: '0 14px', border: '1.5px solid var(--border)', borderRadius: 12, background: 'var(--surface)' }}><RefreshCw size={15} color="var(--text-mut)"/></button>
         </div>
-        <div style={{ flex:'1 1 180px', minWidth:160, maxWidth:280 }}>
-          <CardSelect value={filterTest} onChange={setFilterTest} options={[{id:'', title:'All Tests'}, ...allTests]} placeholder="Filter by Test…" icon={<Filter size={14}/>}/>
-        </div>
-        <button className="iconbtn" onClick={onRefresh} title="Refresh"><RefreshCw size={15}/></button>
-        <button className="btn primary" onClick={() => setShowCreate(v=>!v)} style={{ marginLeft:'auto', display:'flex', alignItems:'center', gap:6, borderRadius:10, fontWeight:600 }}>
-          <Plus size={14}/> {showCreate ? 'Cancel' : 'Add Candidate'}
+        <button style={{ background: showCreate ? 'transparent' : 'var(--accent)', display: 'flex', alignItems: 'center', gap: 7, borderRadius: 12, padding: '9px 20px', fontSize: 13.5, fontWeight: 700, border: showCreate ? '1px solid var(--border)' : 'none', color: showCreate ? 'var(--text)' : '#fff', boxShadow: showCreate ? 'none' : '0 4px 12px rgba(224,120,32,.25)', cursor: 'pointer', transition: 'all .2s' }} onClick={() => setShowCreate(v=>!v)}>
+          {showCreate ? <><X size={15}/> Cancel</> : <><Plus size={15}/> Add Candidate</>}
         </button>
       </div>
 
@@ -932,15 +961,49 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
       )}
 
       {/* Stats row */}
-      <div className="am-stats-grid-3" style={{ gap:12 }}>
+      <div className="am-stats-grid-3" style={{ gap:16, marginBottom:12 }}>
         {[
-          { label:'Total', value:filtered.length, color:'var(--accent)', bg:'var(--accent-weak)' },
-          { label:'In Progress', value:filtered.filter(c=>c.status==='in_progress').length, color:'#f59e0b', bg:'rgba(245,158,11,.1)' },
-          { label:'Submitted', value:filtered.filter(c=>c.status==='submitted').length, color:'var(--success)', bg:'var(--success-weak)' },
+          { 
+            label:'Total Candidates', value:filtered.length, 
+            bg:'#fff',
+            textColor: '#0f172a',
+            labelColor: '#64748b',
+            icon: <Users size={18} color="#4f46e5"/>,
+            iconBg: 'rgba(79,70,229,0.1)',
+            border: '1px solid var(--border)',
+            shadow: '0 8px 24px rgba(0,0,0,.04)'
+          },
+          { 
+            label:'In Progress', value:filtered.filter(c=>c.status==='in_progress').length,
+            bg:'#fff',
+            textColor: '#0f172a',
+            labelColor: '#64748b',
+            icon: <Clock size={18} color="var(--accent)"/>,
+            iconBg: 'rgba(224,120,32,0.1)',
+            border: '1px solid var(--border)',
+            shadow: '0 8px 24px rgba(0,0,0,.04)'
+          },
+          { 
+            label:'Submitted', value:filtered.filter(c=>c.status==='submitted').length,
+            bg:'#fff',
+            textColor: '#0f172a',
+            labelColor: '#64748b',
+            icon: <CheckCircle2 size={18} color="#0F766E"/>,
+            iconBg: 'rgba(15,118,110,0.1)',
+            border: '1px solid var(--border)',
+            shadow: '0 8px 24px rgba(0,0,0,.04)'
+          },
         ].map(s => (
-          <div key={s.label} style={{ background:s.bg, border:`1px solid ${s.color}25`, borderRadius:14, padding:'14px 18px', display:'flex', alignItems:'center', gap:12 }}>
-            <div style={{ fontSize:26, fontWeight:800, color:s.color }}>{s.value}</div>
-            <div style={{ fontSize:12, color:s.color, fontWeight:600, opacity:.8 }}>{s.label}</div>
+          <div key={s.label} style={{ background:s.bg, border:s.border, borderRadius:20, padding:'18px 22px', display:'flex', alignItems:'center', gap:16, boxShadow:s.shadow, position:'relative', overflow:'hidden', transition: 'transform .2s' }}
+               onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+               onMouseLeave={e => e.currentTarget.style.transform = 'none'}>
+            <div style={{ width:44, height:44, borderRadius:12, background:s.iconBg, display:'grid', placeItems:'center' }}>
+              {s.icon}
+            </div>
+            <div style={{ position: 'relative', zIndex: 1 }}>
+              <div style={{ fontSize:26, fontWeight:800, color:s.textColor, lineHeight:1, letterSpacing:'-0.03em' }}>{s.value}</div>
+              <div style={{ fontSize:13, color:s.labelColor, fontWeight:600, marginTop:6 }}>{s.label}</div>
+            </div>
           </div>
         ))}
       </div>
@@ -971,10 +1034,10 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                     <td style={{ padding:'14px 20px', fontWeight:700, color:'var(--text)' }}>
                       <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                        <div style={{ width:32, height:32, borderRadius:'50%', background:'var(--accent-weak)', color:'var(--accent)', display:'grid', placeItems:'center', fontSize:12, fontWeight:800 }}>
-                          {c.fullName.charAt(0).toUpperCase()}
+                        <div style={{ width:32, height:32, borderRadius:'50%', background:'linear-gradient(135deg, #F58220, #E07820)', color:'#fff', boxShadow:'0 2px 6px rgba(224,120,32,0.25)', display:'grid', placeItems:'center', fontSize:12, fontWeight:700, flexShrink:0 }}>
+                          {getInitials(c.fullName)}
                         </div>
-                        {c.fullName}
+                        <span style={{ fontSize:13, fontWeight:600 }}>{c.fullName}</span>
                       </div>
                     </td>
                     <td style={{ padding:'14px 20px', color:'var(--text-mut)' }}>{c.mobileNumber||'—'}</td>
@@ -984,9 +1047,11 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
                     <td style={{ padding:'14px 20px', color:'var(--text-mut)', fontSize:12.5, whiteSpace:'nowrap' }}>{fmtDt(c.submittedAt)}</td>
                     <td style={{ padding:'14px 20px', fontWeight:800, color: c.score!=null ? 'var(--accent)' : 'var(--text-faint)', fontSize:14 }}>{c.score!=null?c.score:'—'}</td>
                     <td style={{ padding:'14px 20px' }}>{tabSwitchBadge(c.tabSwitchCount)}</td>
-                    <td style={{ padding:'14px 20px', textAlign:'right', whiteSpace:'nowrap' }}>
-                      <button className="iconbtn" onClick={() => setEditCand(c)} title="Edit Candidate"><Edit3 size={15} color="var(--accent)"/></button>
-                      <button className="iconbtn" onClick={() => del(c.id)} title="Delete Candidate"><Trash2 size={15} color="var(--danger)"/></button>
+                    <td style={{ padding:'14px 20px' }}>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:10 }}>
+                        <button className="iconbtn" onClick={() => setEditCand(c)} title="Edit Candidate" style={{ background:'var(--surface-2)', padding:8, borderRadius:8 }}><Edit3 size={15} color="#0F766E"/></button>
+                        <button className="iconbtn" onClick={() => del(c.id)} title="Delete Candidate" style={{ background:'rgba(239,68,68,0.1)', padding:8, borderRadius:8 }}><Trash2 size={15} color="var(--danger)"/></button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -1102,10 +1167,10 @@ function ResultsTab({ results, onRefresh, onError }) {
                       onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
                     <td style={{ padding:'14px 20px', fontWeight:700, color:'var(--text)' }}>
                       <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                        <div style={{ width:32, height:32, borderRadius:'50%', background:'var(--accent-weak)', color:'var(--accent)', display:'grid', placeItems:'center', fontSize:12, fontWeight:800 }}>
-                          {r.fullName.charAt(0).toUpperCase()}
+                        <div style={{ width:32, height:32, borderRadius:'50%', background:'linear-gradient(135deg, #F58220, #E07820)', color:'#fff', boxShadow:'0 2px 6px rgba(224,120,32,0.25)', display:'grid', placeItems:'center', fontSize:12, fontWeight:700, flexShrink:0 }}>
+                          {getInitials(r.fullName)}
                         </div>
-                        {r.fullName}
+                        <span style={{ fontSize:13, fontWeight:600 }}>{r.fullName}</span>
                       </div>
                     </td>
                     <td style={{ padding:'14px 20px', color:'var(--text-mut)' }}>{r.mobileNumber||'—'}</td>

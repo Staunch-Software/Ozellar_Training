@@ -18,9 +18,9 @@ const NAV_ITEMS = [
     label: 'Assignments',
     sub: 'Enroll & track crew',
     icon: Grid3x3,
-    color: '#7c3aed',
-    colorWeak: 'rgba(124,58,237,0.1)',
-    colorBorder: 'rgba(124,58,237,0.35)',
+    color: '#E07820',
+    colorWeak: 'rgba(224,120,32,0.1)',
+    colorBorder: 'rgba(224,120,32,0.35)',
   },
   {
     to: '/admin/course-management/report',

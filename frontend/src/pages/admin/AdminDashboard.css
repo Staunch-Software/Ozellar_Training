@@ -1,0 +1,59 @@
+@media (max-width: 1279px) {
+  .dash-chart-grid { gap: 14px; } }
+@media (max-width: 1024px) {
+
+  
+  .dash-chart-grid { grid-template-columns: 1fr; }
+  .dash-chart-card.span-2 { grid-column: span 1; } }
+@media (max-width: 768px) {
+
+  .dash-header { flex-direction: column; align-items: flex-start; }
+  .dash-kpi-grid-row { grid-template-columns: repeat(3, 1fr); overflow-x: auto; } }
+@media (max-width: 640px) {
+
+  .dash-kpi-grid { grid-template-columns: repeat(2, 1fr); }
+  .dash-kpi-grid-row { grid-template-columns: repeat(2, 1fr); }
+  .dash-rate-grid { flex-wrap: wrap; }
+  .dash-rate-cell { flex: 1 0 calc(50% - 7px); max-width: none; } }
+@media (max-width: 480px) {
+
+  .dash-kpi { padding: 12px; }
+  .dash-kpi-value { font-size: 18px; }
+  .dash-chart-card { padding: 14px; }
+  .dash-cert-row { flex-wrap: wrap; } }
+@media (max-width: 380px) {
+
+  .dash-kpi-grid, .dash-kpi-grid-row { grid-template-columns: 1fr; }
+  .dash-rate-cell { flex: 1 0 100%; } }
+@media (max-width: 320px) {
+
+  .dash-title { font-size: 20px; }
+  .dash-kpi-value { font-size: 16px; } }
+@media (min-width: 2560px) {
+  .dash-kpi { padding: 32px 36px; gap: 24px; border-radius: 20px; }
+  .dash-kpi-icon { width: 64px; height: 64px; border-radius: 18px; }
+  .dash-kpi-icon svg { width: 32px; height: 32px; }
+  .dash-kpi-label { font-size: 18px; }
+  .dash-kpi-value { font-size: 42px; margin-top: 8px; }
+  .dash-kpi-note { font-size: 15px; margin-top: 6px; }
+
+  .dash-chart-card { padding: 42px; border-radius: 24px; gap: 20px; }
+  .dash-chart-card h3 { font-size: 26px; }
+  .dash-chart-card p { font-size: 17px; margin-bottom: 24px; }
+  
+  .dash-rate-cell { padding: 24px; border-radius: 16px; gap: 16px; }
+  .dash-rate-cell .c-title { font-size: 16px; margin-top: 14px; }
+  .dash-rate-cell .c-meta { font-size: 14px; margin-top: 6px; }
+
+  .dash-cert-row { padding: 24px 32px; gap: 24px; border-radius: 16px; }
+  .dash-cert-row .initials { width: 48px; height: 48px; font-size: 17px; }
+  .dash-cert-row .name { font-size: 19px; }
+  .dash-cert-row .course { font-size: 16px; }
+  .dash-cert-row .score { font-size: 19px; }
+  .dash-cert-row .time { font-size: 15px; }
+  
+  .dash-kpi-grid-row { gap: 32px; margin-bottom: 42px; }
+  .dash-chart-grid { gap: 42px; margin-bottom: 42px; }
+}
+
+

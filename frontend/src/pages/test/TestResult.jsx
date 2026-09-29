@@ -23,8 +23,8 @@ export default function TestResult() {
     <div className="ex-result-root">
       <style>{`
         :root {
-          --brand: #0d3355;
-          --brand-deep: #082138;
+          --brand: #0f766e;
+          --brand-deep: #123c3a;
           --brand-mid: #b8842c;
           --ink: #101f2b;
           --ink-mut: #54697a;

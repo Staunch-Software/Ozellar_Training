@@ -1,3 +1,4 @@
+import './Assessment.css';
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { Check, X, Dot, ArrowRight, ArrowLeft, Award, RotateCcw, AlertCircle } from 'lucide-react'

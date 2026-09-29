@@ -7,8 +7,8 @@ import {
 import { adminReport, adminSetEnrollments, adminFetchCertificatePdfUrl, adminReassignCourse } from '../../api.js'
 import Pagination from '../../components/Pagination.jsx'
 
-const ACCENT = '#7c3aed'
-const ACCENT_GRADIENT = 'linear-gradient(135deg, #7c3aed, #a855f7)'
+const ACCENT = '#E07820'
+const ACCENT_GRADIENT = 'linear-gradient(135deg, #E07820, #F58220)'
 const VISIBLE_CHIPS = 4
 
 const formatMobile = (mobileNo) => {
@@ -54,13 +54,13 @@ function ModalShell({ icon, title, subtitle, width = 560, busy, onClose, childre
         width: `min(${width}px, 100%)`, maxHeight: '88vh', overflow: 'hidden',
         display: 'flex', flexDirection: 'column',
         background: 'var(--surface)', borderRadius: 16,
-        border: '1.5px solid rgba(124,58,237,0.28)',
+        border: '1.5px solid rgba(224,120,32,0.28)',
         boxShadow: '0 20px 60px rgba(0,0,0,0.35)',
       }}>
         <div style={{
           display: 'flex', alignItems: 'center', gap: 12,
           padding: '18px 22px', borderBottom: '1px solid var(--border)',
-          background: 'rgba(124,58,237,0.08)', flexShrink: 0,
+          background: 'rgba(224,120,32,0.08)', flexShrink: 0,
         }}>
           <div style={{
             width: 36, height: 36, borderRadius: 10, background: ACCENT_GRADIENT,
@@ -176,7 +176,7 @@ function CourseProgressModal({ row, course, cell, onClose, onManage, onReassign 
           {cell.pendingApproval && (
             <span style={{
               display: 'inline-flex', alignItems: 'center', gap: 6, padding: '5px 12px', borderRadius: 999,
-              background: 'rgba(124,58,237,0.12)', color: ACCENT, border: '1px solid rgba(124,58,237,0.35)',
+              background: 'rgba(224,120,32,0.12)', color: ACCENT, border: '1px solid rgba(224,120,32,0.35)',
               fontSize: 12.5, fontWeight: 700,
             }}>
               <Hourglass size={13} /> Awaiting approval
@@ -403,8 +403,8 @@ function ManageCoursesModal({ row, courses, onClose, onSaved }) {
             <label key={c.id} style={{
               display: 'flex', alignItems: 'center', gap: 10,
               padding: '9px 10px', borderRadius: 10, cursor: 'pointer',
-              border: `1.5px solid ${isOn ? 'rgba(124,58,237,0.35)' : 'var(--border)'}`,
-              background: isOn ? 'rgba(124,58,237,0.06)' : 'transparent',
+              border: `1.5px solid ${isOn ? 'rgba(224,120,32,0.35)' : 'var(--border)'}`,
+              background: isOn ? 'rgba(224,120,32,0.06)' : 'transparent',
               marginBottom: 6, transition: 'background .12s ease',
             }}>
               <input type="checkbox" checked={isOn} onChange={() => toggleOne(c.id)}
@@ -507,8 +507,8 @@ export default function AdminAssignments() {
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
             <div className="asg-header">
         <div className="asg-header-brand">
-          <div style={{ width: '4px', height: '36px', background: 'linear-gradient(180deg, #7c3aed, #a855f7)', borderRadius: '0 4px 4px 0', flexShrink: 0 }}></div>
-          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(124,58,237,0.1)', color: ACCENT, display: 'grid', placeItems: 'center' }}>
+          <div style={{ width: '4px', height: '36px', background: 'linear-gradient(180deg, #E07820, #F58220)', borderRadius: '0 4px 4px 0', flexShrink: 0 }}></div>
+          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(224,120,32,0.1)', color: ACCENT, display: 'grid', placeItems: 'center' }}>
             <Grid3x3 size={18} />
           </div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -567,7 +567,7 @@ export default function AdminAssignments() {
           <div key={label} className="admin-card" style={{
             padding: '9px 14px', display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 160px', minWidth: 150,
           }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(124,58,237,0.1)', color: ACCENT, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
+            <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(224,120,32,0.1)', color: ACCENT, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
               <Icon size={15} />
             </div>
             <div>

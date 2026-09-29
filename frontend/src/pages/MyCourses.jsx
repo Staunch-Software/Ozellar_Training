@@ -1,3 +1,4 @@
+import './MyCourses.css';
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Anchor, HardHat, ShieldCheck, ArrowRight, Download, PlayCircle, BookOpen, FileDown, AlertCircle, Filter } from 'lucide-react'

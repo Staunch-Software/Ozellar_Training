@@ -1,3 +1,4 @@
+import './Certificates.css';
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Award, Download, Eye, Search, X } from 'lucide-react'

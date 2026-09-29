@@ -1,6 +1,7 @@
+import './Login.css';
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { GraduationCap, User, Calendar, Mail, Lock, Anchor, AlertCircle, ClipboardList, KeyRound } from 'lucide-react'
+import { GraduationCap, User, Calendar, Mail, Lock, Anchor, AlertCircle, ClipboardList, KeyRound, ShieldCheck, Compass } from 'lucide-react'
 import { ThemeToggle } from '../App.jsx'
 import { useAuth, homeFor } from '../auth.jsx'
 import { searchCrewNames } from '../api.js'
@@ -105,30 +106,38 @@ export default function Login() {
       <div className="login-top"><ThemeToggle /></div>
       <div className="login">
         <div className="art">
-          <div className="waves" />
-          <div className="badge"><Anchor size={14} /> Ozellar Marine · Fleet Training</div>
-          <div>
-            <h3>Safe seas start with a trained crew.</h3>
+          <div className="badge"><GraduationCap size={16} /> FLEET TRAINING</div>
+          <div className="art-content">
+            <div className="art-accent-line" />
+            <h3>Safe seas start with a <span className="highlight">trained crew.</span></h3>
             <p>Complete your assigned courses and assessments before joining your vessel.</p>
           </div>
-          <div className="badge">SOLAS · IMSBC · ISM compliant</div>
+          <div className="art-compliance">
+            <div className="art-compliance-item"><ShieldCheck size={12} /> SOLAS COMPLIANT</div>
+            <div className="art-compliance-item"><Anchor size={12} /> IMSBC COMPLIANT</div>
+            <div className="art-compliance-item"><Compass size={12} /> ISM COMPLIANT</div>
+          </div>
         </div>
 
         <form className="form" onSubmit={submit}>
           <div className="brand-lg">
-            <span className="logo"><GraduationCap size={21} /></span> Ozellar Marine
+            <span className="logo"><GraduationCap size={21} /></span>
+            <span className="brand-text">Ozellar<span className="brand-light">Marine</span></span>
           </div>
 
           {/* crew / admin / test / orientation toggle */}
           <div className="segmented" role="tablist">
             <button type="button" role="tab" className={mode === 'crew' ? 'on' : ''}
-              onClick={() => switchMode('crew')}>Crew</button>
+              onClick={() => switchMode('crew')}>
+              <Anchor size={14} />Crew
+            </button>
             <button type="button" role="tab" className={mode === 'admin' ? 'on' : ''}
-              onClick={() => switchMode('admin')}>Admin</button>
+              onClick={() => switchMode('admin')}>
+              <ShieldCheck size={14} />Admin
+            </button>
             <button type="button" role="tab" className={mode === 'test' ? 'on' : ''}
-              onClick={() => switchMode('test')}
-              style={{ display: 'flex', alignItems: 'center', gap: '5px' }}>
-              <ClipboardList size={13} />Test
+              onClick={() => switchMode('test')}>
+              <ClipboardList size={14} />Test
             </button>
           </div>
 

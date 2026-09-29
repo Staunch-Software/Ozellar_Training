@@ -19,7 +19,7 @@ function ChapterQuizPreview({ questions }) {
 
   return (
     <div>
-      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8, color: '#0369a1', fontSize: 14, background: '#e0f2fe', padding: '12px 16px', borderRadius: 8 }}>
+      <div style={{ marginBottom: 24, display: 'flex', alignItems: 'center', gap: 8, color: '#C2671B', fontSize: 14, background: 'rgba(224,120,32,0.1)', padding: '12px 16px', borderRadius: 8 }}>
         <Info size={16} /> Admin Preview: Quiz verification mode. Correct answers are highlighted.
       </div>
       
@@ -44,7 +44,7 @@ function ChapterQuizPreview({ questions }) {
             </div>
             {q.explain && (
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #e2e8f0', fontSize: 13, color: '#475569', lineHeight: 1.5 }}>
-                <span style={{ color: '#0284c7', fontWeight: 600, marginRight: 6 }}>Explanation:</span> {q.explain}
+                <span style={{ color: '#E07820', fontWeight: 600, marginRight: 6 }}>Explanation:</span> {q.explain}
               </div>
             )}
           </div>
@@ -107,7 +107,7 @@ function FinalAssessmentPreview({ assessment }) {
             </div>
             {q.explain && (
               <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #e2e8f0', fontSize: 13, color: '#475569', lineHeight: 1.5 }}>
-                <span style={{ color: '#0284c7', fontWeight: 600, marginRight: 6 }}>Explanation:</span> {q.explain}
+                <span style={{ color: '#E07820', fontWeight: 600, marginRight: 6 }}>Explanation:</span> {q.explain}
               </div>
             )}
           </div>
@@ -206,10 +206,10 @@ export default function AdminCoursePreview() {
               {course.chapters.map((c, i) => (
                 <button key={c.id} onClick={() => goto(i)} style={{
                   display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px', width: '100%',
-                  background: i === idx ? '#e0f2fe' : 'transparent',
-                  border: '1px solid', borderColor: i === idx ? '#bae6fd' : 'transparent',
+                  background: i === idx ? 'rgba(224,120,32,0.1)' : 'transparent',
+                  border: '1px solid', borderColor: i === idx ? 'rgba(224,120,32,0.2)' : 'transparent',
                   borderRadius: 8, cursor: 'pointer', textAlign: 'left', transition: '0.2s',
-                  color: i === idx ? '#0369a1' : '#475569'
+                  color: i === idx ? '#C2671B' : '#475569'
                 }} onMouseEnter={e => { if(i !== idx) e.currentTarget.style.background = '#f8fafc' }} onMouseLeave={e => { if(i !== idx) e.currentTarget.style.background = 'transparent' }}>
                   <div style={{ marginTop: 2 }}>
                     {i === idx ? <Play size={16} /> : c.kind === 'quiz' ? <HelpCircle size={16} /> : <Circle size={16} />}
@@ -246,7 +246,7 @@ export default function AdminCoursePreview() {
             ) : (
               <>
                 <div style={{ marginBottom: 32 }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#0284c7', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#E07820', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 8 }}>
                     {ch.kind === 'quiz' ? 'Checkpoint quiz' : `Lesson ${ch.n}`}
                   </div>
                   <h1 style={{ color: '#0f172a', margin: 0, fontSize: 28, fontWeight: 700, lineHeight: 1.3 }}>{ch.title}</h1>
@@ -322,7 +322,7 @@ export default function AdminCoursePreview() {
             <span style={{ color: '#0f172a' }}>{idx + 1}</span> / {course.chapters.length + 1}
           </div>
 
-          <button onClick={complete} disabled={idx === course.chapters.length} style={{ ...navBtnStyle, background: idx === course.chapters.length ? 'transparent' : '#0284c7', color: idx === course.chapters.length ? '#0f172a' : 'white', opacity: idx === course.chapters.length ? 0.3 : 1, cursor: idx === course.chapters.length ? 'not-allowed' : 'pointer' }} onMouseEnter={e => {if(idx !== course.chapters.length) e.currentTarget.style.background = '#0369a1'}} onMouseLeave={e => {if(idx !== course.chapters.length) e.currentTarget.style.background = '#0284c7'}}>
+          <button onClick={complete} disabled={idx === course.chapters.length} style={{ ...navBtnStyle, background: idx === course.chapters.length ? 'transparent' : '#E07820', color: idx === course.chapters.length ? '#0f172a' : 'white', opacity: idx === course.chapters.length ? 0.3 : 1, cursor: idx === course.chapters.length ? 'not-allowed' : 'pointer' }} onMouseEnter={e => {if(idx !== course.chapters.length) e.currentTarget.style.background = '#C2671B'}} onMouseLeave={e => {if(idx !== course.chapters.length) e.currentTarget.style.background = '#E07820'}}>
             Next <ChevronRight size={18} />
           </button>
         </div>
