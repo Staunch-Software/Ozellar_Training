@@ -1,7 +1,7 @@
 
 
 /* ---------- LOGIN ---------- */
-.login-wrap{min-height:100%;display:grid;place-items:center;padding:24px;background:#ffffff}
+.login-wrap{min-height:100vh;height:100%;display:grid;place-items:center;padding:24px;background:#ffffff;box-sizing:border-box}
 .login-top{position:fixed;top:16px;right:18px}
 .login{width:min(1000px,100%);display:grid;grid-template-columns:1.05fr .95fr;
   background:var(--surface);border:1px solid var(--border);border-radius:16px;
