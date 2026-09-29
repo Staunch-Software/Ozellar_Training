@@ -4776,7 +4776,7 @@ def admin_list_orientation_enrollments(
     result = []
     for e in enrollments:
         learner = db.get(models.User, e.learner_id)
-        total = len(e.completions)
+        total = len(e.program.tasks) if e.program else 0
         done = sum(1 for c in e.completions if c.is_completed)
         pct = round(done / total * 100) if total else 0
         result.append({
