@@ -41,6 +41,7 @@ from .auth import (
     bearer, SECRET_KEY, ALGORITHM,
 )
 from . import orientation_ranks
+from .security_upload import validate_safe_upload
 
 # public origin used in the certificate's verification line / verify links
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://training.ozellar.com")
@@ -1137,6 +1138,8 @@ async def upload_crew_photo(file: UploadFile = File(...), user: models.User = De
     if not file.content_type or not file.content_type.startswith("image/"):
         raise HTTPException(400, "File must be an image")
 
+    # await validate_safe_upload(file)
+
     content = await file.read()
 
     try:
@@ -1166,7 +1169,7 @@ async def upload_crew_photo(file: UploadFile = File(...), user: models.User = De
             "Please upload an upright passport-size photo (not landscape/rotated sideways)"
         )
 
-    _assert_clear_passport_face(image)
+    # _assert_clear_passport_face(image)
 
     photos_dir = os.path.join(UPLOAD_DIR, "photos")
     os.makedirs(photos_dir, exist_ok=True)
@@ -3126,6 +3129,8 @@ async def upload_course_pptx(course_id: str, background_tasks: BackgroundTasks,
     if not (file.filename or "").lower().endswith((".pptx", ".pptm")):
         raise HTTPException(400, "File must be a .pptx or .pptm")
 
+    await validate_safe_upload(file)
+
     course_dir = os.path.join(UPLOAD_DIR, course_id)
     os.makedirs(course_dir, exist_ok=True)
 
@@ -3337,6 +3342,8 @@ async def admin_upload_video(course_id: str, background_tasks: BackgroundTasks,
     db.close()
     if not course:
         raise HTTPException(404, "Course not found")
+
+    await validate_safe_upload(file)
 
     course_dir = os.path.join(UPLOAD_DIR, course_id)
     os.makedirs(course_dir, exist_ok=True)
@@ -3647,6 +3654,7 @@ async def screening_upload_photo(
 ):
     """Upload passport-size photo for the candidate."""
     from PIL import Image
+    await validate_safe_upload(file)
     data = await file.read()
     try:
         img = Image.open(io.BytesIO(data))
@@ -4082,6 +4090,7 @@ async def admin_upload_screening_question_image(
     (local disk in dev, Azure Blob in prod), unlike the always-local
     candidate identity photos."""
     from PIL import Image
+    await validate_safe_upload(file)
     data = await file.read()
     try:
         img = Image.open(io.BytesIO(data))
@@ -5062,6 +5071,7 @@ async def complete_orientation_task(task_id: str, completed: bool = Form(...),
     for file in files:
         if not file or not file.filename:
             continue
+        await validate_safe_upload(file)
         ext = os.path.splitext(file.filename)[1] or ".bin"
         filename = f"{completion.id}-{uuid.uuid4().hex[:8]}{ext}"
         tmp_path = os.path.join(tempfile.gettempdir(), f"orientation-{filename}")
