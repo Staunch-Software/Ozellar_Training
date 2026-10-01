@@ -210,12 +210,12 @@ export default function AdminDashboard() {
   const { kpis, crewByRank, crewByStatus, crewByVessel, courseStats, enrollmentTrend, recentCertificates } = data
 
   const kpiCards = [
-    { icon: Users,        label: 'Total Crew',      value: kpis.totalCrew,         note: kpis.activeCrew + ' active',                                   color: 'blue'    },
+    { icon: Users,        label: 'Total Seafarers',      value: kpis.totalCrew,         note: kpis.activeCrew + ' active',                                   color: 'blue'    },
     { icon: BookOpen,     label: 'Courses',         value: kpis.totalCourses,      note: 'available for training',                                      color: 'indigo'  },
     { icon: GraduationCap,label: 'Enrollments',     value: kpis.totalEnrollments,  note: 'total assignments',                                           color: 'teal'    },
     { icon: Award,        label: 'Certificates',    value: kpis.totalCertificates, note: 'issued to date',                                              color: 'emerald' },
     { icon: Target,       label: 'Overall Pass Rate',value: kpis.overallPassRate + '%', note: kpis.passAttempts + '/' + kpis.totalAttempts + ' attempts', color: kpis.overallPassRate >= 70 ? 'emerald' : kpis.overallPassRate >= 50 ? 'amber' : 'rose' },
-    { icon: Zap,          label: 'Active Crew',     value: kpis.activeCrew,        note: (kpis.totalCrew - kpis.activeCrew) + ' inactive',              color: 'purple'  },
+    { icon: Zap,          label: 'Active Seafarers',     value: kpis.activeCrew,        note: (kpis.totalCrew - kpis.activeCrew) + ' inactive',              color: 'purple'  },
   ]
 
   const coursesWithData = courseStats.filter(c => c.enrolled > 0)
@@ -226,7 +226,7 @@ export default function AdminDashboard() {
         icon={BarChart3} 
         title="Training Dashboard" 
         eyebrow="Ozellar Marine · Fleet Command" 
-        subtitle="Real-time overview of crew training progress & compliance"
+        subtitle="Real-time overview of seafarer training progress & compliance"
       >
         <button id="dashboard-refresh-btn" className="btn sm" onClick={() => load(true)} disabled={refreshing}>
           <RefreshCw size={13} style={{ animation: refreshing ? 'spin 1s linear infinite' : 'none' }} />
@@ -242,7 +242,7 @@ export default function AdminDashboard() {
 
         {/* Pass Rate per Course — radial cells */}
         {coursesWithData.length > 0 && (
-          <ChartCard title="Pass Rate per Course" subtitle="Percentage of enrolled crew who passed" icon={Target} span={2}>
+          <ChartCard title="Pass Rate per Course" subtitle="Percentage of enrolled seafarers who passed" icon={Target} span={2}>
             <div className="dash-rate-grid">
               {coursesWithData.map((s) => <PassRateCell key={s.courseId} stat={s} />)}
             </div>
@@ -251,7 +251,7 @@ export default function AdminDashboard() {
 
         {/* Recent Certificates */}
         <div className="dash-chart-card span-2">
-          <SectionHeader icon={Award} title="Recent Certificates" subtitle="Latest crew achievements" />
+          <SectionHeader icon={Award} title="Recent Certificates" subtitle="Latest seafarer achievements" />
           <div className="dash-cert-list">
             {recentCertificates.length === 0 ? (
               <div className="dash-empty">No certificates issued yet.</div>

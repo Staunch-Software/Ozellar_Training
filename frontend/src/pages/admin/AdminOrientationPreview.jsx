@@ -19,13 +19,13 @@ export default function AdminOrientationPreview() {
           <ArrowLeft size={14} /> Exit Preview
         </button>
         <div className="orn-preview-brand">
-          <GraduationCap size={17} color="#7c3aed" /> {program.title} — Crew Preview
+          <GraduationCap size={17} color="#7c3aed" /> {program.title} — Seafarer Preview
         </div>
       </div>
 
       <div className="orn-preview-body">
         <p className="orn-preview-intro">
-          This is what the crew member sees: a checklist of {program.tasks.length} tasks. This view is
+          This is what the seafarer sees: a checklist of {program.tasks.length} tasks. This view is
           read-only — no completion state is recorded here.
         </p>
         <div className="orn-list-lg">

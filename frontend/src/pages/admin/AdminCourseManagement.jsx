@@ -16,7 +16,7 @@ const NAV_ITEMS = [
   {
     to: '/admin/course-management/assignments',
     label: 'Assignments',
-    sub: 'Enroll & track crew',
+    sub: 'Enroll & track seafarers',
     icon: Grid3x3,
     color: '#E07820',
     colorWeak: 'rgba(224,120,32,0.1)',
@@ -33,7 +33,7 @@ const NAV_ITEMS = [
   },
   {
     to: '/admin/course-management/users',
-    label: 'Crew Users',
+    label: 'Seafarers',
     sub: 'Manage user accounts',
     icon: Users,
     color: '#0284c7',
@@ -85,7 +85,7 @@ export default function AdminCourseManagement() {
             <div className="cm-header-sep" />
             <div className="cm-header-stat">
               <span className="cm-header-stat-val">{stats.users}</span>
-              <span className="cm-header-stat-lbl">Crew</span>
+              <span className="cm-header-stat-lbl">Seafarers</span>
             </div>
           </div>
         </div>

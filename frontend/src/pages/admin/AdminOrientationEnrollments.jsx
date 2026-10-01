@@ -161,7 +161,7 @@ function EnrollModal({ programs, vessels, onClose, onDone }) {
             <div className="orn-modal-header-icon"><UserPlus size={18} /></div>
             <div>
               <div className="orn-modal-title">Enroll Officer</div>
-              <div className="orn-modal-subtitle">Assign a promotion checklist to an onboard crew member</div>
+              <div className="orn-modal-subtitle">Assign a promotion checklist to an onboard seafarer</div>
             </div>
           </div>
           <button className="iconbtn" onClick={onClose}><X size={18} /></button>
@@ -175,7 +175,7 @@ function EnrollModal({ programs, vessels, onClose, onDone }) {
             <div className="orn-enroll-col-head">
               <Search size={14} />
               <input
-                placeholder="Search crew by name..."
+                placeholder="Search seafarers by name..."
                 value={crewQ}
                 onChange={(e) => setCrewQ(e.target.value)}
                 autoFocus
@@ -205,12 +205,12 @@ function EnrollModal({ programs, vessels, onClose, onDone }) {
             </div>
 
             <div className="orn-enroll-crew-list">
-              {crew === null && <div className="orn-enroll-hint">Loading onboard crew...</div>}
+              {crew === null && <div className="orn-enroll-hint">Loading onboard seafarers...</div>}
               {crew !== null && available.length === 0 && (
                 <div className="orn-enroll-hint">
                   {eligibleRanks.length === 0
                     ? 'No active program promotes from any rank yet — build one under Programs first.'
-                    : 'No matching onboard crew found for the selected rank/vessel.'}
+                    : 'No matching onboard seafarers found for the selected rank/vessel.'}
                 </div>
               )}
               {available.map((c) => {
@@ -249,7 +249,7 @@ function EnrollModal({ programs, vessels, onClose, onDone }) {
               <div className="orn-enroll-empty">
                 <Users size={26} className="orn-enroll-empty-icon" />
                 <div className="orn-enroll-empty-title">No officer selected</div>
-                <div className="orn-enroll-empty-desc">Pick a crew member on the left to see their vessel and choose a program.</div>
+                <div className="orn-enroll-empty-desc">Pick a seafarer on the left to see their vessel and choose a program.</div>
               </div>
             ) : (
               <>
@@ -297,7 +297,7 @@ function EnrollModal({ programs, vessels, onClose, onDone }) {
                         ) : (
                           <span>
                             {approverList.length} people show as{' '}
-                            {selectedCrew.department === 'engine' ? 'Chief Engineer' : 'Master'} on this vessel — crew
+                            {selectedCrew.department === 'engine' ? 'Chief Engineer' : 'Master'} on this vessel — seafarer
                             data may be mid-handover. Pick the current one:
                           </span>
                         )}

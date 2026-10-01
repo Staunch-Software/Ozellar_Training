@@ -5,8 +5,8 @@ const SECTIONS = [
   {
     icon: <LogIn size={18} />, title: 'Signing in',
     points: [
-      'Crew sign in with their full name and date of birth as 8 digits (DDMMYYYY). Example: 25 March 2004 → 25032004.',
-      'If two crew members share the same name and date of birth, you will be asked for your Crew ID to confirm which record is yours.',
+      'Seafarers sign in with their full name and date of birth as 8 digits (DDMMYYYY). Example: 25 March 2004 → 25032004.',
+      'If two seafarers share the same name and date of birth, you will be asked for your Seafarer ID to confirm which record is yours.',
       'Trouble signing in? Contact your training officer to check your details.',
     ],
   },

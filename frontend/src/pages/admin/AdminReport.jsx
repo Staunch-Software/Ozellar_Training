@@ -392,7 +392,7 @@ export default function AdminReport() {
               <Search size={14} className="rpt-field-icon" />
               <input
                 className="rpt-field"
-                placeholder="Search crew..."
+                placeholder="Search seafarers..."
                 value={crewSearch}
                 onChange={e => setCrewSearch(e.target.value)}
                 style={{ padding: '6px 8px 6px 32px' }}
@@ -456,7 +456,7 @@ export default function AdminReport() {
 
       {/* ═══════════════════════ KPI STRIP ════════════════════════════ */}
       <div className="rpt-kpi-strip">
-        <KpiCard icon={<Users size={16} />} value={kpis.crew}       label="Crew Shown"  color="accent" />
+        <KpiCard icon={<Users size={16} />} value={kpis.crew}       label="Seafarers Shown"  color="accent" />
         <KpiCard icon={<CheckCircle size={16} />} value={kpis.passed}    label="Completed"      color="success" />
         <KpiCard icon={<Clock size={16} />}  value={kpis.wip}        label="In Progress" color="warn" />
         <KpiCard icon={<Circle size={16} />} value={kpis.notStarted} label="Not Started" color="faint" />
@@ -483,8 +483,8 @@ export default function AdminReport() {
               <thead>
                 <tr>
                   <th className="rpt-col-sino">SI No.</th>
-                  <th className="rpt-col-crew">Crew Member</th>
-                  <th className="rpt-col-id">Crew ID</th>
+                  <th className="rpt-col-crew">Seafarer</th>
+                  <th className="rpt-col-id">Seafarer ID</th>
                   <th className="rpt-col-rank">Rank</th>
                   {visibleCourses.map(c => (
                     <th key={c.id} className="rpt-col-course">{c.title}</th>

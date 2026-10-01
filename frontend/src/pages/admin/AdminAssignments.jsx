@@ -520,7 +520,7 @@ export default function AdminAssignments() {
         <div className="asg-header-actions">
           <div className="rpt-search-wrap asg-header-search" style={{ margin: 0 }}>
             <Search size={14} className="rpt-field-icon" />
-            <input type="text" placeholder="Search by name, crew ID, or rank..." className="rpt-field"
+            <input type="text" placeholder="Search by name, Seafarer ID, or rank..." className="rpt-field"
               value={search} onChange={e => setSearch(e.target.value)} />
             {search && (
               <button className="rpt-x-btn" onClick={() => setSearch('')}><X size={12} /></button>
@@ -559,10 +559,10 @@ export default function AdminAssignments() {
 
       <div style={{ display: 'flex', gap: 12, marginTop: 16, marginBottom: 12, flexWrap: 'wrap' }}>
         {[
-          { label: 'Crew', value: data.rows.length, Icon: ClipboardList },
+          { label: 'Seafarers', value: data.rows.length, Icon: ClipboardList },
           { label: 'Courses', value: totalCourses, Icon: BookOpen },
           { label: 'Total Assignments', value: totalAssignments, Icon: Grid3x3 },
-          { label: 'Avg / Crew', value: avgPerCrew.toFixed(1), Icon: Award },
+          { label: 'Avg / Seafarer', value: avgPerCrew.toFixed(1), Icon: Award },
         ].map(({ label, value, Icon }) => (
           <div key={label} className="admin-card" style={{
             padding: '9px 14px', display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 160px', minWidth: 150,
@@ -585,14 +585,14 @@ export default function AdminAssignments() {
             <thead>
               <tr>
                 <th style={{ width: 48 }}>#</th>
-                <th style={{ width: 300 }}>Crew Member</th>
+                <th style={{ width: 300 }}>Seafarer</th>
                 <th>Assigned Courses</th>
                 <th style={{ width: 160 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {currentRows.length === 0 && (
-                <tr><td colSpan={4} className="mut" style={{ textAlign: 'center', padding: 40 }}>No crew match your search.</td></tr>
+                <tr><td colSpan={4} className="mut" style={{ textAlign: 'center', padding: 40 }}>No seafarers match your search.</td></tr>
               )}
               {currentRows.map((row, index) => {
                 // completed first, then in progress, then not started (stable within each group)

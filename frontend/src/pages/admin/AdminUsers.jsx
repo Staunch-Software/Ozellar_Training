@@ -118,7 +118,7 @@ export default function AdminUsers() {
 
         <div style={{ flex: 1 }}>
           <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#0284c7', opacity: 0.8 }}>Fleet Training · People</span>
-          <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', marginTop: '1px' }}>Crew Users</div>
+          <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', marginTop: '1px' }}>Seafarers</div>
         </div>
 
                 <div className="users-head-actions">
@@ -128,7 +128,7 @@ export default function AdminUsers() {
                 <Search size={14} className="rpt-field-icon" />
                 <input 
                   type="text" 
-                  placeholder="Search by name, crew ID, or email..." 
+                  placeholder="Search by name, Seafarer ID, or email..." 
                   className="rpt-field"
                   value={search}
                   onChange={e => setSearch(e.target.value)}
@@ -198,7 +198,7 @@ export default function AdminUsers() {
             <Field label="Rank / title">
               <input value={form.rank} onChange={(e) => set('rank', e.target.value)} placeholder="e.g. Third Officer" />
             </Field>
-            <Field label="Crew ID" required>
+            <Field label="Seafarer ID" required>
               <input value={form.crewId} onChange={(e) => set('crewId', e.target.value)} placeholder="e.g. OZ1101" />
             </Field>
             <Field label="Date of birth (DDMMYYYY)" required>
@@ -249,7 +249,7 @@ export default function AdminUsers() {
   <b className="users-name-text">{u.name}</b>
 </div>
                   </td>
-                <td><span className={`pill ${u.role}`}>{u.role === 'super_admin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : 'Crew'}</span></td>
+                <td><span className={`pill ${u.role}`}>{u.role === 'super_admin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : 'Seafarer'}</span></td>
                 <td className="mono">{u.role === 'admin' || u.role === 'super_admin' ? u.email : u.crewId}</td>
                 <td>{u.rank ? u.rank.toUpperCase() : '—'}</td>
                 <td className="mono">{formatMobile(u.mobileNo) || '—'}</td>

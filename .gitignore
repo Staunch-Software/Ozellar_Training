@@ -25,3 +25,12 @@ Thumbs.db
 
 # local tooling state
 .claude/settings.local.json
+.agents/
+
+# local tests
+backend/tests/
+frontend/tests/
+backend/test.db
+.pytest_cache/
+playwright-report/
+test-results/

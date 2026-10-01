@@ -150,7 +150,7 @@ export default function AdminOrientationResults() {
             <table className="orn-table">
               <thead>
                 <tr>
-                  <th>Crew</th>
+                  <th>Seafarer</th>
                   <th>Vessel</th>
                   <th>Program</th>
                   <th>Status</th>

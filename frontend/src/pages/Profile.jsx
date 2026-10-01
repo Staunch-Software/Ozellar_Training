@@ -140,7 +140,7 @@ export default function Profile() {
               </div>
 
               <div style={{ fontSize: 18, fontWeight: 600, marginBottom: 4 }}>{user?.name}</div>
-              <div className="mut" style={{ fontSize: 13, marginBottom: 24 }}>{user?.rank || 'Crew Member'}</div>
+              <div className="mut" style={{ fontSize: 13, marginBottom: 24 }}>{user?.rank || 'Seafarer'}</div>
 
               {/* Upload Action */}
               <div style={{ width: '100%' }}>
@@ -197,7 +197,7 @@ export default function Profile() {
             
             <SectionCard title="Identity Details">
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                <Field label="Crew ID" value={user?.crewId} />
+                <Field label="Seafarer ID" value={user?.crewId} />
                 <Field label="Nationality" value={user?.nationality} />
                 <Field label="Passport Number" value={user?.ppNo} />
                 <Field label="Seaman Book Number" value={user?.seamenBookNo} />

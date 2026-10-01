@@ -164,7 +164,7 @@ export default function AdminCourseCertificate() {
             {course.title}
           </div>
           <div style={{ fontSize: 12.5, color: 'var(--text-mut)', marginTop: 3 }}>
-            Set what appears on every certificate crew earn for passing this course
+            Set what appears on every certificate seafarers earn for passing this course
           </div>
         </div>
         <div style={{

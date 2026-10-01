@@ -201,13 +201,13 @@ export default function AdminCourses() {
               </Field>
             </div>
             <div style={{ flex: '1 1 300px' }}>
-              <Field label="Target Specific Crew (Other crew members)">
+              <Field label="Target Specific Seafarers (Other seafarers)">
                 <div className="target-selection-container">
                   <div className="search-bar">
                     <Search size={14} color="#64748b" />
-                    <input type="text" placeholder="Search crew by name or rank..." value={searchCrew} onChange={e => setSearchCrew(e.target.value)} />
+                    <input type="text" placeholder="Search seafarers by name or rank..." value={searchCrew} onChange={e => setSearchCrew(e.target.value)} />
                   </div>
-                  {availableUsers.length === 0 ? <div className="mut" style={{ fontSize: 13, marginTop: 10 }}>No other crew available</div> : null}
+                  {availableUsers.length === 0 ? <div className="mut" style={{ fontSize: 13, marginTop: 10 }}>No other seafarers available</div> : null}
                   {Object.keys(availableUsersGrouped).sort((a, b) => {
                     if (a === 'NO RANK') return -1;
                     if (b === 'NO RANK') return 1;

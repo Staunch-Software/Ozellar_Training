@@ -1,4 +1,4 @@
-﻿import { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Outlet, NavLink, Navigate, useLocation } from 'react-router-dom'
 import { GraduationCap, Users, BarChart3, ChevronRight, ClipboardList } from 'lucide-react'
 import { adminListOrientationPrograms, adminListOrientationEnrollments } from '../../api.js'
@@ -33,7 +33,7 @@ const NAV_ITEMS = [
   },
   {
     to: '/admin/orientation-program/candidates',
-    label: 'Crew',
+    label: 'Seafarers',
     sub: 'Enroll for promotion',
     icon: Users,
     color: '#0284c7',

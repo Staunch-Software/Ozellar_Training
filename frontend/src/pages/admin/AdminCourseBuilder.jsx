@@ -1083,7 +1083,7 @@ function CourseSettingsModal({ course, users, onClose, onSave }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid #e2e8f0' }}>
           <div>
             <h2 style={{ fontSize: 20, fontWeight: 700, margin: 0, color: '#0f172a' }}>Course Settings</h2>
-            <p className="mut" style={{ margin: '4px 0 0', fontSize: 13 }}>Update course title and manage enrolled crew members.</p>
+            <p className="mut" style={{ margin: '4px 0 0', fontSize: 13 }}>Update course title and manage enrolled seafarers.</p>
           </div>
           <button type="button" className="iconbtn" onClick={onClose}><X size={18} /></button>
         </div>
@@ -1138,13 +1138,13 @@ function CourseSettingsModal({ course, users, onClose, onSave }) {
             </Field>
           </div>
           <div style={{ flex: '1 1 300px' }}>
-            <Field label="Target Specific Crew (Other crew members)">
+            <Field label="Target Specific Seafarers (Other seafarers)">
               <div className="target-selection-container" style={{ background: '#fff', border: '1px solid #e2e8f0' }}>
                 <div className="search-bar">
                   <Search size={14} color="#64748b" />
-                  <input type="text" placeholder="Search crew by name or rank..." value={searchCrew} onChange={e => setSearchCrew(e.target.value)} />
+                  <input type="text" placeholder="Search seafarers by name or rank..." value={searchCrew} onChange={e => setSearchCrew(e.target.value)} />
                 </div>
-                {availableUsers.length === 0 ? <div className="mut" style={{ fontSize: 13, marginTop: 10 }}>No other crew available</div> : null}
+                {availableUsers.length === 0 ? <div className="mut" style={{ fontSize: 13, marginTop: 10 }}>No other seafarers available</div> : null}
                 {Object.keys(availableUsersGrouped).sort((a, b) => {
                   if (a === 'NO RANK') return -1;
                   if (b === 'NO RANK') return 1;

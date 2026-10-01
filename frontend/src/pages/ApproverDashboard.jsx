@@ -105,7 +105,7 @@ function SubmissionDetail({ s, onDecide, onVerifyTask }) {
 
   const decide = async (action) => {
     const msg = action === 'approve'
-      ? 'This will mark the orientation as fully approved and notify the crew member and admin.'
+      ? 'This will mark the orientation as fully approved and notify the seafarer and admin.'
       : 'This will reject the orientation program.'
     if (!(await confirm(msg, { title: action === 'approve' ? 'Final Approve Program?' : 'Reject Program?', confirmLabel: action === 'approve' ? 'Approve Program' : 'Reject' }))) return
     setBusy(true)
@@ -150,7 +150,7 @@ function SubmissionDetail({ s, onDecide, onVerifyTask }) {
           <div className="apr-detail-sub">{s.candidateRank} · {s.programTitle} · {s.vessel}</div>
         </div>
         <span className={`apr-status-pill apr-status-pill--${s.status}`}>
-          {s.status === 'waiting_on_crew' ? 'Waiting on Crew' : s.status}
+          {s.status === 'waiting_on_crew' ? 'Waiting on Seafarer' : s.status}
         </span>
         <div className="apr-detail-date">Submitted {fmt(s.submittedAt)}</div>
       </div>
