@@ -339,7 +339,17 @@ export default function AdminLayout() {
     <div className="admin">
             <nav className="appnav">
         <Link to="/admin" className="brand">
-          <span className="logo"><Shield size={18} /></span>
+          <div className="logo-ring">
+            <svg width="24" height="24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <linearGradient id="ozellar-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#f1592a" />
+                  <stop offset="100%" stopColor="#e04e22" />
+                </linearGradient>
+              </defs>
+              <circle cx="50" cy="50" r="36" fill="none" stroke="url(#ozellar-grad)" strokeWidth="20" />
+            </svg>
+          </div>
           <span className="brand-text">Ozellar<span className="brand-light">Admin</span></span>
         </Link>
         <div className="navlinks">

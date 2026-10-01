@@ -1,7 +1,7 @@
 import './Login.css';
 import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { GraduationCap, User, Calendar, Mail, Lock, Anchor, AlertCircle, ClipboardList, KeyRound, ShieldCheck, Compass } from 'lucide-react'
+import { GraduationCap, User, Calendar, Mail, Lock, Anchor, AlertCircle, ClipboardList, KeyRound, ShieldCheck, Compass, Briefcase } from 'lucide-react'
 import { ThemeToggle } from '../App.jsx'
 import { useAuth, homeFor } from '../auth.jsx'
 import { searchCrewNames } from '../api.js'
@@ -21,6 +21,11 @@ export default function Login() {
   // test mode
   const [testName, setTestName] = useState('')
   const [testPassword, setTestPassword] = useState('')
+  // office staff mode (shares name + dob fields with crew)
+  const [osName, setOsName] = useState('')
+  const [osDob, setOsDob] = useState('')
+  const [osNeedCrewId, setOsNeedCrewId] = useState(false)
+  const [osCrewId, setOsCrewId] = useState('')
 
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -29,8 +34,15 @@ export default function Login() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [activeIndex, setActiveIndex] = useState(-1)
   const nameWrapRef = useRef(null)
+  const osNameWrapRef = useRef(null)
   const searchTimer = useRef(null)
   const skipNextSearch = useRef(false)
+
+  const [osSuggestions, setOsSuggestions] = useState([])
+  const [osShowSuggestions, setOsShowSuggestions] = useState(false)
+  const [osActiveIndex, setOsActiveIndex] = useState(-1)
+  const osSearchTimer = useRef(null)
+  const osSkipNextSearch = useRef(false)
 
   useEffect(() => {
     if (user) navigate(homeFor(user), { replace: true })
@@ -52,9 +64,26 @@ export default function Login() {
     return () => clearTimeout(searchTimer.current)
   }, [name, mode])
 
+  // debounced name search for office_staff mode
+  useEffect(() => {
+    clearTimeout(osSearchTimer.current)
+    if (osSkipNextSearch.current) { osSkipNextSearch.current = false; return }
+    const q = osName.trim()
+    if (mode !== 'office_staff' || q.length < 1) { setOsSuggestions([]); return }
+    osSearchTimer.current = setTimeout(() => {
+      searchCrewNames(q, 'office_staff').then((results) => {
+        setOsSuggestions(results)
+        setOsShowSuggestions(true)
+        setOsActiveIndex(-1)
+      }).catch(() => setOsSuggestions([]))
+    }, 250)
+    return () => clearTimeout(osSearchTimer.current)
+  }, [osName, mode])
+
   useEffect(() => {
     const onDoc = (e) => {
       if (nameWrapRef.current && !nameWrapRef.current.contains(e.target)) setShowSuggestions(false)
+      if (osNameWrapRef.current && !osNameWrapRef.current.contains(e.target)) setOsShowSuggestions(false)
     }
     document.addEventListener('mousedown', onDoc)
     return () => document.removeEventListener('mousedown', onDoc)
@@ -67,6 +96,13 @@ export default function Login() {
     setShowSuggestions(false)
   }
 
+  const osPickSuggestion = (s) => {
+    osSkipNextSearch.current = true
+    setOsName(s.name)
+    setOsSuggestions([])
+    setOsShowSuggestions(false)
+  }
+
   const onNameKeyDown = (e) => {
     if (!showSuggestions || suggestions.length === 0) return
     if (e.key === 'ArrowDown') { e.preventDefault(); setActiveIndex((i) => (i + 1) % suggestions.length) }
@@ -75,7 +111,19 @@ export default function Login() {
     else if (e.key === 'Escape') { setShowSuggestions(false) }
   }
 
-  const switchMode = (m) => { setMode(m); setError(''); setNeedCrewId(false); setCrewId('') }
+  const osOnNameKeyDown = (e) => {
+    if (!osShowSuggestions || osSuggestions.length === 0) return
+    if (e.key === 'ArrowDown') { e.preventDefault(); setOsActiveIndex((i) => (i + 1) % osSuggestions.length) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setOsActiveIndex((i) => (i <= 0 ? osSuggestions.length - 1 : i - 1)) }
+    else if (e.key === 'Enter' && osActiveIndex >= 0) { e.preventDefault(); osPickSuggestion(osSuggestions[osActiveIndex]) }
+    else if (e.key === 'Escape') { setOsShowSuggestions(false) }
+  }
+
+  const switchMode = (m) => {
+    setMode(m); setError('')
+    setNeedCrewId(false); setCrewId('')
+    setOsNeedCrewId(false); setOsCrewId('')
+  }
 
   const submit = async (e) => {
     e.preventDefault()
@@ -84,6 +132,11 @@ export default function Login() {
     try {
       if (mode === 'test') {
         const u = await screeningLogin({ name: testName.trim(), password: testPassword })
+        navigate(homeFor(u), { replace: true })
+      } else if (mode === 'office_staff') {
+        const body = { mode: 'office_staff', name: osName.trim(), dob: osDob.trim(),
+          ...(osNeedCrewId ? { crewId: osCrewId.trim() } : {}) }
+        const u = await login(body)
         navigate(homeFor(u), { replace: true })
       } else {
         const body = mode === 'crew'
@@ -94,7 +147,10 @@ export default function Login() {
         navigate(homeFor(u), { replace: true })
       }
     } catch (err) {
-      if (err.status === 409) setNeedCrewId(true)
+      if (err.status === 409) {
+        if (mode === 'office_staff') setOsNeedCrewId(true)
+        else setNeedCrewId(true)
+      }
       setError(err.message || 'Sign in failed')
     } finally {
       setBusy(false)
@@ -109,7 +165,7 @@ export default function Login() {
           <div className="badge"><GraduationCap size={16} /> FLEET TRAINING</div>
           <div className="art-content">
             <div className="art-accent-line" />
-            <h3>Safe seas start with a <span className="highlight">trained crew.</span></h3>
+            <h3>Safe seas start with a <span className="highlight">trained seafarer.</span></h3>
             <p>Complete your assigned courses and assessments before joining your vessel.</p>
           </div>
           <div className="art-compliance">
@@ -120,16 +176,24 @@ export default function Login() {
         </div>
 
         <form className="form" onSubmit={submit}>
-          <div className="brand-lg">
+          <div className="brand-lg" style={{ paddingBottom: '10px' }}>
             <span className="logo"><GraduationCap size={21} /></span>
-            <span className="brand-text">Ozellar<span className="brand-light">Marine</span></span>
+            <img 
+              src="/ozellar-marine-global-logo.gif" 
+              alt="Ozellar Marine" 
+              style={{ 
+                height: '42px', 
+                objectFit: 'contain',
+                filter: 'drop-shadow(0 2px 8px rgba(0,0,0,0.05))'
+              }} 
+            />
           </div>
 
-          {/* crew / admin / test / orientation toggle */}
+          {/* crew / admin / test / office staff toggle */}
           <div className="segmented" role="tablist">
             <button type="button" role="tab" className={mode === 'crew' ? 'on' : ''}
               onClick={() => switchMode('crew')}>
-              <Anchor size={14} />Crew
+              <Anchor size={14} />Seafarer
             </button>
             <button type="button" role="tab" className={mode === 'admin' ? 'on' : ''}
               onClick={() => switchMode('admin')}>
@@ -138,6 +202,10 @@ export default function Login() {
             <button type="button" role="tab" className={mode === 'test' ? 'on' : ''}
               onClick={() => switchMode('test')}>
               <ClipboardList size={14} />Test
+            </button>
+            <button type="button" role="tab" className={mode === 'office_staff' ? 'on' : ''}
+              onClick={() => switchMode('office_staff')}>
+              <Briefcase size={14} />Office Staff
             </button>
           </div>
 
@@ -155,7 +223,7 @@ export default function Login() {
                     role="combobox" aria-expanded={showSuggestions} aria-autocomplete="list"
                     aria-controls="crew-name-listbox" aria-haspopup="listbox" />
                   {showSuggestions && suggestions.length > 0 && (
-                    <div id="crew-name-listbox" className="ac-pop" role="listbox" aria-label="Crew name suggestions">
+                    <div id="crew-name-listbox" className="ac-pop" role="listbox" aria-label="Seafarer name suggestions">
                       {suggestions.map((s, i) => (
                         <button type="button" key={s.name} role="option"
                           className={`ac-item${i === activeIndex ? ' active' : ''}`}
@@ -181,13 +249,13 @@ export default function Login() {
               </div>
               {needCrewId && (
                 <div className="field">
-                  <label htmlFor="crewId">Crew ID</label>
+                  <label htmlFor="crewId">Seafarer ID</label>
                   <div className="inputwrap">
                     <Anchor />
                     <input id="crewId" type="text" placeholder="e.g. OZ1024" autoComplete="off" autoFocus
                       value={crewId} onChange={(e) => setCrewId(e.target.value)} />
                   </div>
-                  <div className="hint">Another crew member shares your name and date of birth — your Crew ID confirms which record is yours.</div>
+                  <div className="hint">Another seafarer shares your name and date of birth — your Seafarer ID confirms which record is yours.</div>
                 </div>
               )}
             </>
@@ -209,6 +277,56 @@ export default function Login() {
                     value={password} onChange={(e) => setPassword(e.target.value)} />
                 </div>
               </div>
+            </>
+          ) : mode === 'office_staff' ? (
+            /* Office Staff mode — same name search + DOB as Seafarer */
+            <>
+              <div className="field">
+                <label htmlFor="os-name">Full name</label>
+                <div className="inputwrap" ref={osNameWrapRef}>
+                  <User />
+                  <input id="os-name" type="text" placeholder="e.g. Rajan Kumar" autoComplete="off"
+                    value={osName}
+                    onChange={(e) => setOsName(e.target.value)}
+                    onFocus={() => osSuggestions.length > 0 && setOsShowSuggestions(true)}
+                    onKeyDown={osOnNameKeyDown}
+                    role="combobox" aria-expanded={osShowSuggestions} aria-autocomplete="list"
+                    aria-controls="os-name-listbox" aria-haspopup="listbox" />
+                  {osShowSuggestions && osSuggestions.length > 0 && (
+                    <div id="os-name-listbox" className="ac-pop" role="listbox" aria-label="Office staff name suggestions">
+                      {osSuggestions.map((s, i) => (
+                        <button type="button" key={s.name} role="option"
+                          className={`ac-item${i === osActiveIndex ? ' active' : ''}`}
+                          onMouseDown={(e) => { e.preventDefault(); osPickSuggestion(s) }}>
+                          <span className="ac-name">{s.name}</span>
+                          {s.rank && <span className="ac-rank">{s.rank}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="field">
+                <label htmlFor="os-dob">Date of birth</label>
+                <div className="inputwrap">
+                  <Calendar />
+                  <input id="os-dob" type="text" inputMode="numeric" maxLength={8} placeholder="DDMMYYYY"
+                    autoComplete="off"
+                    value={osDob} onChange={(e) => setOsDob(e.target.value.replace(/\D/g, ''))} />
+                </div>
+                <div className="hint">8 digits — day, month, year. Example: 25 Mar 2004 → 25032004</div>
+              </div>
+              {osNeedCrewId && (
+                <div className="field">
+                  <label htmlFor="os-crew-id">Crew ID <span style={{ color: 'var(--accent)' }}>*</span></label>
+                  <div className="inputwrap">
+                    <Briefcase />
+                    <input id="os-crew-id" type="text" placeholder="Multiple matches — enter your Crew ID"
+                      autoFocus autoComplete="off"
+                      value={osCrewId} onChange={(e) => setOsCrewId(e.target.value)} />
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             /* Test mode */
@@ -236,6 +354,7 @@ export default function Login() {
               </div>
             </>
           )}
+
 
           {error && <div className="form-error"><AlertCircle size={15} /> {error}</div>}
 

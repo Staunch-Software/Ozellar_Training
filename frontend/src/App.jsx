@@ -38,7 +38,8 @@ import AdminUserManagement from './pages/admin/AdminUserManagement.jsx'
 import TestWelcome from './pages/test/TestWelcome.jsx'
 import TestExam from './pages/test/TestExam.jsx'
 import TestResult from './pages/test/TestResult.jsx'
-import { AuthProvider, useAuth, ProtectedRoute, AdminRoute, TestRoute, ApproverRoute } from './auth.jsx'
+import { OfficeStaffCourseList, OfficeStaffCourseReader } from './pages/OfficeStaffCourses.jsx'
+import { AuthProvider, useAuth, ProtectedRoute, AdminRoute, TestRoute, ApproverRoute, OfficeStaffRoute } from './auth.jsx'
 
 /* ---- theme ---- */
 const ThemeCtx = createContext()
@@ -74,7 +75,17 @@ export function TopNav({ searchQuery, onSearch }) {
   return (
     <nav className="appnav">
       <Link to="/my-courses" className="brand">
-        <span className="logo"><GraduationCap size={19} /></span>
+        <div className="logo-ring">
+          <svg width="24" height="24" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="ozellar-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%" stopColor="#f1592a" />
+                <stop offset="100%" stopColor="#e04e22" />
+              </linearGradient>
+            </defs>
+            <circle cx="50" cy="50" r="36" fill="none" stroke="url(#ozellar-grad)" strokeWidth="20" />
+          </svg>
+        </div>
         <span className="brand-text">Ozellar<span className="brand-light">Marine</span></span>
       </Link>
       <div className="navlinks">
@@ -199,6 +210,10 @@ export default function App() {
 
         {/* Orientation Program approver (vessel Master / Chief Engineer) */}
         <Route path="/approvals" element={<ApproverRoute><ApproverDashboard /></ApproverRoute>} />
+
+        {/* Office Staff browse-only routes */}
+        <Route path="/office-courses" element={<OfficeStaffRoute><OfficeStaffCourseList /></OfficeStaffRoute>} />
+        <Route path="/office-courses/:slug" element={<OfficeStaffRoute><OfficeStaffCourseReader /></OfficeStaffRoute>} />
 
         <Route path="/admin/courses/:id/preview" element={<AdminRoute><AdminCoursePreview /></AdminRoute>} />
         <Route path="/admin/orientation/:id/preview" element={<AdminRoute><AdminOrientationPreview /></AdminRoute>} />
