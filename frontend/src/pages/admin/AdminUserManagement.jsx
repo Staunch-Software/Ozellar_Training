@@ -312,12 +312,15 @@ export default function AdminUserManagement() {
   const [osLoading, setOsLoading] = useState(false)
 
   const load = () => adminPanelListAdmins().then(setAdmins).catch(() => setAdmins([]))
-  useEffect(() => { load() }, [])
-
   const loadOfficeStaff = () => {
     setOsLoading(true)
     adminListOfficeStaff().then(setOfficeStaff).catch(() => setOfficeStaff([])).finally(() => setOsLoading(false))
   }
+
+  useEffect(() => {
+    load()
+    loadOfficeStaff()
+  }, [])
 
   const handleTabChange = (tab) => {
     setActiveTab(tab)
@@ -358,158 +361,227 @@ export default function AdminUserManagement() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
 
-      {/* ── Header ── */}
+      {/* ── Page Header ── */}
       <div style={{
         background: 'var(--surface)',
         borderBottom: '1px solid var(--border)',
-        marginBottom: '12px',
+        padding: '16px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '16px',
+        flexWrap: 'wrap',
       }}>
-        {/* Top Row: Title & Primary Action */}
-        <div style={{
-          padding: '16px 20px 12px 0',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '12px',
-          flexWrap: 'wrap',
-        }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{
-              width: '4px', height: '36px',
-              background: 'linear-gradient(180deg, #6366f1, #8b5cf6)',
-              borderRadius: '0 4px 4px 0', flexShrink: 0,
-            }} />
-            <div style={{
-              width: '36px', height: '36px', borderRadius: '10px',
-              background: 'rgba(99,102,241,0.1)', color: '#6366f1',
-              display: 'grid', placeItems: 'center', flexShrink: 0,
-            }}>
-              <Shield size={18} />
-            </div>
-            <div>
-              <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6366f1', opacity: 0.8 }}>Admin Panel · Access</span>
-              <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', marginTop: '1px' }}>User Management</div>
-            </div>
-          </div>
-
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', paddingRight: '4px' }}>
-            {activeTab === 'admin' && (
-              <button className="btn primary" onClick={() => setShowCreate(true)}>
-                <UserPlus size={16} /> Add Admin
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* Bottom Row: Tabs & Filters */}
-        <div style={{
-          padding: '0 20px 16px 20px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '16px',
-          flexWrap: 'wrap',
-        }}>
-          {/* Main Tabs */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <div style={{
-            display: 'flex', background: 'var(--surface-2)', padding: 4, borderRadius: 10,
-            border: '1px solid var(--border)'
+            width: '4px', height: '36px',
+            background: 'linear-gradient(180deg, #6366f1, #8b5cf6)',
+            borderRadius: '0 4px 4px 0', flexShrink: 0,
+          }} />
+          <div style={{
+            width: '38px', height: '38px', borderRadius: '10px',
+            background: 'rgba(99,102,241,0.1)', color: '#6366f1',
+            display: 'grid', placeItems: 'center', flexShrink: 0,
+            border: '1px solid rgba(99,102,241,0.2)'
           }}>
-            <button
-              onClick={() => handleTabChange('admin')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '6px 16px', borderRadius: 6,
-                border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-                background: activeTab === 'admin' ? 'var(--surface)' : 'transparent',
-                color: activeTab === 'admin' ? 'var(--text)' : 'var(--text-mut)',
-                boxShadow: activeTab === 'admin' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                transition: '0.2s'
-              }}
-            >
-              <Shield size={14} /> Admin Users
-            </button>
-            <button
-              onClick={() => handleTabChange('office_staff')}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 6, padding: '6px 16px', borderRadius: 6,
-                border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
-                background: activeTab === 'office_staff' ? 'var(--surface)' : 'transparent',
-                color: activeTab === 'office_staff' ? 'var(--text)' : 'var(--text-mut)',
-                boxShadow: activeTab === 'office_staff' ? '0 1px 3px rgba(0,0,0,0.1)' : 'none',
-                transition: '0.2s'
-              }}
-            >
-              <Briefcase size={14} /> Office Staff
-            </button>
+            <Shield size={19} />
           </div>
-
-          <div style={{ display: 'flex', gap: '12px', alignItems: 'center', flexWrap: 'wrap' }}>
-            {activeTab === 'admin' ? (
-              <>
-                <div className="rpt-search-wrap" style={{ minWidth: 240, maxWidth: 340, margin: 0 }}>
-                  <Search size={14} className="rpt-field-icon" />
-                  <input
-                    type="text"
-                    placeholder="Search admin users..."
-                    className="rpt-field"
-                    value={search}
-                    onChange={e => setSearch(e.target.value)}
-                  />
-                  {search && (
-                    <button className="rpt-x-btn" onClick={() => setSearch('')}>
-                      <X size={12} />
-                    </button>
-                  )}
-                </div>
-
-                {['all', 'admin', 'super_admin'].map(key => {
-                  const active = roleFilter === key
-                  const label = key === 'all' ? 'All' : ROLE_CONFIG[key].label
-                  const color = key === 'all' ? 'var(--text)' : ROLE_CONFIG[key].color
-                  const bg = key === 'all' ? 'var(--surface-2)' : ROLE_CONFIG[key].bg
-                  const border = key === 'all' ? 'var(--border)' : ROLE_CONFIG[key].border
-                  return (
-                    <button key={key} onClick={() => setRoleFilter(key)} style={{
-                      display: 'inline-flex', alignItems: 'center', gap: 6,
-                      padding: '6px 14px', borderRadius: 20,
-                      border: `1.5px solid ${active ? border : 'var(--border)'}`,
-                      background: active ? bg : 'var(--surface)',
-                      color: active ? color : 'var(--text-mut)',
-                      fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                    }}>
-                      {label}
-                      <span style={{
-                        fontSize: 10, fontWeight: 700, minWidth: 18, textAlign: 'center',
-                        background: active ? 'rgba(255,255,255,0.25)' : 'var(--surface-2)',
-                        padding: '1px 6px', borderRadius: 99,
-                      }}>
-                        {counts[key]}
-                      </span>
-                    </button>
-                  )
-                })}
-              </>
-            ) : (
-              <>
-                <div className="rpt-search-wrap" style={{ minWidth: 240, maxWidth: 340, margin: 0 }}>
-                  <Search size={14} className="rpt-field-icon" />
-                  <input
-                    type="text"
-                    placeholder="Search by name, crew ID, nationality…"
-                    className="rpt-field"
-                    value={osSearch}
-                    onChange={e => setOsSearch(e.target.value)}
-                  />
-                  {osSearch && (
-                    <button className="rpt-x-btn" onClick={() => setOsSearch('')}>
-                      <X size={12} />
-                    </button>
-                  )}
-                </div>
-              </>
-            )}
+          <div>
+            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#6366f1', opacity: 0.9 }}>Admin Panel · Access</span>
+            <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', marginTop: '1px' }}>User Management</div>
           </div>
         </div>
+
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          {activeTab === 'admin' ? (
+            <button className="btn primary" onClick={() => setShowCreate(true)} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+              <UserPlus size={15} /> Add Admin
+            </button>
+          ) : (
+            <span style={{
+              fontSize: 12, fontWeight: 600, color: 'var(--text-mut)',
+              background: 'var(--surface-2)', padding: '6px 12px', borderRadius: 20,
+              border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 6
+            }}>
+              <Briefcase size={13} color="var(--accent)" />
+              {officeStaff ? `${officeStaff.length} Office Staff in Directory` : 'Office Staff Directory'}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {/* ── Navigation Tabs ── */}
+      <div style={{
+        background: 'var(--surface)',
+        borderBottom: '1px solid var(--border)',
+        padding: '0 20px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '28px',
+      }}>
+        <button
+          onClick={() => handleTabChange('admin')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '13px 4px',
+            border: 'none',
+            borderBottom: activeTab === 'admin' ? '2.5px solid #6366f1' : '2.5px solid transparent',
+            background: 'transparent',
+            color: activeTab === 'admin' ? '#6366f1' : 'var(--text-mut)',
+            fontWeight: activeTab === 'admin' ? 700 : 500,
+            fontSize: 13.5,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <Shield size={15} />
+          <span>Admin Users</span>
+          <span style={{
+            fontSize: 11,
+            fontWeight: 700,
+            padding: '2px 8px',
+            borderRadius: 99,
+            background: activeTab === 'admin' ? 'rgba(99,102,241,0.12)' : 'var(--surface-2)',
+            color: activeTab === 'admin' ? '#6366f1' : 'var(--text-faint)',
+            border: `1px solid ${activeTab === 'admin' ? 'rgba(99,102,241,0.25)' : 'var(--border)'}`,
+          }}>
+            {(admins || []).length}
+          </span>
+        </button>
+
+        <button
+          onClick={() => handleTabChange('office_staff')}
+          style={{
+            display: 'inline-flex',
+            alignItems: 'center',
+            gap: 8,
+            padding: '13px 4px',
+            border: 'none',
+            borderBottom: activeTab === 'office_staff' ? '2.5px solid #ea580c' : '2.5px solid transparent',
+            background: 'transparent',
+            color: activeTab === 'office_staff' ? '#ea580c' : 'var(--text-mut)',
+            fontWeight: activeTab === 'office_staff' ? 700 : 500,
+            fontSize: 13.5,
+            cursor: 'pointer',
+            transition: 'all 0.15s ease',
+          }}
+        >
+          <Briefcase size={15} />
+          <span>Office Staff</span>
+          <span style={{
+            fontSize: 11,
+            fontWeight: 700,
+            padding: '2px 8px',
+            borderRadius: 99,
+            background: activeTab === 'office_staff' ? 'rgba(234,88,12,0.12)' : 'var(--surface-2)',
+            color: activeTab === 'office_staff' ? '#ea580c' : 'var(--text-faint)',
+            border: `1px solid ${activeTab === 'office_staff' ? 'rgba(234,88,12,0.25)' : 'var(--border)'}`,
+          }}>
+            {officeStaff !== null ? officeStaff.length : '40'}
+          </span>
+        </button>
+      </div>
+
+      {/* ── Sub-Toolbar: Search & Filter Row ── */}
+      <div style={{
+        padding: '14px 20px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: '16px',
+        flexWrap: 'wrap',
+      }}>
+        {activeTab === 'admin' ? (
+          <>
+            <div className="rpt-search-wrap" style={{ minWidth: 260, maxWidth: 360, margin: 0 }}>
+              <Search size={14} className="rpt-field-icon" />
+              <input
+                type="text"
+                placeholder="Search admin users by name, email, or role..."
+                className="rpt-field"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+              />
+              {search && (
+                <button className="rpt-x-btn" onClick={() => setSearch('')}>
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
+            <div style={{
+              display: 'inline-flex',
+              background: 'var(--surface-2)',
+              border: '1px solid var(--border)',
+              borderRadius: 10,
+              padding: 3,
+              gap: 2,
+            }}>
+              {['all', 'admin', 'super_admin'].map(key => {
+                const active = roleFilter === key
+                const label = key === 'all' ? 'All Roles' : ROLE_CONFIG[key].label
+                return (
+                  <button
+                    key={key}
+                    onClick={() => setRoleFilter(key)}
+                    style={{
+                      border: 'none',
+                      background: active ? 'var(--surface)' : 'transparent',
+                      color: active ? 'var(--text)' : 'var(--text-mut)',
+                      fontWeight: active ? 700 : 500,
+                      fontSize: 12.5,
+                      padding: '6px 14px',
+                      borderRadius: 7,
+                      cursor: 'pointer',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 6,
+                      boxShadow: active ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    <span>{label}</span>
+                    <span style={{
+                      fontSize: 10.5,
+                      fontWeight: 700,
+                      padding: '1px 6px',
+                      borderRadius: 99,
+                      background: active ? 'rgba(99,102,241,0.1)' : 'rgba(0,0,0,0.04)',
+                      color: active ? '#6366f1' : 'var(--text-faint)',
+                    }}>
+                      {counts[key]}
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="rpt-search-wrap" style={{ minWidth: 260, maxWidth: 420, margin: 0 }}>
+              <Search size={14} className="rpt-field-icon" />
+              <input
+                type="text"
+                placeholder="Search office staff by name, crew ID, nationality…"
+                className="rpt-field"
+                value={osSearch}
+                onChange={e => setOsSearch(e.target.value)}
+              />
+              {osSearch && (
+                <button className="rpt-x-btn" onClick={() => setOsSearch('')}>
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+
+            <div style={{ fontSize: 13, color: 'var(--text-mut)', fontWeight: 500 }}>
+              Showing <strong style={{ color: 'var(--text)' }}>{osFiltered.length}</strong> of{' '}
+              <strong style={{ color: 'var(--text)' }}>{officeStaff?.length || 40}</strong> office staff members
+            </div>
+          </>
+        )}
       </div>
 
       {/* ── Content ── */}
@@ -620,10 +692,22 @@ export default function AdminUserManagement() {
                     <tr key={u.id}>
                       <td className="mut" style={{ fontSize: 12 }}>{index + 1}</td>
                       <td>
-                        <b>{u.name}</b>
-                        <div style={{ fontSize: 11, color: 'var(--text-mut)', marginTop: 2 }}>OFFICE STAFF</div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{
+                            width: '32px', height: '32px', borderRadius: '50%',
+                            background: 'linear-gradient(135deg, #f97316, #ea580c)',
+                            color: '#fff', display: 'grid', placeItems: 'center',
+                            fontSize: '12px', fontWeight: 700, flexShrink: 0,
+                          }}>
+                            {getInitials(u.name)}
+                          </div>
+                          <div>
+                            <b>{u.name}</b>
+                            <div style={{ fontSize: 11, color: 'var(--text-mut)', marginTop: 2 }}>OFFICE STAFF</div>
+                          </div>
+                        </div>
                       </td>
-                      <td><span className="mono">{u.crewId || '—'}</span></td>
+                      <td><span className="mono" style={{ background: 'var(--surface-2)', padding: '2px 8px', borderRadius: 6, fontSize: 12 }}>{u.crewId || '—'}</span></td>
                       <td>{u.nationality || '—'}</td>
                       <td>
                         <span className="pill" style={{
