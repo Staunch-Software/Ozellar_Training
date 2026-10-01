@@ -81,6 +81,8 @@ export function ProtectedRoute({ children }) {
   if (!user) return <Navigate to="/" replace />
   // Test takers must use TestRoute, not ProtectedRoute — bounce them home
   if (user.role === 'test_taker') return <Navigate to={homeFor(user)} replace />
+  // Office staff have their own route area — bounce them there
+  if (user.role === 'learner' && (user.rank || '').toUpperCase() === 'OFFICE STAFF') return <Navigate to={homeFor(user)} replace />
   if (user.role === 'learner' && !user.hasPhoto && location.pathname !== '/upload-photo' && location.pathname !== '/profile') {
     return <Navigate to="/upload-photo" replace />
   }
@@ -117,11 +119,21 @@ export function ApproverRoute({ children }) {
   return children
 }
 
+// Office-staff-only routes (learner with rank OFFICE STAFF).
+// They get a read-only browse UI — all courses visible, no mark-as-done.
+export function OfficeStaffRoute({ children }) {
+  const { user, loading } = useAuth()
+  if (loading) return <div className="spinner">Loading…</div>
+  if (!user) return <Navigate to="/" replace />
+  if (user.role !== 'learner' || (user.rank || '').toUpperCase() !== 'OFFICE STAFF') return <Navigate to={homeFor(user)} replace />
+  return children
+}
 
 // where a signed-in user belongs by role
 export const homeFor = (u) => {
   if (u?.role === 'admin' || u?.role === 'super_admin') return '/admin'
   if (u?.role === 'test_taker') return '/test/welcome'
   if (u?.isVesselApprover) return '/approvals'
+  if (u?.role === 'learner' && (u?.rank || '').toUpperCase() === 'OFFICE STAFF') return '/office-courses'
   return '/dashboard'
 }

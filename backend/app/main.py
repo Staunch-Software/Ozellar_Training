@@ -266,6 +266,30 @@ def login(req: LoginRequest, db: Session = Depends(get_db)):
         if not user or not user.password_hash or not verify_password(req.password or "", user.password_hash):
             raise HTTPException(401, "Invalid email or password")
         clear_rate_limit(db, f"admin:{email}")
+    elif req.mode == "office_staff":
+        name = (req.name or "").strip()
+        dob_raw = (req.dob or "").strip()
+        check_rate_limit(db, f"office_staff:{normalize_name(name)}:{dob_raw}")
+        dob = parse_ddmmyyyy(dob_raw)
+        if not name or dob is None:
+            raise HTTPException(401, "Invalid name or date of birth")
+        candidates = db.query(models.User).filter_by(role="learner", date_of_birth=dob).all()
+        target = normalize_name(name)
+        matches = [u for u in candidates if normalize_name(u.full_name) == target and (u.rank or "").strip().upper() == "OFFICE STAFF"]
+        if not matches:
+            raise HTTPException(401, "Invalid name or date of birth")
+        if len(matches) > 1:
+            # rare collision: two office staff share name + DOB → need Crew ID to disambiguate
+            crew_id = (req.crewId or "").strip()
+            if not crew_id:
+                raise HTTPException(
+                    409, "More than one office staff member matches that name and date of birth. "
+                         "Please enter your Crew ID to continue.")
+            matches = [u for u in matches if u.crew_id == crew_id]
+            if len(matches) != 1:
+                raise HTTPException(401, "Invalid Crew ID for that name and date of birth")
+        user = matches[0]
+        clear_rate_limit(db, f"office_staff:{normalize_name(name)}:{dob_raw}")
     else:
         raise HTTPException(400, "Invalid login mode")
 
@@ -299,10 +323,16 @@ def crew_search(q: str, request: Request, scope: str | None = None, db: Session 
     candidates = (db.query(models.User)
                   .filter_by(role="learner", is_active=True).all())
     matches = [u for u in candidates if query in normalize_name(u.full_name)]
-    if scope == "orientation":
+    if scope == "office_staff":
+        matches = [u for u in matches if (u.rank or "").strip().upper() == "OFFICE STAFF"]
+    elif scope == "orientation":
         enrolled_ids = {e.learner_id for e in db.query(models.OrientationEnrollment.learner_id).all()}
         matches = [u for u in matches if u.id in enrolled_ids
                   or (orientation_ranks.is_eligible_crew(u.rank) and (u.emp_status or "").strip().upper() == "SAIL")]
+    else:
+        # Standard crew search: exclude office staff
+        matches = [u for u in matches if (u.rank or "").strip().upper() != "OFFICE STAFF"]
+    
     matches.sort(key=lambda u: (not normalize_name(u.full_name).startswith(query), u.full_name))
     return [{"name": u.full_name, "rank": u.rank} for u in matches[:8]]
 
@@ -386,9 +416,11 @@ def enrolled_course_ids(db, user_id):
 
 
 def require_enrollment(db, user, course_id):
-    """Admins may access any course (preview); learners must be assigned it."""
+    """Admins may access any course (preview); office staff too (preview mode); learners must be assigned it."""
     if user.role in ("admin", "super_admin"):
         return
+    if (user.rank or "").strip().upper() == "OFFICE STAFF":
+        return  # office staff can preview all courses without enrollment
     is_enrolled = db.query(models.Enrollment).filter_by(
         learner_id=user.id, course_id=course_id).first()
     if not is_enrolled:
@@ -495,11 +527,15 @@ def list_courses(user: models.User = Depends(get_current_user), db: Session = De
     lid = user.id
     q = db.query(models.Course).order_by(models.Course.order)
     if user.role not in ("admin", "super_admin"):
-        # learners see only the courses assigned to them
-        assigned = enrolled_course_ids(db, user.id)
-        if not assigned:
-            return []
-        q = q.filter(models.Course.id.in_(assigned))
+        if (user.rank or "").strip().upper() == "OFFICE STAFF":
+            # Office staff see ALL courses in preview mode (no enrollment required)
+            pass
+        else:
+            # learners see only the courses assigned to them
+            assigned = enrolled_course_ids(db, user.id)
+            if not assigned:
+                return []
+            q = q.filter(models.Course.id.in_(assigned))
     return [serialize_course(db, c, get_progress(db, lid, c.id)) for c in q.all()]
 
 
@@ -1414,6 +1450,30 @@ def admin_list_users(admin: models.User = Depends(require_admin), db: Session = 
     users = (db.query(models.User).filter_by(role="learner")
              .order_by(models.User.full_name).all())
     return [admin_user_view(db, u) for u in users]
+
+
+@app.get("/api/admin/office-staff")
+def admin_list_office_staff(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+    """List all office staff users (learners with rank 'OFFICE STAFF')."""
+    from sqlalchemy import func as sqlfunc
+    users = (db.query(models.User)
+             .filter(models.User.role == "learner",
+                     sqlfunc.upper(models.User.rank) == "OFFICE STAFF")
+             .order_by(models.User.full_name).all())
+    result = []
+    for u in users:
+        result.append({
+            "id": u.id,
+            "name": u.full_name,
+            "crewId": u.crew_id,
+            "rank": u.rank,
+            "nationality": u.nationality,
+            "empStatus": u.emp_status,
+            "currentVessel": u.current_vessel,
+            "mobileNo": u.mobile_number,
+            "isActive": bool(u.is_active),
+        })
+    return result
 
 
 @app.post("/api/admin/users")

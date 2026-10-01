@@ -14,10 +14,7 @@ drive the real Crewlist page instead of reconstructing headers by hand:
   2. Load the Crewlist page — its own JS resolves the default vessel scope,
      so we never hardcode a vessel list.
   3. In the Rank filter <select id="reportsearchfilterRanks_RANK">, select
-     every option EXCEPT "Office Staff" (matched by option *text*, not a
-     hardcoded rank id — a future new rank is included automatically, and
-     only Office Staff is ever excluded, per instruction: "select all rank
-     then exclude the office staff rank by deselect that").
+     every option (including Office Staff).
   4. Click the page's own "Show" button (data-bind: PopulateCrewListData,
      class btn-icon-apply-search-result) to fetch page 1 — this also lets
      the page's own vessel-scope logic resolve VesselList for us.
@@ -52,7 +49,6 @@ from .smartpal_sync import (
 )
 
 CREWLIST_URL = f"{BASE_URL}/CrewingPALApp/crewing/Crewlist"
-OFFICE_STAFF_RANK_NAME = "OFFICE STAFF"
 MAX_PAGES = 100
 
 
@@ -81,27 +77,23 @@ async def _login(page):
     await page.wait_for_url(f"**{LANDING_URL_PART}**", timeout=30_000)
 
 
-async def _select_all_ranks_except_office_staff(page) -> int:
-    """Selects every option in the Rank filter except 'Office Staff'
-    (matched by option text). Returns how many options were excluded —
-    caller should treat anything other than 1 as a hard error, since a
-    markup/name change here would otherwise silently pull the wrong set."""
-    return await page.evaluate("""(officeStaffName) => {
+async def _select_all_ranks(page) -> int:
+    """Selects every option in the Rank filter."""
+    return await page.evaluate("""() => {
         const sel = document.querySelector('#reportsearchfilterRanks_RANK');
         if (!sel) return -1;
-        let excluded = 0;
+        let selected = 0;
         for (const opt of sel.options) {
-            const isOfficeStaff = opt.textContent.trim().toUpperCase() === officeStaffName;
-            opt.selected = !isOfficeStaff;
-            if (isOfficeStaff) excluded++;
+            opt.selected = true;
+            selected++;
         }
         sel.dispatchEvent(new Event('change', { bubbles: true }));
         if (window.jQuery) {
             jQuery(sel).trigger('change');
             if (jQuery(sel).selectpicker) jQuery(sel).selectpicker('refresh');
         }
-        return excluded;
-    }""", OFFICE_STAFF_RANK_NAME)
+        return selected;
+    }""")
 
 
 async def fetch_crew() -> list:
@@ -118,12 +110,11 @@ async def fetch_crew() -> list:
             await page.goto(CREWLIST_URL, wait_until="networkidle", timeout=60_000)
             await page.wait_for_selector("#reportsearchfilterRanks_RANK", timeout=30_000)
 
-            excluded = await _select_all_ranks_except_office_staff(page)
-            if excluded != 1:
+            selected = await _select_all_ranks(page)
+            if selected <= 0:
                 raise RuntimeError(
-                    f"Expected to exclude exactly 1 'Office Staff' rank option, excluded {excluded} — "
-                    f"the Rank filter markup or the rank name may have changed on SmartPAL's side; "
-                    f"check before trusting this sync's output.")
+                    f"Failed to find or select any rank options (selected={selected}). "
+                    f"The Rank filter markup may have changed.")
             await page.wait_for_timeout(500)
 
             print("[crewlist_sync] Clicking Show, waiting for the crew-list response...")

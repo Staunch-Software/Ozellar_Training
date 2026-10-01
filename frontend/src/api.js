@@ -157,6 +157,9 @@ export const adminPanelListAdmins = () => req('/admin/panel/admins')
 export const adminPanelCreateAdmin = (body) => req('/admin/panel/admins', { method: 'POST', body: JSON.stringify(body) })
 export const adminPanelUpdateAdmin = (id, body) => req(`/admin/panel/admins/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
 
+// Office Staff (learners with rank OFFICE STAFF)
+export const adminListOfficeStaff = () => req('/admin/office-staff')
+
 
 // CSV needs the auth header, so fetch as a blob and trigger a download
 export async function adminDownloadReportCsv() {
