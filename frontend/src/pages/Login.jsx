@@ -193,19 +193,23 @@ export default function Login() {
           <div className="segmented" role="tablist">
             <button type="button" role="tab" className={mode === 'crew' ? 'on' : ''}
               onClick={() => switchMode('crew')}>
-              <Anchor size={14} />Seafarer
+              <Anchor size={14} />
+              <span>Seafarer</span>
             </button>
             <button type="button" role="tab" className={mode === 'admin' ? 'on' : ''}
               onClick={() => switchMode('admin')}>
-              <ShieldCheck size={14} />Admin
+              <ShieldCheck size={14} />
+              <span>Admin</span>
             </button>
             <button type="button" role="tab" className={mode === 'test' ? 'on' : ''}
               onClick={() => switchMode('test')}>
-              <ClipboardList size={14} />Test
+              <ClipboardList size={14} />
+              <span>Test</span>
             </button>
             <button type="button" role="tab" className={mode === 'office_staff' ? 'on' : ''}
               onClick={() => switchMode('office_staff')}>
-              <Briefcase size={14} />Office Staff
+              <Briefcase size={14} />
+              <span>Office Staff</span>
             </button>
           </div>
 

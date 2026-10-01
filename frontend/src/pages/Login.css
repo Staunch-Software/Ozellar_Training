@@ -3,7 +3,7 @@
 /* ---------- LOGIN ---------- */
 
 .login-top{position:fixed;top:16px;right:18px}
-.login{width:min(1000px,100%);display:grid;grid-template-columns:1.05fr .95fr;
+.login{width:min(1040px,100%);display:grid;grid-template-columns:1.02fr .98fr;
   background:var(--surface);border:1px solid var(--border);border-radius:16px;
   box-shadow:var(--shadow);overflow:hidden;transition:width .2s ease}
 .login .art {
@@ -110,7 +110,7 @@
   background: rgba(22, 134, 106, 0.5);
   border-color: rgba(22, 134, 106, 0.8);
 }
-.login .form{padding:42px;display:flex;flex-direction:column;justify-content:center;gap:15px}
+.login .form{padding:38px 32px;display:flex;flex-direction:column;justify-content:center;gap:15px}
 .brand-lg{display:flex;align-items:center;gap:11px;font-size:20px;letter-spacing:-0.02em}
 .brand-lg .brand-text{font-weight:800;color:var(--text)}
 .brand-lg .brand-light{font-weight:400;color:var(--text-mut);margin-left:2px}
@@ -122,13 +122,16 @@
 .field input{width:100%;border:1px solid var(--border-strong);border-radius:9px;
   background:var(--bg);padding:11px 13px 11px 38px;font-size:14px;color:var(--text);font-family:inherit}
 .field input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-weak)}
-.segmented{display:flex;background:var(--bg);border:1px solid var(--border);
-  border-radius:12px;padding:4px;gap:4px;box-shadow:inset 0 2px 4px rgba(0,0,0,0.02)}
-.segmented button{flex:1;border:none;background:transparent;padding:10px 8px;border-radius:8px;
-  font-size:13.5px;font-weight:600;color:var(--text-mut);transition:all 0.2s ease;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;gap:6px}
-.segmented button:hover:not(.on){color:var(--text);background:var(--surface-2)}
-.segmented button.on{background:var(--surface);color:var(--accent);box-shadow:0 0 0 1px var(--border), 0 2px 6px rgba(0,0,0,0.06)}
+.segmented{display:flex;background:var(--surface-2);border:1px solid var(--border);
+  border-radius:12px;padding:4px;gap:3px;box-shadow:inset 0 1px 3px rgba(0,0,0,0.02)}
+.segmented button{flex:1 1 0;min-width:0;border:none;background:transparent;padding:9px 6px;border-radius:8px;
+  font-size:12.5px;font-weight:600;letter-spacing:-0.01em;color:var(--text-mut);transition:all 0.2s cubic-bezier(0.16,1,0.3,1);cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:6px;white-space:nowrap;user-select:none;line-height:1}
+.segmented button svg{flex-shrink:0;width:14px;height:14px;transition:transform 0.2s ease}
+.segmented button:hover:not(.on){color:var(--text);background:rgba(0,0,0,0.04)}
+.segmented button:hover:not(.on) svg{transform:translateY(-0.5px)}
+.segmented button.on{background:var(--surface);color:var(--accent);font-weight:700;
+  box-shadow:0 1px 4px rgba(0,0,0,0.08), 0 0 0 1px var(--border)}
 .field .hint{font-size:11.5px;color:var(--text-faint);margin-top:6px}
 .ac-pop{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--surface);
   border:1px solid var(--border);border-radius:10px;box-shadow:var(--shadow);
@@ -173,13 +176,15 @@
   .login .art h3 { font-size: 26px; }}
 @media (max-width: 480px){
 
-  .login .form { padding: 26px 20px; }}
+  .login .form { padding: 26px 18px; }
+  .login .segmented button { font-size: 11.5px; padding: 8px 4px; gap: 4px; }
+}
 @media (min-width: 1440px) and (max-width: 1919px) {
   .login { width: 1100px; min-height: 600px; }
   .login .art { padding: 54px; }
   .login .art h3 { font-size: 34px; max-width: 16ch; }
   .login .art p { font-size: 16px; max-width: 36ch; margin-top: 16px; }
-  .login .form { padding: 54px; gap: 20px; }
+  .login .form { padding: 44px 36px; gap: 20px; }
   .login .field label { font-size: 14px; margin-bottom: 6px; }
   .login .field input { padding: 14px 18px 14px 44px; font-size: 16px; border-radius: 10px; }
   .login .field .inputwrap svg { width: 20px; height: 20px; left: 14px; }
