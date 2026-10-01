@@ -3,6 +3,7 @@ import { Shield, UserPlus, Check, Ban, AlertCircle, X, Mail, Lock, User,
          Crown, Pencil, Save, Search, Users, Briefcase, ChevronDown, ChevronUp,
          Phone, MapPin, Building2, Eye } from 'lucide-react'
 import { adminPanelListAdmins, adminPanelCreateAdmin, adminPanelUpdateAdmin, adminListOfficeStaff } from '../../api.js'
+import Pagination from '../../components/Pagination.jsx'
 import { useAuth } from '../../auth.jsx'
 
 const EMPTY_CREATE = { role: 'admin', fullName: '', email: '', password: '', rank: '' }
@@ -356,6 +357,20 @@ export default function AdminUserManagement() {
     super_admin: (admins || []).filter(u => u.role === 'super_admin').length,
   }
 
+  // Pagination for Admin users
+  const [currentPage, setCurrentPage] = useState(1)
+  const itemsPerPage = 10
+  useEffect(() => { setCurrentPage(1) }, [search, roleFilter, activeTab])
+  const totalPages = Math.ceil(filtered.length / itemsPerPage) || 1
+  const paginatedAdmins = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
+
+  // Pagination for Office Staff
+  const [osCurrentPage, setOsCurrentPage] = useState(1)
+  const osItemsPerPage = 10
+  useEffect(() => { setOsCurrentPage(1) }, [osSearch, activeTab])
+  const osTotalPages = Math.ceil(osFiltered.length / osItemsPerPage) || 1
+  const paginatedOs = osFiltered.slice((osCurrentPage - 1) * osItemsPerPage, osCurrentPage * osItemsPerPage)
+
   if (admins === null) return <div className="spinner">Loading admins…</div>
 
   return (
@@ -612,9 +627,9 @@ export default function AdminUserManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filtered.map((u, index) => (
+                  {paginatedAdmins.map((u, index) => (
                     <tr key={u.id} className={u.isActive ? '' : 'row-inactive'}>
-                      <td className="mut" style={{ fontSize: 12 }}>{index + 1}</td>
+                      <td className="mut" style={{ fontSize: 12 }}>{(currentPage - 1) * itemsPerPage + index + 1}</td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <div style={{
@@ -658,6 +673,15 @@ export default function AdminUserManagement() {
               </table>
             </div>
           )}
+          {filtered.length > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filtered.length}
+              itemsPerPage={itemsPerPage}
+              onPageChange={setCurrentPage}
+            />
+          )}
         </div>
       ) : (
         <div className="admin-card" style={{ padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
@@ -688,9 +712,9 @@ export default function AdminUserManagement() {
                   </tr>
                 </thead>
                 <tbody>
-                  {osFiltered.map((u, index) => (
+                  {paginatedOs.map((u, index) => (
                     <tr key={u.id}>
-                      <td className="mut" style={{ fontSize: 12 }}>{index + 1}</td>
+                      <td className="mut" style={{ fontSize: 12 }}>{(osCurrentPage - 1) * osItemsPerPage + index + 1}</td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                           <div style={{
@@ -725,6 +749,15 @@ export default function AdminUserManagement() {
                 </tbody>
               </table>
             </div>
+          )}
+          {osFiltered.length > 0 && (
+            <Pagination
+              currentPage={osCurrentPage}
+              totalPages={osTotalPages}
+              totalItems={osFiltered.length}
+              itemsPerPage={osItemsPerPage}
+              onPageChange={setOsCurrentPage}
+            />
           )}
         </div>
       )}
