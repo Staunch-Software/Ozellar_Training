@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   CheckCircle2, Circle, Play, Lock, Star, Check, Download, Info, Dot,
@@ -124,6 +124,8 @@ export default function AdminCoursePreview() {
   const [idx, setIdx] = useState(0)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [fullScreenImage, setFullScreenImage] = useState(null)
+  const activeItemRef = useRef(null)
+  const sidebarRef = useRef(null)
 
   useEffect(() => {
     adminGetCourseBuilder(id).then((c) => {
@@ -131,6 +133,17 @@ export default function AdminCoursePreview() {
       setIdx(0)
     })
   }, [id])
+
+  // Automatically scroll active chapter into view in sidebar
+  useEffect(() => {
+    if (activeItemRef.current) {
+      activeItemRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest'
+      })
+    }
+  }, [idx])
 
   if (!course) return (
     <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', color: '#64748b' }}>
@@ -141,7 +154,11 @@ export default function AdminCoursePreview() {
   const isFinalAssessment = idx === course.chapters.length
   const ch = isFinalAssessment ? null : course.chapters[idx]
 
-  const goto = (i) => { setIdx(i); document.getElementById('preview-scroll-area').scrollTo(0, 0) }
+  const goto = (i) => {
+    setIdx(i)
+    const el = document.getElementById('preview-scroll-area')
+    if (el) el.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   const complete = () => {
     if (idx < course.chapters.length) goto(idx + 1)
@@ -188,29 +205,38 @@ export default function AdminCoursePreview() {
 
       <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
         {/* Sidebar */}
-        <div style={{ 
-          width: sidebarOpen ? 320 : 0, 
-          flexShrink: 0, 
-          background: '#ffffff', 
-          borderRight: '1px solid #e2e8f0',
-          transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-          overflowX: 'hidden',
-          overflowY: 'auto',
-          display: 'flex', flexDirection: 'column'
-        }}>
+        <div 
+          ref={sidebarRef}
+          style={{ 
+            width: sidebarOpen ? 320 : 0, 
+            flexShrink: 0, 
+            background: '#ffffff', 
+            borderRight: '1px solid #e2e8f0',
+            transition: 'width 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+            overflowX: 'hidden',
+            overflowY: 'auto',
+            display: 'flex', flexDirection: 'column'
+          }}>
           <div style={{ width: 320, padding: 20 }}>
             <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: '#94a3b8', marginBottom: 12 }}>
               Course Content
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               {course.chapters.map((c, i) => (
-                <button key={c.id} onClick={() => goto(i)} style={{
-                  display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px', width: '100%',
-                  background: i === idx ? 'rgba(224,120,32,0.1)' : 'transparent',
-                  border: '1px solid', borderColor: i === idx ? 'rgba(224,120,32,0.2)' : 'transparent',
-                  borderRadius: 8, cursor: 'pointer', textAlign: 'left', transition: '0.2s',
-                  color: i === idx ? '#C2671B' : '#475569'
-                }} onMouseEnter={e => { if(i !== idx) e.currentTarget.style.background = '#f8fafc' }} onMouseLeave={e => { if(i !== idx) e.currentTarget.style.background = 'transparent' }}>
+                <button 
+                  key={c.id} 
+                  ref={i === idx ? activeItemRef : null}
+                  onClick={() => goto(i)} 
+                  style={{
+                    display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px', width: '100%',
+                    background: i === idx ? 'rgba(224,120,32,0.1)' : 'transparent',
+                    border: '1px solid', borderColor: i === idx ? 'rgba(224,120,32,0.2)' : 'transparent',
+                    borderRadius: 8, cursor: 'pointer', textAlign: 'left', transition: '0.2s',
+                    color: i === idx ? '#C2671B' : '#475569'
+                  }} 
+                  onMouseEnter={e => { if(i !== idx) e.currentTarget.style.background = '#f8fafc' }} 
+                  onMouseLeave={e => { if(i !== idx) e.currentTarget.style.background = 'transparent' }}
+                >
                   <div style={{ marginTop: 2 }}>
                     {i === idx ? <Play size={16} /> : c.kind === 'quiz' ? <HelpCircle size={16} /> : <Circle size={16} />}
                   </div>
@@ -219,13 +245,19 @@ export default function AdminCoursePreview() {
                   </div>
                 </button>
               ))}
-              <button onClick={() => goto(course.chapters.length)} style={{
-                display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px', width: '100%', marginTop: 8,
-                background: isFinalAssessment ? '#dcfce7' : 'transparent',
-                border: '1px solid', borderColor: isFinalAssessment ? '#bbf7d0' : 'transparent',
-                borderRadius: 8, cursor: 'pointer', textAlign: 'left', transition: '0.2s',
-                color: isFinalAssessment ? '#166534' : '#475569'
-              }} onMouseEnter={e => { if(!isFinalAssessment) e.currentTarget.style.background = '#f8fafc' }} onMouseLeave={e => { if(!isFinalAssessment) e.currentTarget.style.background = 'transparent' }}>
+              <button 
+                ref={isFinalAssessment ? activeItemRef : null}
+                onClick={() => goto(course.chapters.length)} 
+                style={{
+                  display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px', width: '100%', marginTop: 8,
+                  background: isFinalAssessment ? '#dcfce7' : 'transparent',
+                  border: '1px solid', borderColor: isFinalAssessment ? '#bbf7d0' : 'transparent',
+                  borderRadius: 8, cursor: 'pointer', textAlign: 'left', transition: '0.2s',
+                  color: isFinalAssessment ? '#166534' : '#475569'
+                }} 
+                onMouseEnter={e => { if(!isFinalAssessment) e.currentTarget.style.background = '#f8fafc' }} 
+                onMouseLeave={e => { if(!isFinalAssessment) e.currentTarget.style.background = 'transparent' }}
+              >
                 <div style={{ marginTop: 2 }}>
                   {isFinalAssessment ? <Star size={16} /> : <Lock size={16} />}
                 </div>
