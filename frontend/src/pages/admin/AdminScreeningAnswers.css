@@ -247,18 +247,39 @@
   border-radius: 16px;
   padding: 6px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.02);
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 12px;
   position: sticky;
   top: 16px;
   z-index: 10;
+  overflow: hidden;
 }
 
 .ans-nav-sections, .ans-nav-status {
   display: flex;
   align-items: center;
   gap: 4px;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+}
+
+.ans-nav-status {
+  flex-shrink: 0;
+}
+
+.ans-nav-sections {
+  overflow-x: auto;
+  scrollbar-width: none;
+  min-width: 0;
+}
+.ans-nav-sections::-webkit-scrollbar {
+  height: 4px;
+}
+.ans-nav-sections::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ans-nav-sections::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
 }
 
 .ans-nav-bar button {
