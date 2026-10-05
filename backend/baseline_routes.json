@@ -1,0 +1,821 @@
+[
+  {
+    "path": "/api/admin/courses",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_list_courses"
+  },
+  {
+    "path": "/api/admin/courses",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_create_course"
+  },
+  {
+    "path": "/api/admin/courses/{course_id}",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_get_course_builder"
+  },
+  {
+    "path": "/api/admin/courses/{course_id}",
+    "methods": [
+      "PUT"
+    ],
+    "name": "admin_update_course"
+  },
+  {
+    "path": "/api/admin/courses/{course_id}/assessment",
+    "methods": [
+      "PUT"
+    ],
+    "name": "admin_save_assessment"
+  },
+  {
+    "path": "/api/admin/courses/{course_id}/certificate",
+    "methods": [
+      "PUT"
+    ],
+    "name": "admin_save_course_certificate"
+  },
+  {
+    "path": "/api/admin/courses/{course_id}/certificate-preview.pdf",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_preview_course_certificate"
+  },
+  {
+    "path": "/api/admin/courses/{course_id}/chapters/{chapter_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "name": "admin_delete_chapter"
+  },
+  {
+    "path": "/api/admin/courses/{course_id}/chapters/{chapter_id}/quiz-questions",
+    "methods": [
+      "PUT"
+    ],
+    "name": "admin_save_quiz_questions"
+  },
+  {
+    "path": "/api/admin/courses/{course_id}/pptx-status",
+    "methods": [
+      "GET"
+    ],
+    "name": "pptx_status"
+  },
+  {
+    "path": "/api/admin/courses/{course_id}/quiz-chapters",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_create_quiz_chapter"
+  },
+  {
+    "path": "/api/admin/courses/{course_id}/reorder",
+    "methods": [
+      "PUT"
+    ],
+    "name": "admin_reorder_chapters"
+  },
+  {
+    "path": "/api/admin/courses/{course_id}/upload-pptx",
+    "methods": [
+      "POST"
+    ],
+    "name": "upload_course_pptx"
+  },
+  {
+    "path": "/api/admin/courses/{course_id}/upload-video",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_upload_video"
+  },
+  {
+    "path": "/api/admin/courses/{course_id}/upload-video-status",
+    "methods": [
+      "GET"
+    ],
+    "name": "video_upload_status"
+  },
+  {
+    "path": "/api/admin/dashboard-stats",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_dashboard_stats"
+  },
+  {
+    "path": "/api/admin/maintenance/reconcile-progress",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_reconcile_progress"
+  },
+  {
+    "path": "/api/admin/notifications",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_notifications"
+  },
+  {
+    "path": "/api/admin/office-staff",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_list_office_staff"
+  },
+  {
+    "path": "/api/admin/orientation/candidates",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_list_orientation_candidates"
+  },
+  {
+    "path": "/api/admin/orientation/enrollments",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_list_orientation_enrollments"
+  },
+  {
+    "path": "/api/admin/orientation/enrollments",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_create_orientation_enrollment"
+  },
+  {
+    "path": "/api/admin/orientation/enrollments/{enrollment_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "name": "admin_delete_orientation_enrollment"
+  },
+  {
+    "path": "/api/admin/orientation/enrollments/{enrollment_id}/decide",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_decide_orientation_enrollment"
+  },
+  {
+    "path": "/api/admin/orientation/programs",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_list_orientation_programs"
+  },
+  {
+    "path": "/api/admin/orientation/programs",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_create_orientation_program"
+  },
+  {
+    "path": "/api/admin/orientation/programs.xlsx",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_orientation_programs_xlsx"
+  },
+  {
+    "path": "/api/admin/orientation/programs/{program_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "name": "admin_delete_orientation_program"
+  },
+  {
+    "path": "/api/admin/orientation/programs/{program_id}",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_get_orientation_program"
+  },
+  {
+    "path": "/api/admin/orientation/programs/{program_id}",
+    "methods": [
+      "PUT"
+    ],
+    "name": "admin_update_orientation_program"
+  },
+  {
+    "path": "/api/admin/orientation/programs/{program_id}/reorder",
+    "methods": [
+      "PUT"
+    ],
+    "name": "admin_reorder_orientation_tasks"
+  },
+  {
+    "path": "/api/admin/orientation/programs/{program_id}/tasks",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_add_orientation_task"
+  },
+  {
+    "path": "/api/admin/orientation/programs/{program_id}/tasks/{task_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "name": "admin_delete_orientation_task"
+  },
+  {
+    "path": "/api/admin/orientation/programs/{program_id}/tasks/{task_id}",
+    "methods": [
+      "PUT"
+    ],
+    "name": "admin_update_orientation_task"
+  },
+  {
+    "path": "/api/admin/orientation/programs/{program_id}/toggle",
+    "methods": [
+      "PATCH"
+    ],
+    "name": "admin_toggle_orientation_program"
+  },
+  {
+    "path": "/api/admin/orientation/results",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_orientation_results"
+  },
+  {
+    "path": "/api/admin/orientation/results.xlsx",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_orientation_results_xlsx"
+  },
+  {
+    "path": "/api/admin/orientation/vessels",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_list_orientation_vessels"
+  },
+  {
+    "path": "/api/admin/panel/admins",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_panel_list_admins"
+  },
+  {
+    "path": "/api/admin/panel/admins",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_panel_create_admin"
+  },
+  {
+    "path": "/api/admin/panel/admins/{user_id}",
+    "methods": [
+      "PATCH"
+    ],
+    "name": "admin_panel_update_admin"
+  },
+  {
+    "path": "/api/admin/report",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_report"
+  },
+  {
+    "path": "/api/admin/report.csv",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_report_csv"
+  },
+  {
+    "path": "/api/admin/report.xlsx",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_report_xlsx"
+  },
+  {
+    "path": "/api/admin/screening/candidates",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_list_candidates"
+  },
+  {
+    "path": "/api/admin/screening/candidates",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_create_candidate"
+  },
+  {
+    "path": "/api/admin/screening/candidates/{cand_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "name": "admin_delete_candidate"
+  },
+  {
+    "path": "/api/admin/screening/candidates/{cand_id}",
+    "methods": [
+      "PATCH"
+    ],
+    "name": "admin_update_candidate"
+  },
+  {
+    "path": "/api/admin/screening/candidates/{cand_id}/answers",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_get_candidate_answers"
+  },
+  {
+    "path": "/api/admin/screening/results",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_screening_results"
+  },
+  {
+    "path": "/api/admin/screening/results.xlsx",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_screening_results_xlsx"
+  },
+  {
+    "path": "/api/admin/screening/tests",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_list_tests"
+  },
+  {
+    "path": "/api/admin/screening/tests",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_create_test"
+  },
+  {
+    "path": "/api/admin/screening/tests/{test_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "name": "admin_delete_test"
+  },
+  {
+    "path": "/api/admin/screening/tests/{test_id}",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_get_test"
+  },
+  {
+    "path": "/api/admin/screening/tests/{test_id}",
+    "methods": [
+      "PATCH"
+    ],
+    "name": "admin_update_test"
+  },
+  {
+    "path": "/api/admin/screening/tests/{test_id}/duplicate",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_duplicate_test"
+  },
+  {
+    "path": "/api/admin/screening/tests/{test_id}/sections",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_add_section"
+  },
+  {
+    "path": "/api/admin/screening/tests/{test_id}/sections/{section_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "name": "admin_delete_section"
+  },
+  {
+    "path": "/api/admin/screening/tests/{test_id}/sections/{section_id}",
+    "methods": [
+      "PATCH"
+    ],
+    "name": "admin_update_section"
+  },
+  {
+    "path": "/api/admin/screening/tests/{test_id}/sections/{section_id}/questions",
+    "methods": [
+      "PUT"
+    ],
+    "name": "admin_save_section_questions"
+  },
+  {
+    "path": "/api/admin/screening/tests/{test_id}/toggle",
+    "methods": [
+      "PATCH"
+    ],
+    "name": "admin_toggle_test"
+  },
+  {
+    "path": "/api/admin/screening/upload-question-image",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_upload_screening_question_image"
+  },
+  {
+    "path": "/api/admin/users",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_list_users"
+  },
+  {
+    "path": "/api/admin/users",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_create_user"
+  },
+  {
+    "path": "/api/admin/users/{user_id}",
+    "methods": [
+      "PATCH"
+    ],
+    "name": "admin_update_user"
+  },
+  {
+    "path": "/api/admin/users/{user_id}/courses/{course_id}/approve",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_inline_approve"
+  },
+  {
+    "path": "/api/admin/users/{user_id}/courses/{course_id}/certificate.pdf",
+    "methods": [
+      "GET"
+    ],
+    "name": "admin_get_crew_certificate_pdf"
+  },
+  {
+    "path": "/api/admin/users/{user_id}/courses/{course_id}/reassign",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_reassign_course"
+  },
+  {
+    "path": "/api/admin/users/{user_id}/enrollments",
+    "methods": [
+      "POST"
+    ],
+    "name": "admin_assign"
+  },
+  {
+    "path": "/api/admin/users/{user_id}/enrollments",
+    "methods": [
+      "PUT"
+    ],
+    "name": "admin_bulk_set_enrollments"
+  },
+  {
+    "path": "/api/admin/users/{user_id}/enrollments/{course_id}",
+    "methods": [
+      "DELETE"
+    ],
+    "name": "admin_unassign"
+  },
+  {
+    "path": "/api/approve",
+    "methods": [
+      "GET"
+    ],
+    "name": "approve_assessment_form"
+  },
+  {
+    "path": "/api/approve",
+    "methods": [
+      "POST"
+    ],
+    "name": "approve_assessment"
+  },
+  {
+    "path": "/api/approver/submissions",
+    "methods": [
+      "GET"
+    ],
+    "name": "approver_list_submissions"
+  },
+  {
+    "path": "/api/approver/submissions/{submission_id}/decide",
+    "methods": [
+      "POST"
+    ],
+    "name": "approver_decide_submission"
+  },
+  {
+    "path": "/api/approver/submissions/{submission_id}/tasks/{task_id}/verify",
+    "methods": [
+      "POST"
+    ],
+    "name": "approver_verify_task"
+  },
+  {
+    "path": "/api/auth/crew-search",
+    "methods": [
+      "GET"
+    ],
+    "name": "crew_search"
+  },
+  {
+    "path": "/api/auth/login",
+    "methods": [
+      "POST"
+    ],
+    "name": "login"
+  },
+  {
+    "path": "/api/auth/me",
+    "methods": [
+      "GET"
+    ],
+    "name": "me"
+  },
+  {
+    "path": "/api/certificates",
+    "methods": [
+      "GET"
+    ],
+    "name": "list_certificates"
+  },
+  {
+    "path": "/api/courses",
+    "methods": [
+      "GET"
+    ],
+    "name": "list_courses"
+  },
+  {
+    "path": "/api/courses/{course_id}/assessment",
+    "methods": [
+      "POST"
+    ],
+    "name": "submit_assessment"
+  },
+  {
+    "path": "/api/courses/{course_id}/certificate",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_certificate"
+  },
+  {
+    "path": "/api/courses/{course_id}/certificate.pdf",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_certificate_pdf"
+  },
+  {
+    "path": "/api/courses/{course_id}/chapters/{chapter_id}/complete",
+    "methods": [
+      "POST"
+    ],
+    "name": "complete_chapter"
+  },
+  {
+    "path": "/api/courses/{slug}",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_course"
+  },
+  {
+    "path": "/api/crew/my-report.xlsx",
+    "methods": [
+      "GET"
+    ],
+    "name": "crew_my_report_xlsx"
+  },
+  {
+    "path": "/api/crew/photo",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_crew_photo"
+  },
+  {
+    "path": "/api/crew/photo",
+    "methods": [
+      "POST"
+    ],
+    "name": "upload_crew_photo"
+  },
+  {
+    "path": "/api/learner",
+    "methods": [
+      "GET"
+    ],
+    "name": "learner"
+  },
+  {
+    "path": "/api/notifications",
+    "methods": [
+      "GET"
+    ],
+    "name": "list_notifications"
+  },
+  {
+    "path": "/api/notifications/read-all",
+    "methods": [
+      "POST"
+    ],
+    "name": "mark_all_notifications_read"
+  },
+  {
+    "path": "/api/notifications/{notif_id}/read",
+    "methods": [
+      "POST"
+    ],
+    "name": "mark_notification_read"
+  },
+  {
+    "path": "/api/orientation/my-enrollment",
+    "methods": [
+      "GET"
+    ],
+    "name": "get_my_orientation_enrollment"
+  },
+  {
+    "path": "/api/orientation/tasks/submit-multiple",
+    "methods": [
+      "POST"
+    ],
+    "name": "submit_multiple_orientation_tasks"
+  },
+  {
+    "path": "/api/orientation/tasks/{task_id}/attachments",
+    "methods": [
+      "DELETE"
+    ],
+    "name": "delete_orientation_task_attachment"
+  },
+  {
+    "path": "/api/orientation/tasks/{task_id}/complete",
+    "methods": [
+      "POST"
+    ],
+    "name": "complete_orientation_task"
+  },
+  {
+    "path": "/api/orientation/tasks/{task_id}/submit",
+    "methods": [
+      "POST"
+    ],
+    "name": "submit_orientation_task"
+  },
+  {
+    "path": "/api/preview-certificate",
+    "methods": [
+      "GET"
+    ],
+    "name": "preview_assessment_certificate"
+  },
+  {
+    "path": "/api/reject",
+    "methods": [
+      "GET"
+    ],
+    "name": "reject_assessment"
+  },
+  {
+    "path": "/api/screening/autosave",
+    "methods": [
+      "POST"
+    ],
+    "name": "screening_autosave"
+  },
+  {
+    "path": "/api/screening/login",
+    "methods": [
+      "POST"
+    ],
+    "name": "screening_login"
+  },
+  {
+    "path": "/api/screening/photo",
+    "methods": [
+      "GET"
+    ],
+    "name": "screening_get_photo"
+  },
+  {
+    "path": "/api/screening/photo",
+    "methods": [
+      "POST"
+    ],
+    "name": "screening_upload_photo"
+  },
+  {
+    "path": "/api/screening/result",
+    "methods": [
+      "GET"
+    ],
+    "name": "screening_result"
+  },
+  {
+    "path": "/api/screening/start",
+    "methods": [
+      "POST"
+    ],
+    "name": "screening_start"
+  },
+  {
+    "path": "/api/screening/submit",
+    "methods": [
+      "POST"
+    ],
+    "name": "screening_submit"
+  },
+  {
+    "path": "/api/screening/tab-switch",
+    "methods": [
+      "POST"
+    ],
+    "name": "screening_tab_switch"
+  },
+  {
+    "path": "/api/screening/test",
+    "methods": [
+      "GET"
+    ],
+    "name": "screening_get_test"
+  },
+  {
+    "path": "/api/uploads/{course_id}/{filename}",
+    "methods": [
+      "GET"
+    ],
+    "name": "serve_upload"
+  },
+  {
+    "path": "/api/verify/{cert_id}",
+    "methods": [
+      "GET"
+    ],
+    "name": "verify_certificate"
+  },
+  {
+    "path": "/api/verify/{cert_id}/pdf",
+    "methods": [
+      "GET"
+    ],
+    "name": "verify_certificate_pdf"
+  },
+  {
+    "path": "/docs",
+    "methods": [
+      "GET"
+    ],
+    "name": "swagger_ui_html"
+  },
+  {
+    "path": "/docs/oauth2-redirect",
+    "methods": [
+      "GET"
+    ],
+    "name": "swagger_ui_redirect"
+  },
+  {
+    "path": "/openapi.json",
+    "methods": [
+      "GET"
+    ],
+    "name": "openapi"
+  },
+  {
+    "path": "/redoc",
+    "methods": [
+      "GET"
+    ],
+    "name": "redoc_html"
+  }
+]
