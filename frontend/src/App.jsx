@@ -33,6 +33,8 @@ import AdminOrientationResults from './pages/admin/AdminOrientationResults.jsx'
 import Orientation from './pages/Orientation.jsx'
 import ApproverDashboard from './pages/ApproverDashboard.jsx'
 import AdminScreening from './pages/admin/AdminScreening.jsx'
+import AdminScreeningPreview from './pages/admin/AdminScreeningPreview.jsx'
+import AdminScreeningResultReview from './pages/admin/AdminScreeningResultReview.jsx'
 import AdminCoursePreview from './pages/admin/AdminCoursePreview.jsx'
 import AdminUserManagement from './pages/admin/AdminUserManagement.jsx'
 import TestWelcome from './pages/test/TestWelcome.jsx'
@@ -217,6 +219,8 @@ export default function App() {
 
         <Route path="/admin/courses/:id/preview" element={<AdminRoute><AdminCoursePreview /></AdminRoute>} />
         <Route path="/admin/orientation/:id/preview" element={<AdminRoute><AdminOrientationPreview /></AdminRoute>} />
+        <Route path="/admin/screening/:id/preview" element={<AdminRoute><AdminScreeningPreview /></AdminRoute>} />
+        <Route path="/admin/screening/results/:id" element={<AdminRoute><AdminScreeningResultReview /></AdminRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route index element={<AdminDashboard />} />
 

@@ -394,6 +394,8 @@ export const adminDeleteScreeningCandidate = (id) =>
 
 export const adminGetScreeningResults = (testId) =>
   req(`/admin/screening/results${testId ? `?test_id=${testId}` : ''}`)
+export const adminGetCandidateAnswers = (candId) =>
+  req(`/admin/screening/candidates/${candId}/answers`)
 
 export async function adminDownloadScreeningResultsXlsx(testId) {
   const url = `/api/admin/screening/results.xlsx${testId ? `?test_id=${testId}` : ''}`

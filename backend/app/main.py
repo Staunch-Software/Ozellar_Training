@@ -4307,6 +4307,130 @@ def admin_screening_results(
     return rows
 
 
+@app.get("/api/admin/screening/candidates/{cand_id}/answers")
+def admin_get_candidate_answers(
+    cand_id: str,
+    admin: models.User = Depends(require_admin),
+    db: Session = Depends(get_db)
+):
+    """Retrieve detailed questions and answered options for a candidate's attempt."""
+    candidate = db.get(models.ScreeningCandidate, cand_id)
+    if not candidate:
+        raise HTTPException(404, "Candidate not found")
+    attempt = candidate.attempt
+    if not attempt:
+        raise HTTPException(404, "No attempt found for this candidate")
+    test = db.get(models.ScreeningTest, attempt.test_id)
+    if not test:
+        raise HTTPException(404, "Test not found")
+
+    time_taken = None
+    if attempt.started_at and attempt.submitted_at:
+        delta = attempt.submitted_at - attempt.started_at
+        time_taken = round(delta.total_seconds() / 60, 1)
+
+    total_q = sum(
+        len(s.questions) for s in (test.sections or [])
+        if s.section_type == "mcq"
+    )
+    max_score = total_q * test.correct_score
+
+    section_answers = attempt.section_answers or {}
+    sections_data = []
+
+    for sec in (test.sections or []):
+        if sec.section_type == "personal_data":
+            sections_data.append({
+                "id": sec.id,
+                "title": sec.title,
+                "type": sec.section_type,
+                "order": sec.order,
+                "passage": None,
+                "questions": [],
+                "questionCount": 0,
+                "correctCount": 0,
+                "wrongCount": 0,
+                "unansweredCount": 0,
+                "score": 0,
+                "maxScore": 0,
+            })
+            continue
+
+        raw_answers = section_answers.get(sec.id, [])
+        qs_data = []
+        for i, q in enumerate(sec.questions):
+            chosen = raw_answers[i] if i < len(raw_answers) else None
+            is_correct = (chosen is not None) and (chosen == q.answer)
+            is_unanswered = (chosen is None)
+            is_wrong = (chosen is not None) and (chosen != q.answer)
+            points = test.correct_score if is_correct else (-test.wrong_penalty if is_wrong else 0)
+
+            qs_data.append({
+                "id": q.id,
+                "order": q.order,
+                "prompt": q.prompt,
+                "options": q.options or [],
+                "imageUrls": q.image_urls or [],
+                "correctAnswer": q.answer,
+                "selectedAnswer": chosen,
+                "isCorrect": is_correct,
+                "isWrong": is_wrong,
+                "isUnanswered": is_unanswered,
+                "points": points,
+            })
+
+        sec_correct = sum(1 for q in qs_data if q["isCorrect"])
+        sec_wrong = sum(1 for q in qs_data if q["isWrong"])
+        sec_unanswered = sum(1 for q in qs_data if q["isUnanswered"])
+        sec_score = sum(q["points"] for q in qs_data)
+        sec_max = len(qs_data) * test.correct_score
+
+        sections_data.append({
+            "id": sec.id,
+            "title": sec.title,
+            "type": sec.section_type,
+            "order": sec.order,
+            "passage": sec.passage,
+            "questions": qs_data,
+            "questionCount": len(qs_data),
+            "correctCount": sec_correct,
+            "wrongCount": sec_wrong,
+            "unansweredCount": sec_unanswered,
+            "score": sec_score,
+            "maxScore": sec_max,
+        })
+
+    return {
+        "candidate": {
+            "id": candidate.id,
+            "fullName": candidate.full_name,
+            "mobileNumber": candidate.mobile_number or (attempt.personal_data.get("mobile") if attempt.personal_data else None),
+            "status": candidate.status,
+            "personalData": attempt.personal_data or {},
+            "startedAt": attempt.started_at.isoformat() if attempt.started_at else None,
+            "submittedAt": attempt.submitted_at.isoformat() if attempt.submitted_at else None,
+            "timeTakenMinutes": time_taken,
+            "tabSwitchCount": attempt.tab_switch_count or 0,
+        },
+        "test": {
+            "id": test.id,
+            "title": test.title,
+            "timerMinutes": test.timer_minutes,
+            "correctScore": test.correct_score,
+            "wrongPenalty": test.wrong_penalty,
+            "totalQuestions": total_q,
+            "maxScore": max_score,
+        },
+        "score": attempt.score or 0,
+        "maxScore": max_score,
+        "correctCount": attempt.correct_count or 0,
+        "wrongCount": attempt.wrong_count or 0,
+        "unansweredCount": attempt.unanswered_count or 0,
+        "accuracy": round((attempt.correct_count / (attempt.correct_count + attempt.wrong_count)) * 100, 1) if (attempt.correct_count is not None and attempt.wrong_count is not None and (attempt.correct_count + attempt.wrong_count) > 0) else None,
+        "sections": sections_data,
+    }
+
+
 @app.get("/api/admin/screening/results.xlsx")
 def admin_screening_results_xlsx(
     test_id: Optional[str] = None,
