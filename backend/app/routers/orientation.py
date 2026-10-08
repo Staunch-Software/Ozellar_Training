@@ -118,6 +118,27 @@ def admin_create_orientation_program(req: OrientationProgramRequest,
     return orientation_program_summary(program)
 
 
+@router.get("/api/admin/orientation/programs/enrollments", include_in_schema=False)
+def admin_programs_enrollments_alias(
+    program_id: str | None = None,
+    status: str | None = None,
+    admin: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Fallback alias if enrollments is requested under /programs/enrollments."""
+    return admin_list_orientation_enrollments(program_id=program_id, status=status, admin=admin, db=db)
+
+
+@router.get("/api/admin/orientation/programs/results", include_in_schema=False)
+def admin_programs_results_alias(
+    program_id: str | None = None,
+    admin: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Fallback alias if results is requested under /programs/results."""
+    return admin_orientation_results(program_id=program_id, admin=admin, db=db)
+
+
 @router.get("/api/admin/orientation/programs/{program_id}")
 def admin_get_orientation_program(program_id: str, admin: models.User = Depends(require_admin),
                                   db: Session = Depends(get_db)):
@@ -349,7 +370,7 @@ def orientation_candidate_view(db, u, program_id=None):
 
 @router.get("/api/admin/orientation/vessels")
 def admin_list_orientation_vessels(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
-    from .orientation_ranks import _norm
+    _norm = orientation_ranks._norm
     learners = db.query(models.User).filter(
         models.User.role == "learner",
         models.User.is_active == True,

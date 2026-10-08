@@ -53,7 +53,7 @@ export default function AdminOrientationManagement() {
       }).catch(() => {})
   }, [])
 
-  if (location.pathname === '/admin/orientation-program') {
+  if (location.pathname === '/admin/orientation-program' || location.pathname === '/admin/orientation-program/') {
     return <Navigate to="/admin/orientation-program/programs" replace />
   }
 

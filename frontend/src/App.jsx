@@ -1,6 +1,6 @@
 import './components/Navbar.css';
 import { useState, useEffect, useRef, createContext, useContext } from 'react'
-import { Routes, Route, Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Link, NavLink, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { GraduationCap, Search, Sun, Moon, LogOut, Menu, X } from 'lucide-react'
 import NotificationBell from './NotificationBell.jsx'
 import Login from './pages/Login.jsx'
@@ -193,6 +193,7 @@ export default function App() {
     <ThemeProvider>
       <Routes>
         <Route path="/" element={<Login />} />
+        <Route path="/login" element={<Navigate to="/" replace />} />
         <Route path="/verify/:id" element={<Verify />} />
         <Route path="/profile" element={P(<Profile />)} />
         <Route path="/upload-photo" element={P(<UploadPhoto />)} />
@@ -224,7 +225,9 @@ export default function App() {
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
           <Route index element={<AdminDashboard />} />
 
+          <Route path="courses" element={<Navigate to="/admin/course-management/courses" replace />} />
           <Route path="course-management" element={<AdminCourseManagement />}>
+            <Route index element={<Navigate to="courses" replace />} />
             <Route path="courses" element={<AdminCourses />} />
             <Route path="assignments" element={<AdminAssignments />} />
             <Route path="report" element={<AdminReport />} />
@@ -235,7 +238,15 @@ export default function App() {
           <Route path="courses/:id" element={<AdminCourseBuilder />} />
           <Route path="courses/:id/certificate" element={<AdminCourseCertificate />} />
 
+          {/* Compatibility redirects for legacy /admin/orientation/* paths */}
+          <Route path="orientation" element={<Navigate to="/admin/orientation-program/programs" replace />} />
+          <Route path="orientation/programs" element={<Navigate to="/admin/orientation-program/programs" replace />} />
+          <Route path="orientation/enrollments" element={<Navigate to="/admin/orientation-program/enrollments" replace />} />
+          <Route path="orientation/results" element={<Navigate to="/admin/orientation-program/results" replace />} />
+          <Route path="orientation/candidates" element={<Navigate to="/admin/orientation-program/candidates" replace />} />
+
           <Route path="orientation-program" element={<AdminOrientationManagement />}>
+            <Route index element={<Navigate to="programs" replace />} />
             <Route path="programs" element={<AdminOrientationPrograms />} />
             <Route path="enrollments" element={<AdminOrientationEnrollments />} />
             <Route path="results" element={<AdminOrientationResults />} />
@@ -247,6 +258,7 @@ export default function App() {
           <Route path="screening" element={<AdminScreening />} />
           <Route path="user-management" element={<AdminUserManagement />} />
         </Route>
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </ThemeProvider>
   )

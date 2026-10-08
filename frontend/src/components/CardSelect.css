@@ -1,5 +1,6 @@
 /* Card-style dropdown — replaces native <select> across the admin UI */
 .cardselect { position: relative; width: 100%; }
+.cardselect--open { z-index: 50; }
 .cardselect--disabled { opacity: .6; }
 
 .cardselect-trigger {

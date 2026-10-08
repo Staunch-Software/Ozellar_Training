@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Bell, BellOff, Info } from 'lucide-react'
 import { getNotifications, markNotificationRead, markAllNotificationsRead } from './api.js'
+import './NotificationBell.css'
 
 function timeAgo(iso) {
   if (!iso) return ''
@@ -43,7 +44,13 @@ export default function NotificationBell() {
     }
     if (it.link) {
       setOpen(false)
-      navigate(it.link)
+      let target = it.link
+      if (target === '/admin/orientation/enrollments') target = '/admin/orientation-program/enrollments'
+      else if (target === '/admin/orientation/results') target = '/admin/orientation-program/results'
+      else if (target === '/admin/orientation/programs') target = '/admin/orientation-program/programs'
+      else if (target === '/admin/orientation/candidates') target = '/admin/orientation-program/candidates'
+      else if (target === '/admin/orientation') target = '/admin/orientation-program/programs'
+      navigate(target)
     }
   }
 

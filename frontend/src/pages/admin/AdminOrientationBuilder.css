@@ -136,12 +136,17 @@
 .ob-editor {
   flex-shrink: 0;
   background: var(--ob-surface); border: 1px solid var(--ob-line); border-radius: 16px;
-  overflow: hidden; box-shadow: 0 12px 32px -18px rgba(15, 23, 42, .3);
+  overflow: visible; box-shadow: 0 12px 32px -18px rgba(15, 23, 42, .3);
   animation: ob-editor-in .16s ease;
 }
 @keyframes ob-editor-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
 
-.ob-editor-bar { height: 4px; background: linear-gradient(90deg, var(--ob-accent), transparent 140%); }
+.ob-editor-bar {
+  height: 4px;
+  background: linear-gradient(90deg, var(--ob-accent), transparent 140%);
+  border-top-left-radius: 15px;
+  border-top-right-radius: 15px;
+}
 
 .ob-editor-head { display: flex; align-items: center; gap: 13px; padding: 18px 20px 16px; }
 .ob-editor-ring {
@@ -164,6 +169,8 @@
 .ob-editor-foot {
   display: flex; justify-content: flex-end; gap: 8px; padding: 14px 20px;
   border-top: 1px solid var(--ob-line); background: var(--ob-wash);
+  border-bottom-left-radius: 15px;
+  border-bottom-right-radius: 15px;
 }
 
 .ob-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }

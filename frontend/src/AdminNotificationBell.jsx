@@ -4,6 +4,7 @@ import { Bell, BellOff, Award, Info, ArrowRight } from 'lucide-react'
 import {
   adminGetNotifications, getNotifications, markNotificationRead, markAllNotificationsRead,
 } from './api.js'
+import './NotificationBell.css'
 
 // Certificate approvals (AssessmentApproval rows) have no server-side
 // is_read flag — they're "read" for as long as the admin has seen them,
@@ -102,7 +103,15 @@ export default function AdminNotificationBell() {
       navigate(`/admin/course-management/report?crew=${encodeURIComponent(m.raw.learnerName)}&course=${encodeURIComponent(m.raw.courseId)}&status=pending`)
     } else {
       if (!m.isRead) markNotificationRead(m.raw.id).then(load).catch(() => {})
-      if (m.raw.link) navigate(m.raw.link)
+      if (m.raw.link) {
+        let target = m.raw.link
+        if (target === '/admin/orientation/enrollments') target = '/admin/orientation-program/enrollments'
+        else if (target === '/admin/orientation/results') target = '/admin/orientation-program/results'
+        else if (target === '/admin/orientation/programs') target = '/admin/orientation-program/programs'
+        else if (target === '/admin/orientation/candidates') target = '/admin/orientation-program/candidates'
+        else if (target === '/admin/orientation') target = '/admin/orientation-program/programs'
+        navigate(target)
+      }
     }
   }
 

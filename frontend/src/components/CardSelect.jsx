@@ -30,7 +30,7 @@ export default function CardSelect({
   const CurrentIcon = current?.icon
 
   return (
-    <div className={`cardselect${disabled ? ' cardselect--disabled' : ''} ${className}`} ref={ref}>
+    <div className={`cardselect${open ? ' cardselect--open' : ''}${disabled ? ' cardselect--disabled' : ''} ${className}`} ref={ref}>
       <button
         type="button"
         className={`cardselect-trigger${open ? ' cardselect-trigger--open' : ''}`}

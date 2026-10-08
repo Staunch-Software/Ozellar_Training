@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, useNavigate, Link, Navigate } from 'react-router-dom'
 import {
   ArrowLeft, Plus, Trash2, Pencil, ChevronUp, ChevronDown,
   Eye, Save, X, AlertCircle, Settings, Ship, Cog, Paperclip,
@@ -16,6 +16,7 @@ import './AdminOrientationBuilder.css'
 
 const DECK_RANKS   = ['Third Officer', 'Second Officer', 'Chief Officer', 'Master']
 const ENGINE_RANKS = ['Fourth Engineer', 'Third Engineer', 'Second Engineer', 'Chief Engineer']
+const RESERVED_TAB_NAMES = ['enrollments', 'programs', 'results', 'candidates']
 
 function TaskItem({ task, index, total, onEdit, onDelete, onMove }) {
   return (
@@ -48,6 +49,9 @@ function TaskItem({ task, index, total, onEdit, onDelete, onMove }) {
 
 export default function AdminOrientationBuilder() {
   const { id } = useParams()
+  if (RESERVED_TAB_NAMES.includes(id)) {
+    return <Navigate to={`/admin/orientation-program/${id}`} replace />
+  }
   const navigate = useNavigate()
   const [program, setProgram] = useState(null)
   const [error, setError] = useState('')
