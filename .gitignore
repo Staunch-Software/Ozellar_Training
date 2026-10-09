@@ -34,3 +34,6 @@ backend/test.db
 .pytest_cache/
 playwright-report/
 test-results/
+.pytest_cache/
+playwright-report/
+test-results/

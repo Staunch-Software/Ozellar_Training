@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import {
   ArrowLeft, CheckCircle2, XCircle, AlertTriangle, Clock,
   Calendar, Award, FileText, Layers, Filter, Check, X,
-  HelpCircle, Eye, Phone, User, TrendingUp
+  HelpCircle, Eye, Phone, User, TrendingUp, RotateCcw
 } from 'lucide-react'
 import * as api from '../../api.js'
 import './AdminScreeningAnswers.css'
@@ -33,6 +33,22 @@ export default function AdminScreeningAnswersReview({ candidateId, onBack }) {
   const [selectedSecId, setSelectedSecId] = useState('all') 
   const [statusFilter, setStatusFilter] = useState('all') 
   const [modalImage, setModalImage] = useState(null)
+  const [resetting, setResetting] = useState(false)
+  const [showConfirmReset, setShowConfirmReset] = useState(false)
+
+  const handleResetCandidate = async () => {
+    setResetting(true)
+    try {
+      await api.adminResetScreeningCandidate(candidateId)
+      setShowConfirmReset(false)
+      onBack()
+    } catch (err) {
+      setError(err.message || 'Failed to reset candidate')
+      setShowConfirmReset(false)
+    } finally {
+      setResetting(false)
+    }
+  }
 
   useEffect(() => {
     if (!candidateId) return
@@ -121,6 +137,19 @@ export default function AdminScreeningAnswersReview({ candidateId, onBack }) {
             <ArrowLeft size={14} /> Back to Results
           </button>
           <div className="ans-hero-badges">
+            <button
+              className="ans-btn-reset-action"
+              onClick={() => setShowConfirmReset(true)}
+              title="Reset candidate so they can re-attend the test"
+              style={{
+                display: 'inline-flex', alignItems: 'center', gap: 6,
+                padding: '5px 12px', borderRadius: 20, fontSize: 12, fontWeight: 700,
+                background: 'rgba(245,158,11,0.12)', color: '#d97706', border: '1px solid rgba(245,158,11,0.25)',
+                cursor: 'pointer', transition: 'all .15s'
+              }}
+            >
+              <RotateCcw size={12} /> Reset Candidate
+            </button>
             {candidate.timeTakenMinutes != null && (
               <span className="ans-badge-time">
                 <Clock size={13} /> {candidate.timeTakenMinutes} mins taken
@@ -132,6 +161,45 @@ export default function AdminScreeningAnswersReview({ candidateId, onBack }) {
             </span>
           </div>
         </div>
+
+        {showConfirmReset && (
+          <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(4px)', display:'grid', placeItems:'center', padding:16 }}>
+            <div style={{ background:'#fff', width:'100%', maxWidth:440, borderRadius:24, padding:28, boxShadow:'0 25px 50px -12px rgba(0,0,0,0.5)', animation:'tw-in 0.2s ease-out', border:'1px solid var(--border)' }}>
+              <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
+                <div style={{ width:42, height:42, borderRadius:12, background:'rgba(245,158,11,0.15)', display:'grid', placeItems:'center', flexShrink:0 }}>
+                  <RotateCcw size={20} color="#d97706"/>
+                </div>
+                <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'#0f172a' }}>Reset Candidate Test</h3>
+              </div>
+              <p style={{ margin:'0 0 24px', fontSize:14, color:'#64748b', lineHeight:1.6 }}>
+                Are you sure you want to reset candidate <strong>{candidate.fullName}</strong>? All answers, score, timings, and progress will be deleted, allowing them to take the test again as a fresh candidate.
+              </p>
+              <div style={{ display:'flex', gap:12, justifyContent:'flex-end' }}>
+                <button
+                  type="button"
+                  disabled={resetting}
+                  onClick={() => setShowConfirmReset(false)}
+                  style={{ padding:'10px 18px', borderRadius:12, border:'1px solid #e2e8f0', background:'#f8fafc', color:'#475569', fontWeight:600, fontSize:13.5, cursor: resetting ? 'not-allowed' : 'pointer' }}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={resetting}
+                  onClick={handleResetCandidate}
+                  style={{
+                    padding:'10px 20px', borderRadius:12, border:'none',
+                    background:'#d97706', color:'#fff', fontWeight:700, fontSize:13.5, cursor: resetting ? 'not-allowed' : 'pointer',
+                    display:'inline-flex', alignItems:'center', gap:6,
+                    boxShadow:'0 4px 14px rgba(217,119,6,0.3)'
+                  }}
+                >
+                  {resetting ? 'Resetting…' : 'Reset Candidate'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="ans-hero-content">
           <div className="ans-hero-profile">

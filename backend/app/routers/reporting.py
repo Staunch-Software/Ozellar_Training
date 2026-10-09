@@ -3,7 +3,10 @@ import csv
 import io
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta, date
+from zoneinfo import ZoneInfo
 from typing import Optional
+
+IST = ZoneInfo("Asia/Kolkata")
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
@@ -350,7 +353,7 @@ def admin_report_xlsx(
 
     ws.merge_cells("A2:K2")
     sc = ws.cell(row=2, column=1,
-                 value=f"Generated: {datetime.now(timezone.utc).strftime('%d %b %Y %H:%M UTC')}  ·  "
+                 value=f"Generated: {datetime.now(IST).strftime('%d %b %Y %H:%M IST')}  ·  "
                        f"{len(rows)} crew member(s) shown")
     sc.font = Font(size=9, color="5C626D")
     sc.alignment = Alignment(horizontal="left", vertical="center")
@@ -468,7 +471,7 @@ def crew_my_report_xlsx(status: Optional[str] = None, user: models.User = Depend
 
     ws.merge_cells("A2:L2")
     sub_cell = ws.cell(row=2, column=1,
-                       value=f"Crew ID: {user.crew_id or 'N/A'}   |   Generated: {datetime.now(timezone.utc).strftime('%d %b %Y')}")
+                       value=f"Crew ID: {user.crew_id or 'N/A'}   |   Generated: {datetime.now(IST).strftime('%d %b %Y')}")
     sub_cell.font = Font(size=10, color="5C626D")
     ws.row_dimensions[2].height = 18
 

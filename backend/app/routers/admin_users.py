@@ -170,7 +170,7 @@ def admin_panel_list_admins(admin: models.User = Depends(require_admin),
         "id": u.id, "role": u.role, "name": u.full_name,
         "email": u.email, "rank": u.rank,
         "isActive": bool(u.is_active),
-        "createdAt": u.created_at.isoformat() if u.created_at else None,
+        "createdAt": (u.created_at.isoformat() + '+05:30') if u.created_at else None,
     } for u in users]
 
 
@@ -203,7 +203,7 @@ def admin_panel_create_admin(req: CreateUserRequest,
         "id": user.id, "role": user.role, "name": user.full_name,
         "email": user.email, "rank": user.rank,
         "isActive": bool(user.is_active),
-        "createdAt": user.created_at.isoformat() if user.created_at else None,
+        "createdAt": (user.created_at.isoformat() + '+05:30') if user.created_at else None,
     }
 
 
@@ -241,7 +241,7 @@ def admin_panel_update_admin(user_id: str, req: UpdateUserRequest,
         "id": user.id, "role": user.role, "name": user.full_name,
         "email": user.email, "rank": user.rank,
         "isActive": bool(user.is_active),
-        "createdAt": user.created_at.isoformat() if user.created_at else None,
+        "createdAt": (user.created_at.isoformat() + '+05:30') if user.created_at else None,
     }
 
 

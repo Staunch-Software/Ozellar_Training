@@ -16,12 +16,21 @@ import './ApproverDashboard.css'
 
 function fmt(iso) {
   if (!iso) return '—'
-  return new Date(iso).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Kolkata' })
+  const withOffset = /[Zz]|[+-]\d\d:\d\d$/.test(iso) ? iso : `${iso}+05:30`
+  return new Date(withOffset).toLocaleString('en-IN', {
+    day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hour12: true,
+    timeZone: 'Asia/Kolkata',
+  }) + ' IST'
 }
 
 function fmtShort(iso) {
   if (!iso) return ''
-  return new Date(iso).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', timeZone: 'Asia/Kolkata' })
+  const withOffset = /[Zz]|[+-]\d\d:\d\d$/.test(iso) ? iso : `${iso}+05:30`
+  return new Date(withOffset).toLocaleDateString('en-IN', {
+    day: '2-digit', month: 'short',
+    timeZone: 'Asia/Kolkata',
+  })
 }
 
 function attachmentName(url, i, total) {

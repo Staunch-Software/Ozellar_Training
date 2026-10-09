@@ -18,7 +18,7 @@ def list_notifications(user: models.User = Depends(get_current_user), db: Sessio
     items = [{
         "id": n.id, "kind": n.kind, "title": n.title, "body": n.body, "link": n.link,
         "isRead": bool(n.is_read),
-        "createdAt": (n.created_at.isoformat() + 'Z') if n.created_at else None,
+        "createdAt": (n.created_at.isoformat() + '+05:30') if n.created_at else None,
     } for n in rows]
     return {"unread": unread, "items": items}
 
@@ -62,6 +62,6 @@ def admin_notifications(admin: models.User = Depends(require_admin), db: Session
             "courseId": ap.course_id,
             "learnerName": user.full_name,
             "courseName": course.title,
-            "createdAt": (ap.created_at.isoformat() + 'Z') if ap.created_at else None,
+            "createdAt": (ap.created_at.isoformat() + '+05:30') if ap.created_at else None,
         })
     return {"unread": len(items), "items": items}

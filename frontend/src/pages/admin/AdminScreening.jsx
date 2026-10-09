@@ -5,7 +5,8 @@ import {
   Download, ChevronRight, ChevronDown, CheckCircle2, Clock,
   AlertTriangle, X, Save, Eye, EyeOff, BookOpen, Layers,
   User, Phone, ToggleLeft, ToggleRight, RefreshCw,
-  TrendingUp, Award, Search, Filter, Image as ImageIcon, Upload, Copy
+  TrendingUp, Award, Search, Filter, Image as ImageIcon, Upload, Copy,
+  RotateCcw
 } from 'lucide-react'
 import * as api from '../../api.js'
 import AdminScreeningAnswersReview from './AdminScreeningAnswersReview.jsx'
@@ -1000,9 +1001,49 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
     catch(e) { onError(e.message) } finally { setSaving(false) }
   }
 
-  const del = async (id) => {
-    if (!confirm('Delete this candidate and their attempt?')) return
-    try { await api.adminDeleteScreeningCandidate(id); onRefresh() } catch(e) { onError(e.message) }
+  const [confirmDialog, setConfirmDialog] = useState(null)
+  const [actionLoading, setActionLoading] = useState(false)
+
+  const del = (id, name) => {
+    setConfirmDialog({
+      title: 'Delete Candidate',
+      message: `Are you sure you want to delete candidate "${name || 'this candidate'}" and their test data? This action cannot be undone.`,
+      confirmText: 'Delete',
+      isDestructive: true,
+      onConfirm: async () => {
+        setActionLoading(true)
+        try {
+          await api.adminDeleteScreeningCandidate(id)
+          setConfirmDialog(null)
+          onRefresh()
+        } catch(e) {
+          onError(e.message)
+        } finally {
+          setActionLoading(false)
+        }
+      }
+    })
+  }
+
+  const reset = (cand) => {
+    setConfirmDialog({
+      title: 'Reset Candidate Test',
+      message: `Are you sure you want to reset candidate "${cand.fullName}"? All test answers, score, timings, and progress will be deleted, resetting their account to Pending status so they can attend the test again as a fresh user.`,
+      confirmText: 'Reset Candidate',
+      isDestructive: false,
+      onConfirm: async () => {
+        setActionLoading(true)
+        try {
+          await api.adminResetScreeningCandidate(cand.id)
+          setConfirmDialog(null)
+          onRefresh()
+        } catch(e) {
+          onError(e.message)
+        } finally {
+          setActionLoading(false)
+        }
+      }
+    })
   }
 
   const saveEdit = async (patch) => {
@@ -1157,9 +1198,34 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
                     <td style={{ padding:'12px 10px', fontWeight:800, color: c.score!=null ? 'var(--accent)' : 'var(--text-faint)', fontSize:14 }}>{c.score!=null?c.score:'—'}</td>
                     <td style={{ padding:'12px 10px' }}>{tabSwitchBadge(c.tabSwitchCount)}</td>
                     <td style={{ padding:'12px 10px' }}>
-                      <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:10 }}>
-                        <button className="iconbtn" onClick={() => setEditCand(c)} title="Edit Candidate" style={{ background:'var(--surface-2)', padding:8, borderRadius:8 }}><Edit3 size={15} color="#0F766E"/></button>
-                        <button className="iconbtn" onClick={() => del(c.id)} title="Delete Candidate" style={{ background:'rgba(239,68,68,0.1)', padding:8, borderRadius:8 }}><Trash2 size={15} color="var(--danger)"/></button>
+                      <div style={{ display:'flex', alignItems:'center', justifyContent:'flex-end', gap:8 }}>
+                        <button
+                          className="iconbtn"
+                          onClick={() => reset(c)}
+                          title="Reset Candidate (re-take test)"
+                          aria-label={`Reset candidate ${c.fullName}`}
+                          style={{ background:'rgba(245,158,11,0.12)', padding:8, borderRadius:8, border:'none', cursor:'pointer' }}
+                        >
+                          <RotateCcw size={15} color="#d97706"/>
+                        </button>
+                        <button
+                          className="iconbtn"
+                          onClick={() => setEditCand(c)}
+                          title="Edit Candidate"
+                          aria-label={`Edit candidate ${c.fullName}`}
+                          style={{ background:'var(--surface-2)', padding:8, borderRadius:8, border:'none', cursor:'pointer' }}
+                        >
+                          <Edit3 size={15} color="#0F766E"/>
+                        </button>
+                        <button
+                          className="iconbtn"
+                          onClick={() => del(c.id, c.fullName)}
+                          title="Delete Candidate"
+                          aria-label={`Delete candidate ${c.fullName}`}
+                          style={{ background:'rgba(239,68,68,0.1)', padding:8, borderRadius:8, border:'none', cursor:'pointer' }}
+                        >
+                          <Trash2 size={15} color="var(--danger)"/>
+                        </button>
                       </div>
                     </td>
                   </tr>
@@ -1169,6 +1235,44 @@ function CandidatesTab({ candidates, onRefresh, onError }) {
           </div>
         )}
       </Card>
+
+      {confirmDialog && (
+        <div style={{ position:'fixed', inset:0, zIndex:9999, background:'rgba(0,0,0,0.6)', backdropFilter:'blur(4px)', display:'grid', placeItems:'center', padding:16 }}>
+          <div style={{ background:'var(--surface)', width:'100%', maxWidth:440, borderRadius:24, padding:28, boxShadow:'0 25px 50px -12px rgba(0,0,0,0.5)', animation:'tw-in 0.2s ease-out', border:'1px solid var(--border)' }}>
+            <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:12 }}>
+              <div style={{ width:42, height:42, borderRadius:12, background: confirmDialog.isDestructive ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.15)', display:'grid', placeItems:'center', flexShrink:0 }}>
+                {confirmDialog.isDestructive ? <Trash2 size={20} color="var(--danger)"/> : <RotateCcw size={20} color="#d97706"/>}
+              </div>
+              <h3 style={{ margin:0, fontSize:18, fontWeight:800, color:'var(--text)' }}>{confirmDialog.title}</h3>
+            </div>
+            <p style={{ margin:'0 0 24px', fontSize:14, color:'var(--text-mut)', lineHeight:1.6 }}>{confirmDialog.message}</p>
+            <div style={{ display:'flex', gap:12, justifyContent:'flex-end' }}>
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={() => setConfirmDialog(null)}
+                style={{ padding:'10px 18px', borderRadius:12, border:'1px solid var(--border)', background:'var(--surface-2)', color:'var(--text)', fontWeight:600, fontSize:13.5, cursor: actionLoading ? 'not-allowed' : 'pointer' }}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={actionLoading}
+                onClick={confirmDialog.onConfirm}
+                style={{
+                  padding:'10px 20px', borderRadius:12, border:'none',
+                  background: confirmDialog.isDestructive ? '#ef4444' : '#d97706',
+                  color:'#fff', fontWeight:700, fontSize:13.5, cursor: actionLoading ? 'not-allowed' : 'pointer',
+                  display:'inline-flex', alignItems:'center', gap:6,
+                  boxShadow: confirmDialog.isDestructive ? '0 4px 14px rgba(239,68,68,0.3)' : '0 4px 14px rgba(217,119,6,0.3)'
+                }}
+              >
+                {actionLoading ? 'Please wait…' : confirmDialog.confirmText}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

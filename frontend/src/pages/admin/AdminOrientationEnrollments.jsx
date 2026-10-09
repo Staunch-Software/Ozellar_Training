@@ -30,7 +30,8 @@ function initials(name) {
 
 function fmtDate(iso) {
   if (!iso) return null
-  return new Date(iso).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })
+  const withOffset = /[Zz]|[+-]\d\d:\d\d$/.test(iso) ? iso : `${iso}+05:30`
+  return new Date(withOffset).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', timeZone: 'Asia/Kolkata' })
 }
 
 // Same top-rank rule used on the Crew page to flag Master/Chief Engineer.
@@ -556,7 +557,7 @@ export default function AdminOrientationEnrollments() {
                       <td><span className={`orn-badge ${sl.cls}`}>{sl.label}</span></td>
                       <td><ProgressBar pct={e.progressPct} /></td>
                       <td className="orn-table-muted orn-table-nowrap" style={{ fontSize: 12 }}>
-                        {e.createdAt ? new Date(e.createdAt).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                        {e.createdAt ? fmtDate(e.createdAt) : '-'}
                       </td>
                       <td>
                         {e.status === 'master_approved' && isSuperAdmin ? (

@@ -41,7 +41,8 @@ function useThemeColors() {
 
 function timeAgo(iso) {
   if (!iso) return ''
-  const diff = Date.now() - new Date(iso).getTime()
+  const withOffset = /[Zz]|[+-]\d\d:\d\d$/.test(iso) ? iso : `${iso}+05:30`
+  const diff = Date.now() - new Date(withOffset).getTime()
   const d = Math.floor(diff / 86400000)
   if (d === 0) return 'Today'
   if (d === 1) return 'Yesterday'

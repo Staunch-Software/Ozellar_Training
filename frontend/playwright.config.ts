@@ -8,7 +8,7 @@ export default defineConfig({
   workers: 1, // To avoid db locks or port conflicts
   reporter: 'html',
   use: {
-    baseURL: 'http://localhost:5173', // Frontend dev server
+    baseURL: process.env.BASE_URL || 'http://localhost:5175', // Frontend dev server
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
   },

@@ -391,6 +391,8 @@ export const adminUpdateScreeningCandidate = (id, body) =>
   req(`/admin/screening/candidates/${id}`, { method: 'PATCH', body: JSON.stringify(body) })
 export const adminDeleteScreeningCandidate = (id) =>
   req(`/admin/screening/candidates/${id}`, { method: 'DELETE' })
+export const adminResetScreeningCandidate = (id) =>
+  req(`/admin/screening/candidates/${id}/reset`, { method: 'POST' })
 
 export const adminGetScreeningResults = (testId) =>
   req(`/admin/screening/results${testId ? `?test_id=${testId}` : ''}`)

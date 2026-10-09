@@ -4,7 +4,20 @@ import os
 import re
 import uuid
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from typing import Optional
+
+IST = ZoneInfo("Asia/Kolkata")
+
+
+def to_ist_iso(dt: Optional[datetime]) -> Optional[str]:
+    """Serializes datetime into unambiguous ISO 8601 string with +05:30 IST offset."""
+    if not dt:
+        return None
+    if dt.tzinfo is None:
+        return dt.isoformat() + "+05:30"
+    return dt.astimezone(IST).isoformat()
+
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response
 from fastapi.responses import StreamingResponse
@@ -82,7 +95,7 @@ def serialize_test(t, include_sections=False, db=None):
     data = {
         "id": t.id, "title": t.title, "timerMinutes": t.timer_minutes,
         "correctScore": t.correct_score, "wrongPenalty": t.wrong_penalty,
-        "isActive": t.is_active, "createdAt": t.created_at.isoformat() if t.created_at else None,
+        "isActive": t.is_active, "createdAt": to_ist_iso(t.created_at),
         "candidateCount": candidate_count, "submittedCount": submitted_count,
         "totalQuestions": total_questions,
     }
@@ -171,8 +184,8 @@ def screening_get_test(
         "remainingSeconds": remaining_seconds,
         "sections": sections_data,
         "attempt": {
-            "startedAt": attempt.started_at.isoformat() if attempt else None,
-            "submittedAt": attempt.submitted_at.isoformat() if attempt and attempt.submitted_at else None,
+            "startedAt": to_ist_iso(attempt.started_at) if attempt else None,
+            "submittedAt": to_ist_iso(attempt.submitted_at) if attempt and attempt.submitted_at else None,
             "status": candidate.status,
             "tabSwitchCount": attempt.tab_switch_count or 0,
             "sectionAnswers": attempt.section_answers or {},
@@ -191,7 +204,7 @@ def screening_start(
         raise HTTPException(403, "Test already submitted")
     existing = candidate.attempt
     if existing:
-        return {"startedAt": existing.started_at.isoformat(), "ok": True}
+        return {"startedAt": to_ist_iso(existing.started_at), "ok": True}
     attempt = models.ScreeningAttempt(
         candidate_id=candidate.id, test_id=candidate.test_id,
     )
@@ -199,7 +212,7 @@ def screening_start(
     candidate.status = "in_progress"
     db.commit()
     db.refresh(attempt)
-    return {"startedAt": attempt.started_at.isoformat(), "ok": True}
+    return {"startedAt": to_ist_iso(attempt.started_at), "ok": True}
 
 
 @router.post("/api/screening/tab-switch")
@@ -307,7 +320,7 @@ def screening_submit(
     attempt.correct_count = correct
     attempt.wrong_count = wrong
     attempt.unanswered_count = unanswered
-    attempt.submitted_at = datetime.now(timezone.utc)
+    attempt.submitted_at = func.now()
 
     candidate.status = "submitted"
     if req.personal_data:
@@ -315,13 +328,14 @@ def screening_submit(
         if mob and not candidate.mobile_number:
             candidate.mobile_number = mob
     db.commit()
+    db.refresh(attempt)
     return {
         "score": raw_score, "correct": correct, "wrong": wrong,
         "unanswered": unanswered,
         "correctScore": test.correct_score,
         "wrongPenalty": test.wrong_penalty,
         "sectionResults": section_results,
-        "submittedAt": attempt.submitted_at.isoformat(),
+        "submittedAt": to_ist_iso(attempt.submitted_at),
     }
 
 
@@ -341,7 +355,7 @@ def screening_autosave(
     if req.personal_data:
         attempt.personal_data = req.personal_data
     db.commit()
-    return {"ok": True, "savedAt": datetime.now(timezone.utc).isoformat()}
+    return {"ok": True, "savedAt": datetime.now(IST).isoformat()}
 
 
 @router.get("/api/screening/result")
@@ -381,8 +395,8 @@ def screening_result(
         "timeTakenMinutes": time_taken_minutes,
         "fullName": candidate.full_name,
         "testTitle": test.title if test else None,
-        "submittedAt": attempt.submitted_at.isoformat() if attempt.submitted_at else None,
-        "startedAt": attempt.started_at.isoformat() if attempt.started_at else None,
+        "submittedAt": to_ist_iso(attempt.submitted_at),
+        "startedAt": to_ist_iso(attempt.started_at),
     }
 
 
@@ -614,9 +628,9 @@ def admin_list_candidates(
             "id": c.id, "fullName": c.full_name, "mobileNumber": c.mobile_number,
             "status": c.status, "isActive": c.is_active,
             "testId": c.test_id, "testTitle": test.title if test else "—",
-            "createdAt": c.created_at.isoformat() if c.created_at else None,
-            "startedAt": att.started_at.isoformat() if att and att.started_at else None,
-            "submittedAt": att.submitted_at.isoformat() if att and att.submitted_at else None,
+            "createdAt": to_ist_iso(c.created_at),
+            "startedAt": to_ist_iso(att.started_at) if att and att.started_at else None,
+            "submittedAt": to_ist_iso(att.submitted_at) if att and att.submitted_at else None,
             "score": att.score if att else None,
             "tabSwitchCount": att.tab_switch_count or 0 if att else 0,
         })
@@ -642,7 +656,7 @@ def admin_create_candidate(
     return {
         "id": c.id, "fullName": c.full_name, "mobileNumber": c.mobile_number,
         "status": c.status, "testId": c.test_id, "testTitle": test.title,
-        "createdAt": c.created_at.isoformat() if c.created_at else None,
+        "createdAt": to_ist_iso(c.created_at),
         "startedAt": None, "submittedAt": None, "score": None,
     }
 
@@ -688,6 +702,51 @@ def admin_delete_candidate(
     return {"ok": True}
 
 
+@router.post("/api/admin/screening/candidates/{cand_id}/reset")
+def admin_reset_candidate(
+    cand_id: str,
+    admin: models.User = Depends(require_admin),
+    db: Session = Depends(get_db),
+):
+    """Reset a screening candidate to fresh 'pending' state so they can re-attend the test.
+    Deletes any attempt row (clearing answers, timings, score, etc.) and identity photo."""
+    c = db.get(models.ScreeningCandidate, cand_id)
+    if not c:
+        raise HTTPException(404, "Candidate not found")
+
+    c.status = "pending"
+    c.is_active = True
+
+    if c.attempt:
+        if c.attempt.photo_path and os.path.exists(c.attempt.photo_path):
+            try:
+                os.remove(c.attempt.photo_path)
+            except OSError:
+                pass
+        db.delete(c.attempt)
+
+    photo_path = os.path.join(SCREENING_PHOTO_DIR, f"{c.id}.jpg")
+    if os.path.exists(photo_path):
+        try:
+            os.remove(photo_path)
+        except OSError:
+            pass
+
+    clear_rate_limit(db, f"screening:{normalize_name(c.full_name)}")
+
+    db.commit()
+    return {
+        "ok": True,
+        "message": f"Candidate {c.full_name} has been reset to initial state.",
+        "candidate": {
+            "id": c.id,
+            "fullName": c.full_name,
+            "status": c.status,
+            "isActive": c.is_active,
+        }
+    }
+
+
 @router.get("/api/admin/screening/results")
 def admin_screening_results(
     test_id: Optional[str] = None,
@@ -705,8 +764,12 @@ def admin_screening_results(
             continue
         time_taken = None
         if att.started_at and att.submitted_at:
-            delta = att.submitted_at - att.started_at
-            time_taken = round(delta.total_seconds() / 60, 1)
+            started, ended = att.started_at, att.submitted_at
+            if (started.tzinfo is None) != (ended.tzinfo is None):
+                started = started.replace(tzinfo=None)
+                ended = ended.replace(tzinfo=None)
+            delta = ended - started
+            time_taken = max(0.0, round(delta.total_seconds() / 60, 1))
         total_q = sum(
             len(s.questions) for s in (test.sections if test else [])
             if s.section_type == "mcq"
@@ -716,8 +779,8 @@ def admin_screening_results(
             "candidateId": c.id, "fullName": c.full_name,
             "mobileNumber": c.mobile_number or att.personal_data.get("mobile", "") if att.personal_data else (c.mobile_number or ""),
             "testId": att.test_id, "testTitle": test.title if test else "—",
-            "startedAt": att.started_at.isoformat() if att.started_at else None,
-            "submittedAt": att.submitted_at.isoformat() if att.submitted_at else None,
+            "startedAt": to_ist_iso(att.started_at),
+            "submittedAt": to_ist_iso(att.submitted_at),
             "timeTakenMinutes": time_taken,
             "correct": att.correct_count or 0,
             "wrong": att.wrong_count or 0,
@@ -750,8 +813,12 @@ def admin_get_candidate_answers(
 
     time_taken = None
     if attempt.started_at and attempt.submitted_at:
-        delta = attempt.submitted_at - attempt.started_at
-        time_taken = round(delta.total_seconds() / 60, 1)
+        started, ended = attempt.started_at, attempt.submitted_at
+        if (started.tzinfo is None) != (ended.tzinfo is None):
+            started = started.replace(tzinfo=None)
+            ended = ended.replace(tzinfo=None)
+        delta = ended - started
+        time_taken = max(0.0, round(delta.total_seconds() / 60, 1))
 
     total_q = sum(
         len(s.questions) for s in (test.sections or [])
@@ -831,8 +898,8 @@ def admin_get_candidate_answers(
             "mobileNumber": candidate.mobile_number or (attempt.personal_data.get("mobile") if attempt.personal_data else None),
             "status": candidate.status,
             "personalData": attempt.personal_data or {},
-            "startedAt": attempt.started_at.isoformat() if attempt.started_at else None,
-            "submittedAt": attempt.submitted_at.isoformat() if attempt.submitted_at else None,
+            "startedAt": to_ist_iso(attempt.started_at),
+            "submittedAt": to_ist_iso(attempt.submitted_at),
             "timeTakenMinutes": time_taken,
             "tabSwitchCount": attempt.tab_switch_count or 0,
         },
@@ -880,7 +947,7 @@ def admin_screening_results_xlsx(
     )
 
     headers = [
-        "Name", "Mobile Number", "Test", "Start Time", "Submit Time",
+        "Name", "Mobile Number", "Test", "Start Time (IST)", "Submit Time (IST)",
         "Time Taken (min)", "Correct", "Wrong", "Unanswered", "Score",
         "Remark", "Shortlisted",
     ]
@@ -900,7 +967,10 @@ def admin_screening_results_xlsx(
                 return ""
             try:
                 from datetime import datetime as dt
-                return dt.fromisoformat(iso.replace("Z", "+00:00")).strftime("%d %b %Y %H:%M")
+                d = dt.fromisoformat(iso.replace("Z", "+00:00"))
+                if d.tzinfo is not None:
+                    d = d.astimezone(IST)
+                return d.strftime("%d %b %Y %H:%M IST")
             except Exception:
                 return iso
 

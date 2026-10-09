@@ -48,10 +48,14 @@ export default function TestWelcome() {
 
   useEffect(() => {
     if (user?.status === 'submitted') { navigate('/test/result', { replace: true }); return }
+    if (user?.status === 'pending') {
+      ;['ss_exam_section', 'ss_exam_sec_visited', 'ss_exam_personal_locked', 'ss_exam_qidx', 'ss_exam_personal', 'ss_exam_answers', 'ss_exam_visited', 'ss_exam_marked']
+        .forEach(k => sessionStorage.removeItem(k))
+    }
     api.screeningGetTest().then(d => setTestData(d)).catch(() => {})
 
     return () => stopCamera()
-  }, [])
+  }, [user?.status])
 
   const loadFaceApiModels = async () => {
     if (window.faceapi && modelLoaded) return true;
@@ -256,6 +260,8 @@ export default function TestWelcome() {
     if (!photoUploaded && !userHasPhoto && photo) await uploadPhoto()
     if (!photoUploaded && !userHasPhoto) return
     setStarting(true)
+    ;['ss_exam_section', 'ss_exam_sec_visited', 'ss_exam_personal_locked', 'ss_exam_qidx', 'ss_exam_personal', 'ss_exam_answers', 'ss_exam_visited', 'ss_exam_marked']
+      .forEach(k => sessionStorage.removeItem(k))
     try { await api.screeningStart(); navigate('/test/exam') }
     catch (err) { console.error(err); setStarting(false) }
   }

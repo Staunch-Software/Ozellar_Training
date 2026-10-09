@@ -4,7 +4,20 @@ import os
 import tempfile
 import uuid
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from typing import Optional
+
+IST = ZoneInfo("Asia/Kolkata")
+
+
+def to_ist_iso(dt: Optional[datetime]) -> Optional[str]:
+    """Serializes datetime into unambiguous ISO 8601 string with +05:30 IST offset."""
+    if not dt:
+        return None
+    if dt.tzinfo is None:
+        return dt.isoformat() + "+05:30"
+    return dt.astimezone(IST).isoformat()
+
 
 from fastapi import APIRouter, Depends, HTTPException, Form, File, UploadFile
 from fastapi.responses import StreamingResponse
@@ -480,7 +493,7 @@ def admin_list_orientation_enrollments(
             "completedCount": done,
             "totalCount": total,
             "progressPct": pct,
-            "createdAt": e.created_at.isoformat() if e.created_at else None,
+            "createdAt": to_ist_iso(e.created_at),
         })
     return result
 
@@ -564,8 +577,8 @@ def orientation_enrollment_result(db, e):
         "programTitle": e.program.title if e.program else None,
         "status": e.status,
         "completedCount": done, "totalCount": total, "progressPct": pct,
-        "submittedAt": submitted_at.isoformat() if submitted_at else None,
-        "decidedAt": decided_at.isoformat() if decided_at else None,
+        "submittedAt": to_ist_iso(submitted_at),
+        "decidedAt": to_ist_iso(decided_at),
         "masterLabel": master_label,
         "masterName": e.master_name,
         "approvedByName": decided_by_user.full_name if decided_by_user else None,
@@ -876,11 +889,11 @@ def orientation_submission_detail(db, enrollment):
             "isCompleted": c.is_completed if c else False,
             "proofUrls": c.proof_paths if c else [],
             "note": c.note if c else None,
-            "completedAt": c.completed_at.isoformat() if c and c.completed_at else None,
+            "completedAt": to_ist_iso(c.completed_at) if c and c.completed_at else None,
             "status": c.status if c else "draft",
             "rejectionNote": c.rejection_note if c else None,
             "verified": (c.status == "approved") if c else False,
-            "verifiedAt": c.verified_at.isoformat() if c and c.verified_at else None,
+            "verifiedAt": to_ist_iso(c.verified_at) if c and c.verified_at else None,
         })
         
     has_pending_tasks = any(c.status == "pending_review" for c in enrollment.completions)
@@ -902,9 +915,9 @@ def orientation_submission_detail(db, enrollment):
         "vesselName": enrollment.vessel_name,
         "vessel": enrollment.vessel_name,
         "department": enrollment.program.department if enrollment.program else "",
-        "submittedAt": enrollment.created_at.isoformat(),
+        "submittedAt": to_ist_iso(enrollment.created_at),
         "status": computed_status,
-        "decidedAt": enrollment.created_at.isoformat() if computed_status != "pending" else None,
+        "decidedAt": to_ist_iso(enrollment.created_at) if computed_status != "pending" else None,
         "candidateName": learner.full_name if learner else "Unknown",
         "candidateRank": learner.rank if learner else "Unknown",
         "candidateCrewId": learner.crew_id if learner else "",
