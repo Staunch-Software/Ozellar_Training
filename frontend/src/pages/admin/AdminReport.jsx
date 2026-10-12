@@ -494,7 +494,6 @@ export default function AdminReport() {
                   <th className="rpt-col-crew">Seafarer</th>
                   <th className="rpt-col-id">Seafarer ID</th>
                   <th className="rpt-col-rank">Rank</th>
-                  <th className="rpt-col-mobile">Mobile Number</th>
                   {visibleCourses.map(c => (
                     <th key={c.id} className="rpt-col-course">{c.title}</th>
                   ))}
@@ -507,41 +506,32 @@ export default function AdminReport() {
                       {((page - 1) * ROWS_PER_PAGE) + idx + 1}
                     </td>
 
-                    {/* crew name + avatar */}
+                    {/* crew name + avatar + mobile phone badge */}
                     <td className="rpt-col-crew">
                       <div className="rpt-crew">
                         <div className="rpt-av">{initials(row.name)}</div>
-                        <div>
+                        <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                           <div className="rpt-crew-name">{row.name}</div>
-                          {!row.isActive && <div className="rpt-crew-tag">Inactive</div>}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', marginTop: 2 }}>
+                            {!row.isActive && <div className="rpt-crew-tag">Inactive</div>}
+                            {(row.mobileNo || row.mobileNumber) && (
+                              <a
+                                href={`tel:${String(row.mobileNo || row.mobileNumber).replace(/[^\d+]/g, '')}`}
+                                title={`Call ${formatMobile(row.mobileNo || row.mobileNumber)}`}
+                                onClick={e => e.stopPropagation()}
+                                className="rpt-phone-badge"
+                              >
+                                <Phone size={10} strokeWidth={2.4} style={{ flexShrink: 0 }} />
+                                <span>{formatMobile(row.mobileNo || row.mobileNumber)}</span>
+                              </a>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </td>
 
                     <td className="mono rpt-mono-cell rpt-col-id">{row.crewId || '—'}</td>
                     <td className="rpt-rank-cell rpt-col-rank">{row.rank || <span className="mut">—</span>}</td>
-                    <td className="mono rpt-mono-cell rpt-col-mobile" style={{ whiteSpace: 'nowrap' }}>
-                      {row.mobileNo || row.mobileNumber ? (
-                        <a
-                          href={`tel:${String(row.mobileNo || row.mobileNumber).replace(/[^\d+]/g, '')}`}
-                          title="Call"
-                          onClick={e => e.stopPropagation()}
-                          style={{
-                            color: 'inherit',
-                            textDecoration: 'none',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: 5,
-                            fontVariantNumeric: 'tabular-nums',
-                          }}
-                        >
-                          <Phone size={11} style={{ opacity: 0.6, flexShrink: 0 }} />
-                          {formatMobile(row.mobileNo || row.mobileNumber)}
-                        </a>
-                      ) : (
-                        <span className="mut">—</span>
-                      )}
-                    </td>
 
                     {/* per-course status cells */}
                     {visibleCourses.map(c => {
