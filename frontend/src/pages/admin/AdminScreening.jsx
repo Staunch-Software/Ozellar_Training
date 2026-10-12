@@ -47,13 +47,8 @@ const chip = (status) => {
 function fmtDt(iso) {
   if (!iso) return '—'
   try {
-    // The backend stores naive IST wall-clock datetimes and serialises them
-    // via .isoformat() without a timezone suffix. A suffix-free string is
-    // parsed by JS as *the viewer's own browser/OS timezone*, not the
-    // server's — so on any admin machine not itself set to IST this used to
-    // render the wrong time (e.g. shifted by the viewer's UTC offset).
-    // Attaching the +05:30 offset explicitly makes the instant unambiguous
-    // regardless of the viewing browser's local timezone.
+    // Naive timestamps from the backend represent IST wall-clock time.
+    // If no timezone suffix is present, append '+05:30' so JS parses as IST.
     const withOffset = /[Zz]|[+-]\d\d:\d\d$/.test(iso) ? iso : `${iso}+05:30`
     return new Date(withOffset).toLocaleString('en-IN', {
       day: '2-digit', month: 'short', year: 'numeric',

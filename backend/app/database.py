@@ -10,7 +10,12 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./dev.db")
 
 # SQLite needs a special flag for use across threads (dev only).
-connect_args = {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+# Postgres connections enforce Asia/Kolkata session timezone across all environments
+# (Linux VM, Docker, Windows dev, Cloud) so func.now() and CURRENT_TIMESTAMP always yield IST.
+if DATABASE_URL.startswith("sqlite"):
+    connect_args = {"check_same_thread": False}
+else:
+    connect_args = {"options": "-c timezone=Asia/Kolkata"}
 
 # pool_recycle: discard pooled connections older than 30 min rather than handing
 # out one the server has already dropped. pool_pre_ping catches most of that on

@@ -3,10 +3,9 @@ import csv
 import io
 from collections import defaultdict
 from datetime import datetime, timezone, timedelta, date
-from zoneinfo import ZoneInfo
 from typing import Optional
 
-IST = ZoneInfo("Asia/Kolkata")
+from app.time_utils import to_ist_iso, IST
 
 from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy.orm import Session
@@ -212,7 +211,7 @@ def admin_dashboard_stats(admin: models.User = Depends(require_admin), db: Sessi
             "rank": user_obj.rank if user_obj else None,
             "course": course_obj.title if course_obj else cert.course_id,
             "score": cert.score,
-            "issuedAt": cert.issued_at.isoformat() if cert.issued_at else None,
+            "issuedAt": to_ist_iso(cert.issued_at),
         })
 
     total_crew = len(learners)
@@ -229,8 +228,8 @@ def admin_dashboard_stats(admin: models.User = Depends(require_admin), db: Sessi
     last_sync = None
     if last_sync_log:
         last_sync = {
-            "startedAt": last_sync_log.started_at.isoformat() if last_sync_log.started_at else None,
-            "finishedAt": last_sync_log.finished_at.isoformat() if last_sync_log.finished_at else None,
+            "startedAt": to_ist_iso(last_sync_log.started_at),
+            "finishedAt": to_ist_iso(last_sync_log.finished_at),
             "status": last_sync_log.status,
             "recordsFetched": last_sync_log.records_fetched,
             "recordsCreated": last_sync_log.records_created,

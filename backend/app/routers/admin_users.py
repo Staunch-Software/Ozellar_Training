@@ -15,6 +15,7 @@ from app.auth import (
 from app.certificates import build_certificate_pdf
 from app.notifications_service import notify
 from app.course_helpers import issue_certificate, cert_pdf_data
+from app.time_utils import to_ist_iso
 
 router = APIRouter(tags=["Admin Users"])
 
@@ -170,7 +171,7 @@ def admin_panel_list_admins(admin: models.User = Depends(require_admin),
         "id": u.id, "role": u.role, "name": u.full_name,
         "email": u.email, "rank": u.rank,
         "isActive": bool(u.is_active),
-        "createdAt": (u.created_at.isoformat() + '+05:30') if u.created_at else None,
+        "createdAt": to_ist_iso(u.created_at),
     } for u in users]
 
 
@@ -203,7 +204,7 @@ def admin_panel_create_admin(req: CreateUserRequest,
         "id": user.id, "role": user.role, "name": user.full_name,
         "email": user.email, "rank": user.rank,
         "isActive": bool(user.is_active),
-        "createdAt": (user.created_at.isoformat() + '+05:30') if user.created_at else None,
+        "createdAt": to_ist_iso(user.created_at),
     }
 
 
@@ -241,7 +242,7 @@ def admin_panel_update_admin(user_id: str, req: UpdateUserRequest,
         "id": user.id, "role": user.role, "name": user.full_name,
         "email": user.email, "rank": user.rank,
         "isActive": bool(user.is_active),
-        "createdAt": (user.created_at.isoformat() + '+05:30') if user.created_at else None,
+        "createdAt": to_ist_iso(user.created_at),
     }
 
 

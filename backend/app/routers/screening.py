@@ -4,19 +4,9 @@ import os
 import re
 import uuid
 from datetime import datetime, timezone
-from zoneinfo import ZoneInfo
 from typing import Optional
 
-IST = ZoneInfo("Asia/Kolkata")
-
-
-def to_ist_iso(dt: Optional[datetime]) -> Optional[str]:
-    """Serializes datetime into unambiguous ISO 8601 string with +05:30 IST offset."""
-    if not dt:
-        return None
-    if dt.tzinfo is None:
-        return dt.isoformat() + "+05:30"
-    return dt.astimezone(IST).isoformat()
+from app.time_utils import to_ist_iso, IST
 
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Response

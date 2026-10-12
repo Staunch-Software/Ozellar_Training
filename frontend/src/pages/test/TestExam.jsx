@@ -240,6 +240,29 @@ export default function TestExam() {
   const [tabSwitchCount, setTabSwitchCount] = useState(0)
   const [tabWarning, setTabWarning] = useState('')      // separate from `notice` so it survives section changes
   const [saveState,  setSaveState]  = useState('idle')  // 'idle' | 'saving' | 'saved' | 'error'
+  const [isFsBlocked, setIsFsBlocked] = useState(false)
+
+  useEffect(() => {
+    let wasFullscreen = !!document.fullscreenElement
+    const handleFsChange = () => {
+      if (document.fullscreenEnabled && !document.fullscreenElement) {
+        setIsFsBlocked(true)
+        if (wasFullscreen && !isPersonalRef.current) {
+          api.screeningTabSwitch()
+            .then(r => setTabSwitchCount(r.tabSwitchCount))
+            .catch(() => {})
+        }
+        wasFullscreen = false
+      } else {
+        setIsFsBlocked(false)
+        wasFullscreen = true
+      }
+    }
+    // Delay initial check slightly to allow transition
+    setTimeout(handleFsChange, 100)
+    document.addEventListener('fullscreenchange', handleFsChange)
+    return () => document.removeEventListener('fullscreenchange', handleFsChange)
+  }, [])
 
   const submitRef = useRef(null)
 
@@ -378,17 +401,35 @@ export default function TestExam() {
 
   useEffect(() => {
     if (!testData) return
-    const onVisibility = () => {
-      if (isPersonalRef.current) return
-      if (document.visibilityState !== 'visible') {
-        api.screeningTabSwitch()
-          .then(r => setTabSwitchCount(r.tabSwitchCount))
-          .catch(() => {})
-        setTabWarning('You switched away from the assessment tab. This has been recorded and is visible to the administrator.')
+    let isAway = false
+    const onLeave = () => {
+      if (isPersonalRef.current || isAway) return
+      isAway = true
+      api.screeningTabSwitch()
+        .then(r => setTabSwitchCount(r.tabSwitchCount))
+        .catch(() => {})
+      setTabWarning('You clicked outside or switched away from the assessment tab. This has been recorded and is visible to the administrator.')
+    }
+    const onReturn = () => {
+      if (document.hasFocus() && document.visibilityState === 'visible') {
+        isAway = false
       }
     }
-    document.addEventListener('visibilitychange', onVisibility)
-    return () => document.removeEventListener('visibilitychange', onVisibility)
+    
+    const onVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') onLeave()
+      else onReturn()
+    }
+
+    document.addEventListener('visibilitychange', onVisibilityChange)
+    window.addEventListener('blur', onLeave)
+    window.addEventListener('focus', onReturn)
+    
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibilityChange)
+      window.removeEventListener('blur', onLeave)
+      window.removeEventListener('focus', onReturn)
+    }
   }, [testData])
 
   // Required-field markers show on each input regardless; this also gates
@@ -572,9 +613,10 @@ export default function TestExam() {
     : (questions[qIdx] ? [{ q: questions[qIdx], qi: qIdx }] : [])
 
   return (
-    <div className="ex-root" style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: C.bg, color: C.ink, overflow: 'hidden', fontFamily: '"Inter",system-ui,-apple-system,"Segoe UI",sans-serif' }}>
+    <div className="ex-root" onContextMenu={e => e.preventDefault()} style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: C.bg, color: C.ink, overflow: 'hidden', fontFamily: '"Inter",system-ui,-apple-system,"Segoe UI",sans-serif', userSelect: 'none', WebkitUserSelect: 'none' }}>
       <style>{`
         * { box-sizing: border-box; }
+        input, textarea { user-select: auto; -webkit-user-select: auto; }
         .opt { transition: border-color .12s, background .12s; }
         .opt:hover { border-color: ${C.brandMid}; background: ${C.brandSoft}; }
         .pal { transition: transform .1s; }
@@ -1073,6 +1115,21 @@ export default function TestExam() {
                 {submitting ? 'Submitting…' : 'Yes, submit'}
               </Btn>
             </div>
+          </div>
+        </div>
+      )}
+
+      {isFsBlocked && (
+        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,0.85)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', backdropFilter: 'blur(8px)' }}>
+          <div style={{ background: '#fff', padding: '36px 48px', borderRadius: 16, textAlign: 'center', maxWidth: 460 }}>
+            <AlertTriangle size={48} color={C.danger} style={{ marginBottom: 16 }} />
+            <h2 style={{ margin: '0 0 12px', fontSize: 20, fontWeight: 800, color: C.ink }}>Full Screen Required</h2>
+            <p style={{ margin: '0 0 24px', fontSize: 14.5, color: C.inkMut, lineHeight: 1.6 }}>
+              You have exited full screen mode. To ensure the integrity of the assessment, you must remain in full screen mode until you submit your test.
+            </p>
+            <Btn variant="primary" onClick={() => document.documentElement.requestFullscreen().catch(() => {})}>
+              Return to Full Screen
+            </Btn>
           </div>
         </div>
       )}

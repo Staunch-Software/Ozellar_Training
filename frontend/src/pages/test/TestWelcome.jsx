@@ -262,7 +262,16 @@ export default function TestWelcome() {
     setStarting(true)
     ;['ss_exam_section', 'ss_exam_sec_visited', 'ss_exam_personal_locked', 'ss_exam_qidx', 'ss_exam_personal', 'ss_exam_answers', 'ss_exam_visited', 'ss_exam_marked']
       .forEach(k => sessionStorage.removeItem(k))
-    try { await api.screeningStart(); navigate('/test/exam') }
+    try { 
+      try {
+        if (document.documentElement.requestFullscreen) {
+          await document.documentElement.requestFullscreen()
+        }
+      } catch (e) {
+        console.warn('Fullscreen request failed', e)
+      }
+      await api.screeningStart(); navigate('/test/exam') 
+    }
     catch (err) { console.error(err); setStarting(false) }
   }
 
