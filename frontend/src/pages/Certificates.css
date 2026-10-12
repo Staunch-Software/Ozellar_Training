@@ -725,6 +725,7 @@
 .rpt-col-rank{min-width:130px; max-width:130px; width:130px; position:sticky; left:390px; z-index:2;}
 /* Add a shadow element to the last sticky column using pseudo-element for a cleaner look */
 .rpt-col-rank::after { content: ''; position: absolute; top: 0; right: -10px; width: 10px; height: 100%; box-shadow: inset 6px 0 6px -4px rgba(0,0,0,0.06); pointer-events: none; }
+.rpt-col-mobile{min-width:135px; max-width:155px; width:135px; white-space:nowrap; padding:10px 14px;}
 
 .rpt-row:hover td.rpt-col-sino, .rpt-row:hover td.rpt-col-crew, .rpt-row:hover td.rpt-col-id, .rpt-row:hover td.rpt-col-rank { background: var(--surface-2); }
 .rpt-col-course{min-width:170px;text-align:center}

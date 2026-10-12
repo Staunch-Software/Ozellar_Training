@@ -4,7 +4,7 @@ import {
   Award, Clock, Circle, FileSpreadsheet, FileText,
   Users, CheckCircle, AlertCircle, Search, X, SlidersHorizontal,
   TrendingUp, Download, RefreshCw, ChevronDown, ChevronLeft, ChevronRight, Eye, BarChart3,
-  MessageSquare, Lock
+  MessageSquare, Lock, Phone
 } from 'lucide-react'
 import { adminReport, adminDownloadReportCsv, adminDownloadReportXlsx, adminApproveCertificate } from '../../api.js'
 import { getToken } from '../../api.js'
@@ -149,6 +149,13 @@ function initials(name = '') {
   return name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || '?'
 }
 
+function formatMobile(mobileNo) {
+  if (!mobileNo) return null
+  const clean = String(mobileNo).trim()
+  if (clean.length === 10) return `${clean.slice(0, 5)} ${clean.slice(5)}`
+  return clean
+}
+
 /* ------------------------------------------------------------------ */
 /*  Main component                                                      */
 /* ------------------------------------------------------------------ */
@@ -203,9 +210,10 @@ export default function AdminReport() {
     if (crewSearch.trim()) {
       const q = crewSearch.trim().toLowerCase()
       rows = rows.filter(r =>
-        r.name.toLowerCase().includes(q) ||
+        (r.name || '').toLowerCase().includes(q) ||
         (r.crewId  || '').toLowerCase().includes(q) ||
-        (r.rank    || '').toLowerCase().includes(q)
+        (r.rank    || '').toLowerCase().includes(q) ||
+        (r.mobileNo || r.mobileNumber || '').toLowerCase().includes(q)
       )
     }
     if (selectedCourse !== 'all') {
@@ -486,6 +494,7 @@ export default function AdminReport() {
                   <th className="rpt-col-crew">Seafarer</th>
                   <th className="rpt-col-id">Seafarer ID</th>
                   <th className="rpt-col-rank">Rank</th>
+                  <th className="rpt-col-mobile">Mobile Number</th>
                   {visibleCourses.map(c => (
                     <th key={c.id} className="rpt-col-course">{c.title}</th>
                   ))}
@@ -511,6 +520,28 @@ export default function AdminReport() {
 
                     <td className="mono rpt-mono-cell rpt-col-id">{row.crewId || '—'}</td>
                     <td className="rpt-rank-cell rpt-col-rank">{row.rank || <span className="mut">—</span>}</td>
+                    <td className="mono rpt-mono-cell rpt-col-mobile" style={{ whiteSpace: 'nowrap' }}>
+                      {row.mobileNo || row.mobileNumber ? (
+                        <a
+                          href={`tel:${String(row.mobileNo || row.mobileNumber).replace(/[^\d+]/g, '')}`}
+                          title="Call"
+                          onClick={e => e.stopPropagation()}
+                          style={{
+                            color: 'inherit',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: 5,
+                            fontVariantNumeric: 'tabular-nums',
+                          }}
+                        >
+                          <Phone size={11} style={{ opacity: 0.6, flexShrink: 0 }} />
+                          {formatMobile(row.mobileNo || row.mobileNumber)}
+                        </a>
+                      ) : (
+                        <span className="mut">—</span>
+                      )}
+                    </td>
 
                     {/* per-course status cells */}
                     {visibleCourses.map(c => {

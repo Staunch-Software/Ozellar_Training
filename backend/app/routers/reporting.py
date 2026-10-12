@@ -89,7 +89,7 @@ def _report(db):
         
         rows.append({
             "learnerId": lr.id, "name": lr.full_name, "crewId": lr.crew_id,
-            "rank": lr.rank, "mobileNo": lr.mobile_number,
+            "rank": lr.rank, "mobileNo": lr.mobile_number, "mobileNumber": lr.mobile_number,
             "isActive": bool(lr.is_active), "cells": cells,
         })
     return courses, rows
@@ -263,18 +263,19 @@ def admin_report_csv(admin: models.User = Depends(require_admin), db: Session = 
     courses, rows = _report(db)
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["Crew ID", "Name", "Rank", "Active", "Course", "Status", "Score", "Completed On", "Approval Remark"])
+    w.writerow(["Crew ID", "Name", "Rank", "Mobile Number", "Active", "Course", "Status", "Score", "Completed On", "Approval Remark"])
     for r in rows:
         active = "yes" if r["isActive"] else "no"
+        mobile = r.get("mobileNo") or ""
         if not r["cells"]:
-            w.writerow([r["crewId"], r["name"], r["rank"] or "", active,
+            w.writerow([r["crewId"], r["name"], r["rank"] or "", mobile, active,
                         "(no courses assigned)", "", "", "", ""])
             continue
         for c in courses:
             cell = r["cells"].get(c.id)
             if not cell:
                 continue
-            w.writerow([r["crewId"], r["name"], r["rank"] or "", active, c.title,
+            w.writerow([r["crewId"], r["name"], r["rank"] or "", mobile, active, c.title,
                         cell["status"], "" if cell["score"] is None else cell["score"],
                         cell["passedOn"] or "", cell.get("approvalRemark") or ""])
     return Response(content=buf.getvalue(), media_type="text/csv",
@@ -301,7 +302,8 @@ def admin_report_xlsx(
         rows = [r for r in rows if
                 q in (r["name"] or "").lower() or
                 q in (r["crewId"] or "").lower() or
-                q in (r["rank"] or "").lower()]
+                q in (r["rank"] or "").lower() or
+                q in (r.get("mobileNo") or "").lower()]
 
     if course_id:
         rows = [r for r in rows if course_id in r["cells"]]
@@ -344,13 +346,13 @@ def admin_report_xlsx(
     title_text = "Ozellar Marine — Compliance Report"
     if filter_note:
         title_text += f"  |  Filters: {', '.join(filter_note)}"
-    ws.merge_cells("A1:K1")
+    ws.merge_cells("A1:L1")
     tc = ws.cell(row=1, column=1, value=title_text)
     tc.font = Font(bold=True, size=12, color="1E3A5F")
     tc.alignment = Alignment(horizontal="left", vertical="center")
     ws.row_dimensions[1].height = 22
 
-    ws.merge_cells("A2:K2")
+    ws.merge_cells("A2:L2")
     sc = ws.cell(row=2, column=1,
                  value=f"Generated: {datetime.now(IST).strftime('%d %b %Y %H:%M IST')}  ·  "
                        f"{len(rows)} crew member(s) shown")
@@ -358,7 +360,7 @@ def admin_report_xlsx(
     sc.alignment = Alignment(horizontal="left", vertical="center")
     ws.row_dimensions[2].height = 16
 
-    headers = ["Crew ID", "Name", "Rank", "Active",
+    headers = ["Crew ID", "Name", "Rank", "Mobile Number", "Active",
                "Course", "Status", "Score (%)", "Attempts", "Started On", "Completed On", "Approval Remark"]
     ws.append(headers)
     for ci, h in enumerate(headers, 1):
@@ -373,15 +375,16 @@ def admin_report_xlsx(
     row_idx = 4
     for r in rows:
         active = "Yes" if r["isActive"] else "No"
+        mobile = r.get("mobileNo") or ""
         start_row = row_idx
         
         if not r["cells"]:
-            data = [r["crewId"], r["name"], r["rank"] or "", active,
+            data = [r["crewId"], r["name"], r["rank"] or "", mobile, active,
                     "(no courses assigned)", "", "", "", "", "", ""]
             ws.append(data)
-            for ci in range(1, 12):
+            for ci in range(1, 13):
                 c = ws.cell(row=row_idx, column=ci)
-                c.fill = ASGN_FILL if ci > 4 else WHITE_FILL
+                c.fill = ASGN_FILL if ci > 5 else WHITE_FILL
                 c.font = BODY_FONT
                 c.alignment = left; c.border = border
             row_idx += 1
@@ -401,25 +404,25 @@ def admin_report_xlsx(
             remark = cell_data.get("approvalRemark") or ""
 
             fill = PASS_FILL if status == "passed" else (WIP_FILL if status == "in-progress" else ASGN_FILL)
-            data = [r["crewId"], r["name"], r["rank"] or "", active,
+            data = [r["crewId"], r["name"], r["rank"] or "", mobile, active,
                     course.title, label, score, attempts, started_on, passed_on, remark]
             ws.append(data)
             for ci, val in enumerate(data, 1):
                 c = ws.cell(row=row_idx, column=ci)
-                c.fill = fill if ci > 4 else WHITE_FILL
+                c.fill = fill if ci > 5 else WHITE_FILL
                 c.font = BOLD_FONT if ci == 2 else BODY_FONT
                 c.alignment = left
                 c.border = border
             row_idx += 1
 
         if row_idx - 1 > start_row:
-            for ci in range(1, 5):
+            for ci in range(1, 6):
                 ws.merge_cells(start_row=start_row, start_column=ci, end_row=row_idx-1, end_column=ci)
 
-        for ci in range(1, 12):
+        for ci in range(1, 13):
             ws.cell(row=row_idx-1, column=ci).border = border_thick_bottom
 
-    col_widths = [14, 26, 18, 8, 36, 14, 11, 10, 14, 14, 40]
+    col_widths = [14, 26, 18, 16, 8, 36, 14, 11, 10, 14, 14, 40]
     for ci, w in enumerate(col_widths, 1):
         ws.column_dimensions[get_column_letter(ci)].width = w
 
