@@ -392,7 +392,7 @@ export default function AdminLayout() {
           </div>
         </div>
       </nav>
-      <div className={`page ${isLockedPage ? 'page-locked' : ''} ${isFlushRoute ? 'page-cm' : ''}`}>
+      <div className={`page ${isLockedPage ? 'page-locked' : ''} ${isFlushRoute ? 'page-cm' : ''} ${isScreeningRoute ? 'page-screening' : ''}`}>
         <Outlet />
       </div>
 

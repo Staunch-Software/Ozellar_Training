@@ -6,7 +6,7 @@ import {
   AlertTriangle, X, Save, Eye, EyeOff, BookOpen, Layers,
   User, Phone, ToggleLeft, ToggleRight, RefreshCw,
   TrendingUp, Award, Search, Filter, Image as ImageIcon, Upload, Copy,
-  RotateCcw
+  RotateCcw, UserCheck, MessageSquare, Star, Check
 } from 'lucide-react'
 import * as api from '../../api.js'
 import AdminScreeningAnswersReview from './AdminScreeningAnswersReview.jsx'
@@ -59,9 +59,31 @@ function fmtDt(iso) {
   catch { return iso }
 }
 
-function Card({ children, style={} }) {
+function fmtDate(iso) {
+  if (!iso) return '—'
+  try {
+    const withOffset = /[Zz]|[+-]\d\d:\d\d$/.test(iso) ? iso : `${iso}+05:30`
+    return new Date(withOffset).toLocaleDateString('en-IN', {
+      day: '2-digit', month: 'short', year: 'numeric',
+      timeZone: 'Asia/Kolkata',
+    })
+  } catch { return iso }
+}
+
+function fmtTime(iso) {
+  if (!iso) return ''
+  try {
+    const withOffset = /[Zz]|[+-]\d\d:\d\d$/.test(iso) ? iso : `${iso}+05:30`
+    return new Date(withOffset).toLocaleTimeString('en-IN', {
+      hour: '2-digit', minute: '2-digit', hour12: true,
+      timeZone: 'Asia/Kolkata',
+    })
+  } catch { return '' }
+}
+
+function Card({ children, style={}, ...props }) {
   return (
-    <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:18, ...style }}>
+    <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:18, ...style }} {...props}>
       {children}
     </div>
   )
@@ -445,6 +467,7 @@ export default function AdminScreening() {
             {tab === 'results' && (
               <ResultsTab
                 results={results}
+                setResults={setResults}
                 onRefresh={loadResults}
                 onError={setError}
                 reviewCandidateId={reviewCandidateId}
@@ -1293,7 +1316,7 @@ function tabSwitchBadge(count) {
 // ============================================================
 // RESULTS TAB
 // ============================================================
-function ResultsTab({ results, onRefresh, onError, reviewCandidateId, setReviewCandidateId }) {
+function ResultsTab({ results, setResults, onRefresh, onError, reviewCandidateId, setReviewCandidateId }) {
   const navigate = useNavigate()
   const [localReviewId, setLocalReviewId] = useState(null)
   const activeReviewId = reviewCandidateId !== undefined ? reviewCandidateId : localReviewId
@@ -1301,35 +1324,83 @@ function ResultsTab({ results, onRefresh, onError, reviewCandidateId, setReviewC
 
   const [allTests, setAllTests] = useState([])
   const [filterTest, setFilterTest] = useState('')
+  const [filterShortlist, setFilterShortlist] = useState('')
   const [search, setSearch] = useState('')
   const [downloading, setDownloading] = useState(false)
 
+  // Interview remark modal state
+  const [remarkModalCandidate, setRemarkModalCandidate] = useState(null)
+  const [remarkText, setRemarkText] = useState('')
+  const [savingRemark, setSavingRemark] = useState(false)
+  const [updatingShortlistId, setUpdatingShortlistId] = useState(null)
+
   useEffect(() => { api.adminListScreeningTests().then(setAllTests).catch(()=>{}) }, [])
-
-
 
   const download = async () => {
     setDownloading(true)
     try { await api.adminDownloadScreeningResultsXlsx(filterTest||null) } catch(e) { onError(e.message) } finally { setDownloading(false) }
   }
 
+  const toggleShortlist = async (r) => {
+    const nextVal = !r.isShortlisted
+    if (setResults) {
+      setResults(prev => prev.map(item => item.candidateId === r.candidateId ? { ...item, isShortlisted: nextVal } : item))
+    }
+    setUpdatingShortlistId(r.candidateId)
+    try {
+      await api.adminUpdateScreeningCandidate(r.candidateId, { isShortlisted: nextVal })
+    } catch (err) {
+      if (setResults) {
+        setResults(prev => prev.map(item => item.candidateId === r.candidateId ? { ...item, isShortlisted: !nextVal } : item))
+      }
+      if (onError) onError(err.message || 'Failed to update shortlist status')
+    } finally {
+      setUpdatingShortlistId(null)
+    }
+  }
+
+  const handleSaveRemark = async () => {
+    if (!remarkModalCandidate) return
+    setSavingRemark(true)
+    const candId = remarkModalCandidate.candidateId
+    const trimmed = remarkText.trim()
+    try {
+      await api.adminUpdateScreeningCandidate(candId, { interviewRemark: trimmed })
+      if (setResults) {
+        setResults(prev => prev.map(item => item.candidateId === candId ? { ...item, interviewRemark: trimmed } : item))
+      }
+      setRemarkModalCandidate(null)
+    } catch (err) {
+      if (onError) onError(err.message || 'Failed to save interview remark')
+    } finally {
+      setSavingRemark(false)
+    }
+  }
+
   const filtered = results
     .filter(r => !filterTest || r.testId === filterTest)
-    .filter(r => !search || r.fullName.toLowerCase().includes(search.toLowerCase()))
+    .filter(r => {
+      if (filterShortlist === 'shortlisted') return Boolean(r.isShortlisted)
+      if (filterShortlist === 'not_shortlisted') return !r.isShortlisted
+      return true
+    })
+    .filter(r => !search || (r.fullName && r.fullName.toLowerCase().includes(search.toLowerCase())) || (r.mobileNumber && r.mobileNumber.includes(search)))
 
   const avg = (arr) => arr.length ? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length) : '—'
+  const shortlistedCount = results.filter(r => r.isShortlisted).length
 
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-      {/* ── Top Toolbar: Search & Export Results ── */}
-      <div className="as-toolbar">
-        <div className="as-toolbar-left">
+      {/* ── Top Toolbar: Search, Filters & Export Results ── */}
+      {/* ── Top Toolbar: Search, Filters & Export Results ── */}
+      <div className="as-toolbar as-filter-row">
+        <div className="as-toolbar-left as-filter-group-main">
           <div className="as-search-box">
             <Search size={16} className="as-search-icon" />
             <input
               type="text"
               className="as-search-input"
-              placeholder="Search candidate name…"
+              placeholder="Search candidate name or mobile…"
               value={search}
               onChange={e => setSearch(e.target.value)}
             />
@@ -1339,14 +1410,55 @@ function ResultsTab({ results, onRefresh, onError, reviewCandidateId, setReviewC
               </button>
             )}
           </div>
-          <div style={{ flex:'1 1 200px', minWidth:180, maxWidth:280 }}>
+
+          <div className="as-test-filter-select">
             <CardSelect value={filterTest} onChange={setFilterTest} options={[{id:'', title:'All Tests'}, ...allTests]} placeholder="Filter by Test…" icon={<Filter size={14}/>}/>
           </div>
+
+          <div className="as-shortlist-tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={filterShortlist === ''}
+              className={`as-shortlist-tab-btn ${filterShortlist === '' ? 'active' : ''}`}
+              onClick={() => setFilterShortlist('')}
+            >
+              <span>All</span>
+              <span className="as-tab-badge">{results.length}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={filterShortlist === 'shortlisted'}
+              className={`as-shortlist-tab-btn ${filterShortlist === 'shortlisted' ? 'active' : ''}`}
+              onClick={() => setFilterShortlist('shortlisted')}
+            >
+              <Star
+                size={12}
+                fill={filterShortlist === 'shortlisted' ? '#0F766E' : 'none'}
+                stroke={filterShortlist === 'shortlisted' ? '#0F766E' : 'currentColor'}
+                strokeWidth={2}
+              />
+              <span>Shortlisted</span>
+              <span className="as-tab-badge">{results.filter(r => r.isShortlisted).length}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={filterShortlist === 'not_shortlisted'}
+              className={`as-shortlist-tab-btn ${filterShortlist === 'not_shortlisted' ? 'active' : ''}`}
+              onClick={() => setFilterShortlist('not_shortlisted')}
+            >
+              <span>Not Shortlisted</span>
+              <span className="as-tab-badge">{results.filter(r => !r.isShortlisted).length}</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="as-toolbar-right as-filter-group-actions">
           <button className="as-toolbar-icon-btn" onClick={onRefresh} title="Refresh results">
             <RefreshCw size={15} />
           </button>
-        </div>
-        <div className="as-toolbar-right">
           <button
             className="as-btn-export"
             onClick={download}
@@ -1358,75 +1470,188 @@ function ResultsTab({ results, onRefresh, onError, reviewCandidateId, setReviewC
         </div>
       </div>
 
-      {/* Summary cards */}
-      <div className="am-summary-grid-4" style={{ gap:12 }}>
+      {/* ── Summary KPI Cards (Uniform style without active border) ── */}
+      <div className="as-summary-grid-5">
         {[
-          { label:'Submissions', value:filtered.length, color:'var(--accent)', bg:'var(--accent-weak)', icon:<TrendingUp size={16}/> },
+          {
+            label:'Submissions',
+            value:filtered.length,
+            color:'var(--accent)',
+            bg:'var(--accent-weak)',
+            icon:<TrendingUp size={16}/>,
+            onClick: () => setFilterShortlist(''),
+          },
           { label:'Avg Score', value: filtered.length ? avg(filtered.map(r=>r.score||0)) : '—', color:'#f59e0b', bg:'rgba(245,158,11,.1)', icon:<Award size={16}/> },
           { label:'Avg Correct', value: filtered.length ? avg(filtered.map(r=>r.correct||0)) : '—', color:'var(--success)', bg:'var(--success-weak)', icon:<CheckCircle2 size={16}/> },
           { label:'Avg Wrong', value: filtered.length ? avg(filtered.map(r=>r.wrong||0)) : '—', color:'var(--danger)', bg:'var(--danger-weak)', icon:<AlertTriangle size={16}/> },
+          {
+            label:'Shortlisted',
+            value: results.filter(r => r.isShortlisted).length,
+            color:'#0F766E',
+            bg:'rgba(15,118,110,.1)',
+            icon:<Star size={16} fill="#0F766E" stroke="#0F766E" strokeWidth={1.5} />,
+            onClick: () => setFilterShortlist(prev => prev === 'shortlisted' ? '' : 'shortlisted'),
+          },
         ].map(s => (
-          <Card key={s.label} style={{ padding:'14px 10px', display:'flex', alignItems:'center', gap:12 }}>
+          <Card
+            key={s.label}
+            className={`as-kpi-card ${s.onClick ? 'as-kpi-card-clickable' : ''}`}
+            style={{
+              padding:'14px 14px',
+              display:'flex',
+              alignItems:'center',
+              gap:11,
+              cursor: s.onClick ? 'pointer' : 'default',
+              borderColor: 'var(--border)',
+              background: 'var(--surface)',
+              transition:'all .18s ease'
+            }}
+            onClick={s.onClick}
+          >
             <div style={{ width:38, height:38, borderRadius:11, background:s.bg, display:'grid', placeItems:'center', color:s.color, flexShrink:0 }}>{s.icon}</div>
-            <div>
-              <div style={{ fontSize:24, fontWeight:800, color:s.color, letterSpacing:'-.01em' }}>{s.value}</div>
-              <div style={{ fontSize:11.5, color:'var(--text-faint)', fontWeight:600 }}>{s.label}</div>
+            <div style={{ minWidth:0, flex:1 }}>
+              <div style={{ fontSize:22, fontWeight:800, color:s.color, letterSpacing:'-.01em', lineHeight:1.1 }}>{s.value}</div>
+              <div style={{ fontSize:11.5, color:'var(--text-faint)', fontWeight:700, marginTop:2 }}>
+                {s.label}
+              </div>
             </div>
           </Card>
         ))}
       </div>
 
-      <Card style={{ overflow:'hidden' }}>
+      {/* ── Table Container (Fit without scroll at >= 1200px) ── */}
+      <Card style={{ overflow:'visible' }}>
         {filtered.length === 0 ? (
           <div style={{ padding:'80px 0', textAlign:'center', color:'var(--text-faint)' }}>
             <div style={{ width:64, height:64, borderRadius:'50%', background:'var(--surface-2)', display:'grid', placeItems:'center', margin:'0 auto 16px' }}>
               <BarChart3 size={28} style={{ opacity:.4 }}/>
             </div>
             <div style={{ fontWeight:600, fontSize:15, color:'var(--text)', marginBottom:4 }}>No results found</div>
-            <div style={{ fontSize:13 }}>Scores will appear here once candidates submit tests.</div>
+            <div style={{ fontSize:13 }}>
+              {filterShortlist ? 'No candidates match the shortlist filter.' : 'Scores will appear here once candidates submit tests.'}
+            </div>
           </div>
         ) : (
-          <div style={{ overflowX:'auto' }}>
-            <table style={{ width:'100%', borderCollapse:'collapse', fontSize:13.5 }}>
+          <div className="as-results-table-wrap">
+            <table className="as-results-table">
               <thead>
-                <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
-                  {['Name','Mobile','Test','Start','Submit','Time (min)','✓','✗','○','Total Q','Score / Max','Tab Sw.','Result'].map(h => (
-                    <th key={h} style={{ padding:'14px 10px', textAlign: h === 'Result' ? 'center' : 'left', fontWeight:700, color:'#64748b', fontSize:11.5, letterSpacing:'.06em', textTransform:'uppercase', whiteSpace:'nowrap' }}>{h}</th>
-                  ))}
+                <tr>
+                  <th className="as-th-candidate">Candidate</th>
+                  <th className="as-th-test">Test</th>
+                  <th className="as-th-dt">Start</th>
+                  <th className="as-th-dt">Submit</th>
+                  <th className="as-th-time">Time</th>
+                  <th className="as-th-num" title="Correct answers">✓</th>
+                  <th className="as-th-num" title="Wrong answers">✗</th>
+                  <th className="as-th-num" title="Unanswered">○</th>
+                  <th className="as-th-num" title="Total questions">Total</th>
+                  <th className="as-th-score">Score</th>
+                  <th className="as-th-tabsw" title="Exam tab switch count">Tab Sw.</th>
+                  <th className="as-th-result">Result</th>
+                  <th className="as-th-remark">Remark</th>
+                  <th className="as-th-shortlist">Shortlist</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.map((r) => (
-                  <tr key={r.candidateId} style={{ borderBottom:'1px solid var(--border)', background: 'transparent', transition:'background .15s' }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'var(--surface-2)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
-                    <td style={{ padding:'12px 10px', fontWeight:700, color:'var(--text)' }}>
-                      <div style={{ display:'flex', alignItems:'center', gap:10 }}>
-                        <div style={{ width:32, height:32, borderRadius:'50%', background:'linear-gradient(135deg, #F58220, #E07820)', color:'#fff', boxShadow:'0 2px 6px rgba(224,120,32,0.25)', display:'grid', placeItems:'center', fontSize:12, fontWeight:700, flexShrink:0 }}>
+                  <tr key={r.candidateId} className="as-result-row">
+                    <td className="as-td-candidate">
+                      <div className="as-cand-cell">
+                        <div className="as-cand-avatar">
                           {getInitials(r.fullName)}
                         </div>
-                        <span style={{ fontSize:13, fontWeight:600 }}>{r.fullName}</span>
+                        <div className="as-cand-info">
+                          <span className="as-cand-name" title={r.fullName}>{r.fullName}</span>
+                          <span className="as-cand-mobile">{r.mobileNumber || '—'}</span>
+                        </div>
                       </div>
                     </td>
-                    <td style={{ padding:'12px 10px', color:'var(--text-mut)' }}>{r.mobileNumber||'—'}</td>
-                    <td style={{ padding:'12px 10px', color:'var(--text-mut)', maxWidth:160 }}><span style={{ display:'block', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', fontWeight:500 }}>{r.testTitle}</span></td>
-                    <td style={{ padding:'12px 10px', color:'var(--text-mut)', fontSize:12.5, minWidth:80 }}>{fmtDt(r.startedAt)}</td>
-                    <td style={{ padding:'12px 10px', color:'var(--text-mut)', fontSize:12.5, minWidth:80 }}>{fmtDt(r.submittedAt)}</td>
-                    <td style={{ padding:'12px 10px', color:'var(--text-mut)' }}>{r.timeTakenMinutes!=null?r.timeTakenMinutes:'—'}</td>
-                    <td style={{ padding:'12px 10px', color:'var(--success)', fontWeight:800 }}>{r.correct}</td>
-                    <td style={{ padding:'12px 10px', color:'var(--danger)', fontWeight:800 }}>{r.wrong}</td>
-                    <td style={{ padding:'12px 10px', color:'var(--text-mut)' }}>{r.unanswered}</td>
-                    <td style={{ padding:'12px 10px', color:'var(--text-mut)' }}>{r.totalQuestions!=null?r.totalQuestions:'—'}</td>
-                    <td style={{ padding:'12px 10px', fontWeight:900, color:'var(--accent)', fontSize:15, whiteSpace:'nowrap' }}>
-                      {r.score}{r.maxScore!=null ? ` / ${r.maxScore}` : ''}
+                    <td className="as-td-test">
+                      <span className="as-test-title" title={r.testTitle}>{r.testTitle}</span>
                     </td>
-                    <td style={{ padding:'12px 10px' }}>{tabSwitchBadge(r.tabSwitchCount)}</td>
-                    <td style={{ padding:'12px 10px', textAlign:'center', whiteSpace:'nowrap' }}>
+                    <td className="as-td-dt">
+                      <div className="as-dt-cell" title={fmtDt(r.startedAt)}>
+                        <span className="as-dt-d">{fmtDate(r.startedAt)}</span>
+                        <span className="as-dt-t">{fmtTime(r.startedAt)}</span>
+                      </div>
+                    </td>
+                    <td className="as-td-dt">
+                      <div className="as-dt-cell" title={fmtDt(r.submittedAt)}>
+                        <span className="as-dt-d">{fmtDate(r.submittedAt)}</span>
+                        <span className="as-dt-t">{fmtTime(r.submittedAt)}</span>
+                      </div>
+                    </td>
+                    <td className="as-td-time">{r.timeTakenMinutes != null ? `${r.timeTakenMinutes}m` : '—'}</td>
+                    <td className="as-td-num as-td-correct">{r.correct}</td>
+                    <td className="as-td-num as-td-wrong">{r.wrong}</td>
+                    <td className="as-td-num as-td-unanswered">{r.unanswered}</td>
+                    <td className="as-td-num as-td-total">{r.totalQuestions != null ? r.totalQuestions : '—'}</td>
+                    <td className="as-td-score">
+                      <span className="as-score-badge">
+                        {r.score}{r.maxScore != null ? ` / ${r.maxScore}` : ''}
+                      </span>
+                    </td>
+                    <td className="as-td-tabsw">{tabSwitchBadge(r.tabSwitchCount)}</td>
+                    <td className="as-td-result">
                       <button
                         className="as-btn-table-review"
                         onClick={() => setActiveReviewId(r.candidateId)}
+                        title="View candidate answers & review"
                       >
-                        <Eye size={13} strokeWidth={2.2}/> View
+                        <Eye size={12} strokeWidth={2.2}/> View
+                      </button>
+                    </td>
+                    <td className="as-col-remark">
+                      {r.interviewRemark ? (
+                        <div className="as-remark-wrapper">
+                          <button
+                            type="button"
+                            className="as-remark-btn has-content"
+                            onClick={() => { setRemarkModalCandidate(r); setRemarkText(r.interviewRemark || '') }}
+                            aria-label={`Interview Remark: ${r.interviewRemark} (Click to edit)`}
+                          >
+                            <MessageSquare size={11} className="as-remark-icon" />
+                            <span className="as-remark-text">{r.interviewRemark}</span>
+                            <Edit3 size={10} className="as-remark-edit-icon" />
+                          </button>
+                          <div className="as-custom-tooltip" role="tooltip">
+                            <div className="as-tooltip-tag">Interview Remark</div>
+                            <div className="as-tooltip-text">{r.interviewRemark}</div>
+                            <div className="as-tooltip-hint">Click to edit</div>
+                          </div>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="as-remark-btn is-empty"
+                          onClick={() => { setRemarkModalCandidate(r); setRemarkText('') }}
+                          aria-label="Add interview remark"
+                        >
+                          <Plus size={11} />
+                          <span>Remark</span>
+                        </button>
+                      )}
+                    </td>
+                    <td className="as-col-shortlist">
+                      <button
+                        type="button"
+                        className={`as-shortlist-check ${r.isShortlisted ? 'checked' : 'unchecked'}`}
+                        onClick={() => toggleShortlist(r)}
+                        disabled={updatingShortlistId === r.candidateId}
+                        aria-label={r.isShortlisted ? 'Shortlisted candidate. Click to remove from shortlist.' : 'Not shortlisted. Click to shortlist candidate.'}
+                      >
+                        <span className="as-check-indicator" aria-hidden="true">
+                          <Star
+                            size={13}
+                            className="as-star-svg"
+                            fill={r.isShortlisted ? '#0F766E' : 'none'}
+                            stroke={r.isShortlisted ? '#0F766E' : '#94a3b8'}
+                            strokeWidth={r.isShortlisted ? 1.5 : 2}
+                          />
+                        </span>
+                        <span className="as-check-text">
+                          {r.isShortlisted ? 'Shortlisted' : 'Shortlist'}
+                        </span>
                       </button>
                     </td>
                   </tr>
@@ -1436,6 +1661,83 @@ function ResultsTab({ results, onRefresh, onError, reviewCandidateId, setReviewC
           </div>
         )}
       </Card>
+
+      {/* ── Interview Remark Modal ── */}
+      {remarkModalCandidate && (
+        <div className="as-modal-backdrop" onClick={() => setRemarkModalCandidate(null)}>
+          <div className="as-remark-modal" onClick={e => e.stopPropagation()}>
+            <div className="as-remark-modal-header">
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div className="as-remark-modal-icon">
+                  <MessageSquare size={18} color="#0F766E" />
+                </div>
+                <div>
+                  <h3 className="as-remark-modal-title">Interview Remark</h3>
+                  <p className="as-remark-modal-subtitle">
+                    {remarkModalCandidate.fullName} &bull; {remarkModalCandidate.testTitle}
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className="as-modal-close"
+                onClick={() => setRemarkModalCandidate(null)}
+                title="Close"
+              >
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="as-remark-modal-body">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <label className="as-remark-label">Candidate Assessment Feedback & Interview Remark</label>
+                <span className="as-remark-counter">{remarkText.length} chars</span>
+              </div>
+              <textarea
+                className="as-remark-textarea"
+                rows={4}
+                autoFocus
+                value={remarkText}
+                onChange={e => setRemarkText(e.target.value)}
+                placeholder="Enter interview remarks, performance notes, technical observations, or selection recommendations for this candidate..."
+              />
+              <div style={{ fontSize: 11.5, color: 'var(--text-faint)', marginTop: 4 }}>
+                Candidate completed assessment with score: <strong style={{ color: 'var(--accent)' }}>{remarkModalCandidate.score}{remarkModalCandidate.maxScore != null ? ` / ${remarkModalCandidate.maxScore}` : ''}</strong>
+              </div>
+            </div>
+
+            <div className="as-remark-modal-footer">
+              {remarkText ? (
+                <button
+                  type="button"
+                  className="as-remark-btn-clear"
+                  onClick={() => setRemarkText('')}
+                >
+                  Clear
+                </button>
+              ) : <span />}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  type="button"
+                  className="as-remark-btn-cancel"
+                  onClick={() => setRemarkModalCandidate(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className="as-remark-btn-save"
+                  onClick={handleSaveRemark}
+                  disabled={savingRemark}
+                >
+                  {savingRemark ? 'Saving…' : 'Save Remark'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+

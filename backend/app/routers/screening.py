@@ -623,6 +623,8 @@ def admin_list_candidates(
             "submittedAt": to_ist_iso(att.submitted_at) if att and att.submitted_at else None,
             "score": att.score if att else None,
             "tabSwitchCount": att.tab_switch_count or 0 if att else 0,
+            "interviewRemark": c.interview_remark or "",
+            "isShortlisted": bool(c.is_shortlisted),
         })
     return result
 
@@ -675,8 +677,20 @@ def admin_update_candidate(
             db.delete(c.attempt)
         c.test_id = req["testId"]
         c.status = "pending"
+    if "interviewRemark" in req:
+        c.interview_remark = req["interviewRemark"]
+    elif "interview_remark" in req:
+        c.interview_remark = req["interview_remark"]
+    if "isShortlisted" in req:
+        c.is_shortlisted = bool(req["isShortlisted"])
+    elif "is_shortlisted" in req:
+        c.is_shortlisted = bool(req["is_shortlisted"])
     db.commit()
-    return {"ok": True}
+    return {
+        "ok": True,
+        "interviewRemark": c.interview_remark or "",
+        "isShortlisted": bool(c.is_shortlisted),
+    }
 
 
 @router.delete("/api/admin/screening/candidates/{cand_id}")
@@ -780,6 +794,8 @@ def admin_screening_results(
             "totalQuestions": total_q,
             "personalData": att.personal_data,
             "tabSwitchCount": att.tab_switch_count or 0,
+            "interviewRemark": c.interview_remark or "",
+            "isShortlisted": bool(c.is_shortlisted),
         })
     return rows
 
@@ -892,6 +908,8 @@ def admin_get_candidate_answers(
             "submittedAt": to_ist_iso(attempt.submitted_at),
             "timeTakenMinutes": time_taken,
             "tabSwitchCount": attempt.tab_switch_count or 0,
+            "interviewRemark": candidate.interview_remark or "",
+            "isShortlisted": bool(candidate.is_shortlisted),
         },
         "test": {
             "id": test.id,
@@ -970,8 +988,8 @@ def admin_screening_results_xlsx(
             r["timeTakenMinutes"] or "",
             r["correct"], r["wrong"], r["unanswered"],
             r["score"],
-            "",  # Remark
-            "",  # Shortlisted
+            r.get("interviewRemark") or "",  # Remark
+            "Yes" if r.get("isShortlisted") else "No",  # Shortlisted
         ])
         fill = alt_fill if row_i % 2 == 0 else None
         for col_idx in range(1, len(headers) + 1):

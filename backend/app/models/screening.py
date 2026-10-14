@@ -68,6 +68,8 @@ class ScreeningCandidate(Base):
     # 'pending' | 'in_progress' | 'submitted'
     status = Column(String, default="pending")
     is_active = Column(Boolean, default=True)
+    interview_remark = Column(Text, nullable=True)
+    is_shortlisted = Column(Boolean, default=False)
     created_at = Column(DateTime, server_default=func.now())
 
     test = relationship("ScreeningTest", back_populates="candidates")
