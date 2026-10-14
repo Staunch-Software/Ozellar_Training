@@ -898,20 +898,6 @@ html {
   transition: width 0.22s ease, box-shadow 0.22s ease;
 }
 
-/* Ambient subtle corner glow */
-.as-kpi-compact-glow {
-  position: absolute;
-  top: -16px;
-  right: -16px;
-  width: 72px;
-  height: 72px;
-  border-radius: 50%;
-  background: radial-gradient(circle, var(--card-glow, rgba(15, 118, 110, 0.09)) 0%, transparent 70%);
-  pointer-events: none;
-  opacity: 0.85;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-}
-
 .as-kpi-compact-inner {
   padding: 10px 14px 11px;
   display: flex;
@@ -974,11 +960,6 @@ html {
 
 .as-kpi-card-compact.is-clickable:hover .as-kpi-compact-icon {
   transform: scale(1.05);
-}
-
-.as-kpi-card-compact.is-clickable:hover .as-kpi-compact-glow {
-  transform: scale(1.15);
-  opacity: 1;
 }
 
 .as-kpi-card-compact.is-active {
@@ -1087,7 +1068,7 @@ html {
 }
 
 .as-results-table td {
-  padding: 9px 6px;
+  padding: 13px 6px;
   border-bottom: 1px solid var(--border);
   vertical-align: middle;
 }
@@ -1102,7 +1083,8 @@ html {
 }
 
 /* ── Specific Column Widths & Alignments ── */
-.as-th-sl, .as-td-sl               { text-align: center; width: 40px; min-width: 34px; max-width: 46px; font-size: 12px; color: var(--text-faint, #94a3b8); font-weight: 600; padding: 9px 4px !important; }
+.as-th-sl                          { text-align: center; width: 40px; min-width: 34px; max-width: 46px; font-size: 12px; color: var(--text-faint, #94a3b8); font-weight: 600; padding: 12px 4px !important; }
+.as-td-sl                          { text-align: center; width: 40px; min-width: 34px; max-width: 46px; font-size: 12px; color: var(--text-faint, #94a3b8); font-weight: 600; padding: 13px 4px !important; }
 .as-th-candidate, .as-td-candidate { text-align: left; }
 .as-th-mobile, .as-td-mobile       { text-align: left; white-space: nowrap; font-size: 12px; color: var(--text-mut); }
 .as-th-test, .as-td-test           { text-align: left; }
@@ -1404,7 +1386,7 @@ html {
   width: 98px;
   min-width: 90px;
   max-width: 110px;
-  padding: 6px 4px !important;
+  padding: 10px 4px !important;
 }
 
 .as-remark-wrapper {

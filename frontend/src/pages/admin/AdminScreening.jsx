@@ -1490,7 +1490,6 @@ function ResultsTab({ results, setResults, onRefresh, onError, reviewCandidateId
             }}
           >
             <div className="as-kpi-accent-pill" style={{ background: s.color }} />
-            <div className="as-kpi-compact-glow" />
             <div className="as-kpi-compact-inner">
               <div className="as-kpi-compact-icon" style={{ background: s.bg, color: s.color, borderColor: s.borderColor }}>
                 {s.icon}
