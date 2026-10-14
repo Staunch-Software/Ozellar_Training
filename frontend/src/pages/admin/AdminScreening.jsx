@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   ClipboardList, Plus, Trash2, Edit3, Users, BarChart3,
-  Download, ChevronRight, ChevronDown, CheckCircle2, Clock,
+  Download, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronDown, CheckCircle2, Clock,
   AlertTriangle, X, Save, Eye, EyeOff, BookOpen, Layers,
   User, Phone, ToggleLeft, ToggleRight, RefreshCw,
   TrendingUp, Award, Search, Filter, Image as ImageIcon, Upload, Copy,
@@ -81,6 +81,19 @@ function fmtTime(iso) {
   } catch { return '' }
 }
 
+function getPageNumbers(current, total) {
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1)
+  }
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, '...', total]
+  }
+  if (current >= total - 3) {
+    return [1, '...', total - 4, total - 3, total - 2, total - 1, total]
+  }
+  return [1, '...', current - 1, current, current + 1, '...', total]
+}
+
 function Card({ children, style={}, ...props }) {
   return (
     <div style={{ background:'var(--surface)', border:'1px solid var(--border)', borderRadius:18, ...style }} {...props}>
@@ -126,22 +139,22 @@ function CardSelect({ value, onChange, options, placeholder, icon, required }) {
       {required && <select required value={value} onChange={()=>{}} style={{ position:'absolute', opacity:0, pointerEvents:'none', width:1, height:1 }}><option value={value}/></select>}
       
       <button type="button" onClick={() => setOpen(!open)}
-        style={{ width:'100%', height:42, padding:'0 14px', borderRadius:12, border:'1.5px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:13.5, display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, cursor:'pointer', outline:'none', boxShadow:'0 1px 3px rgba(0,0,0,.02)', transition:'all .15s', borderColor: open ? '#0F766E' : 'var(--border)' }}>
+        style={{ width:'100%', height:38, padding:'0 12px', borderRadius:10, border:'1.5px solid var(--border)', background:'var(--surface)', color:'var(--text)', fontSize:13, display:'flex', alignItems:'center', justifyContent:'space-between', gap:8, cursor:'pointer', outline:'none', boxShadow:'0 1px 3px rgba(0,0,0,.02)', transition:'all .15s', borderColor: open ? '#0F766E' : 'var(--border)' }}>
         <span style={{ display:'flex', alignItems:'center', gap:8, color: selected ? 'var(--text)' : 'var(--text-mut)', overflow:'hidden', textOverflow:'ellipsis', whiteSpace:'nowrap', flex:1, fontWeight: selected ? 600 : 500 }}>
           {icon} {displayLabel}
         </span>
         <ChevronDown size={14} style={{ color:'var(--text-mut)', transition:'transform .2s', transform: open ? 'rotate(180deg)' : 'none', flexShrink:0 }}/>
       </button>
       {open && (
-        <div style={{ position:'absolute', top:'100%', left:0, right:0, marginTop:6, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:12, boxShadow:'0 10px 30px rgba(0,0,0,.1)', zIndex:100, overflow:'hidden', animation:'tw-in .15s ease-out' }}>
+        <div style={{ position:'absolute', top:'100%', left:0, right:0, marginTop:6, background:'var(--surface)', border:'1px solid var(--border)', borderRadius:10, boxShadow:'0 10px 30px rgba(0,0,0,.1)', zIndex:100, overflow:'hidden', animation:'tw-in .15s ease-out' }}>
           <div style={{ maxHeight:250, overflowY:'auto' }}>
             <button type="button" onClick={() => { onChange(''); setOpen(false) }}
-              style={{ width:'100%', padding:'11px 14px', border:'none', background: value === '' ? 'var(--accent-weak)' : 'transparent', color: value === '' ? 'var(--accent)' : 'var(--text-mut)', fontSize:13.5, textAlign:'left', cursor:'pointer' }}>
+              style={{ width:'100%', padding:'9px 12px', border:'none', background: value === '' ? 'var(--accent-weak)' : 'transparent', color: value === '' ? 'var(--accent)' : 'var(--text-mut)', fontSize:13, textAlign:'left', cursor:'pointer' }}>
               {placeholder}
             </button>
             {options.map(o => (
               <button key={o.id} type="button" onClick={() => { onChange(o.id); setOpen(false) }}
-                style={{ width:'100%', padding:'11px 14px', border:'none', borderTop:'1px solid var(--border)', background: value === o.id ? 'var(--accent-weak)' : 'transparent', color: value === o.id ? 'var(--accent)' : 'var(--text)', fontSize:13.5, textAlign:'left', cursor:'pointer', display:'block', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', fontWeight: value === o.id ? 700 : 500 }}>
+                style={{ width:'100%', padding:'9px 12px', border:'none', borderTop:'1px solid var(--border)', background: value === o.id ? 'var(--accent-weak)' : 'transparent', color: value === o.id ? 'var(--accent)' : 'var(--text)', fontSize:13, textAlign:'left', cursor:'pointer', display:'block', whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', fontWeight: value === o.id ? 700 : 500 }}>
                 {o.title}
               </button>
             ))}
@@ -1328,6 +1341,10 @@ function ResultsTab({ results, setResults, onRefresh, onError, reviewCandidateId
   const [search, setSearch] = useState('')
   const [downloading, setDownloading] = useState(false)
 
+  // Pagination state
+  const [pageSize, setPageSize] = useState(15)
+  const [currentPage, setCurrentPage] = useState(1)
+
   // Interview remark modal state
   const [remarkModalCandidate, setRemarkModalCandidate] = useState(null)
   const [remarkText, setRemarkText] = useState('')
@@ -1335,6 +1352,11 @@ function ResultsTab({ results, setResults, onRefresh, onError, reviewCandidateId
   const [updatingShortlistId, setUpdatingShortlistId] = useState(null)
 
   useEffect(() => { api.adminListScreeningTests().then(setAllTests).catch(()=>{}) }, [])
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [search, filterTest, filterShortlist, pageSize])
 
   const download = async () => {
     setDownloading(true)
@@ -1386,17 +1408,107 @@ function ResultsTab({ results, setResults, onRefresh, onError, reviewCandidateId
     })
     .filter(r => !search || (r.fullName && r.fullName.toLowerCase().includes(search.toLowerCase())) || (r.mobileNumber && r.mobileNumber.includes(search)))
 
+  const totalItems = filtered.length
+  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize))
+  const startIndex = (currentPage - 1) * pageSize
+  const endIndex = Math.min(startIndex + pageSize, totalItems)
+  const paginatedResults = filtered.slice(startIndex, endIndex)
+
   const avg = (arr) => arr.length ? Math.round(arr.reduce((a,b)=>a+b,0)/arr.length) : '—'
   const shortlistedCount = results.filter(r => r.isShortlisted).length
 
   return (
-    <div style={{ display:'flex', flexDirection:'column', gap:16 }}>
-      {/* ── Top Toolbar: Search, Filters & Export Results ── */}
+    <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
+      {/* ── Summary KPI Cards (Premium Compact Horizontal UI) ── */}
+      <div className="as-summary-grid-5">
+        {[
+          {
+            key: 'all',
+            label: 'Submissions',
+            value: filtered.length,
+            color: '#0F766E',
+            glow: 'rgba(15, 118, 110, 0.28)',
+            bg: 'rgba(15, 118, 110, 0.09)',
+            borderColor: 'rgba(15, 118, 110, 0.22)',
+            icon: <Users size={16} strokeWidth={2.2} />,
+            active: filterShortlist === '',
+            onClick: () => setFilterShortlist(''),
+          },
+          {
+            key: 'avg_score',
+            label: 'Avg Score',
+            value: filtered.length ? avg(filtered.map(r=>r.score||0)) : '—',
+            color: '#d97706',
+            glow: 'rgba(217, 119, 6, 0.28)',
+            bg: 'rgba(217, 119, 6, 0.09)',
+            borderColor: 'rgba(217, 119, 6, 0.22)',
+            icon: <Award size={16} strokeWidth={2.2} />,
+          },
+          {
+            key: 'avg_correct',
+            label: 'Avg Correct',
+            value: filtered.length ? avg(filtered.map(r=>r.correct||0)) : '—',
+            color: '#059669',
+            glow: 'rgba(5, 150, 105, 0.28)',
+            bg: 'rgba(5, 150, 105, 0.09)',
+            borderColor: 'rgba(5, 150, 105, 0.22)',
+            icon: <CheckCircle2 size={16} strokeWidth={2.2} />,
+          },
+          {
+            key: 'avg_wrong',
+            label: 'Avg Wrong',
+            value: filtered.length ? avg(filtered.map(r=>r.wrong||0)) : '—',
+            color: '#dc2626',
+            glow: 'rgba(220, 38, 38, 0.28)',
+            bg: 'rgba(220, 38, 38, 0.09)',
+            borderColor: 'rgba(220, 38, 38, 0.22)',
+            icon: <AlertTriangle size={16} strokeWidth={2.2} />,
+          },
+          {
+            key: 'shortlisted',
+            label: 'Shortlisted',
+            value: results.filter(r => r.isShortlisted).length,
+            color: '#0F766E',
+            glow: 'rgba(15, 118, 110, 0.32)',
+            bg: 'rgba(15, 118, 110, 0.12)',
+            borderColor: 'rgba(15, 118, 110, 0.28)',
+            icon: <Star size={16} fill={filterShortlist === 'shortlisted' ? '#0F766E' : 'none'} stroke="#0F766E" strokeWidth={2} />,
+            active: filterShortlist === 'shortlisted',
+            onClick: () => setFilterShortlist(prev => prev === 'shortlisted' ? '' : 'shortlisted'),
+          },
+        ].map(s => (
+          <div
+            key={s.key}
+            className={`as-kpi-card-compact ${s.onClick ? 'is-clickable' : ''} ${s.active ? 'is-active' : ''}`}
+            onClick={s.onClick}
+            role={s.onClick ? 'button' : undefined}
+            tabIndex={s.onClick ? 0 : undefined}
+            onKeyDown={s.onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); s.onClick(); } } : undefined}
+            style={{
+              '--card-accent': s.color,
+              '--card-glow': s.glow,
+            }}
+          >
+            <div className="as-kpi-accent-pill" style={{ background: s.color }} />
+            <div className="as-kpi-compact-glow" />
+            <div className="as-kpi-compact-inner">
+              <div className="as-kpi-compact-icon" style={{ background: s.bg, color: s.color, borderColor: s.borderColor }}>
+                {s.icon}
+              </div>
+              <div className="as-kpi-compact-text">
+                <div className="as-kpi-compact-val" style={{ color: s.color }}>{s.value}</div>
+                <div className="as-kpi-compact-lbl">{s.label}</div>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
       {/* ── Top Toolbar: Search, Filters & Export Results ── */}
       <div className="as-toolbar as-filter-row">
         <div className="as-toolbar-left as-filter-group-main">
           <div className="as-search-box">
-            <Search size={16} className="as-search-icon" />
+            <Search size={15} className="as-search-icon" />
             <input
               type="text"
               className="as-search-input"
@@ -1464,59 +1576,10 @@ function ResultsTab({ results, setResults, onRefresh, onError, reviewCandidateId
             onClick={download}
             disabled={downloading}
           >
-            <Download size={15} strokeWidth={2.4} />
+            <Download size={14} strokeWidth={2.4} />
             <span>{downloading ? 'Preparing…' : 'Export Excel'}</span>
           </button>
         </div>
-      </div>
-
-      {/* ── Summary KPI Cards (Uniform style without active border) ── */}
-      <div className="as-summary-grid-5">
-        {[
-          {
-            label:'Submissions',
-            value:filtered.length,
-            color:'var(--accent)',
-            bg:'var(--accent-weak)',
-            icon:<TrendingUp size={16}/>,
-            onClick: () => setFilterShortlist(''),
-          },
-          { label:'Avg Score', value: filtered.length ? avg(filtered.map(r=>r.score||0)) : '—', color:'#f59e0b', bg:'rgba(245,158,11,.1)', icon:<Award size={16}/> },
-          { label:'Avg Correct', value: filtered.length ? avg(filtered.map(r=>r.correct||0)) : '—', color:'var(--success)', bg:'var(--success-weak)', icon:<CheckCircle2 size={16}/> },
-          { label:'Avg Wrong', value: filtered.length ? avg(filtered.map(r=>r.wrong||0)) : '—', color:'var(--danger)', bg:'var(--danger-weak)', icon:<AlertTriangle size={16}/> },
-          {
-            label:'Shortlisted',
-            value: results.filter(r => r.isShortlisted).length,
-            color:'#0F766E',
-            bg:'rgba(15,118,110,.1)',
-            icon:<Star size={16} fill="#0F766E" stroke="#0F766E" strokeWidth={1.5} />,
-            onClick: () => setFilterShortlist(prev => prev === 'shortlisted' ? '' : 'shortlisted'),
-          },
-        ].map(s => (
-          <Card
-            key={s.label}
-            className={`as-kpi-card ${s.onClick ? 'as-kpi-card-clickable' : ''}`}
-            style={{
-              padding:'14px 14px',
-              display:'flex',
-              alignItems:'center',
-              gap:11,
-              cursor: s.onClick ? 'pointer' : 'default',
-              borderColor: 'var(--border)',
-              background: 'var(--surface)',
-              transition:'all .18s ease'
-            }}
-            onClick={s.onClick}
-          >
-            <div style={{ width:38, height:38, borderRadius:11, background:s.bg, display:'grid', placeItems:'center', color:s.color, flexShrink:0 }}>{s.icon}</div>
-            <div style={{ minWidth:0, flex:1 }}>
-              <div style={{ fontSize:22, fontWeight:800, color:s.color, letterSpacing:'-.01em', lineHeight:1.1 }}>{s.value}</div>
-              <div style={{ fontSize:11.5, color:'var(--text-faint)', fontWeight:700, marginTop:2 }}>
-                {s.label}
-              </div>
-            </div>
-          </Card>
-        ))}
       </div>
 
       {/* ── Table Container (Fit without scroll at >= 1200px) ── */}
@@ -1534,133 +1597,232 @@ function ResultsTab({ results, setResults, onRefresh, onError, reviewCandidateId
         ) : (
           <div className="as-results-table-wrap">
             <table className="as-results-table">
-              <thead>
-                <tr>
-                  <th className="as-th-candidate">Candidate</th>
-                  <th className="as-th-test">Test</th>
-                  <th className="as-th-dt">Start</th>
-                  <th className="as-th-dt">Submit</th>
-                  <th className="as-th-time">Time</th>
-                  <th className="as-th-num" title="Correct answers">✓</th>
-                  <th className="as-th-num" title="Wrong answers">✗</th>
-                  <th className="as-th-num" title="Unanswered">○</th>
-                  <th className="as-th-num" title="Total questions">Total</th>
-                  <th className="as-th-score">Score</th>
-                  <th className="as-th-tabsw" title="Exam tab switch count">Tab Sw.</th>
-                  <th className="as-th-result">Result</th>
-                  <th className="as-th-remark">Remark</th>
-                  <th className="as-th-shortlist">Shortlist</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filtered.map((r) => (
-                  <tr key={r.candidateId} className="as-result-row">
-                    <td className="as-td-candidate">
-                      <div className="as-cand-cell">
-                        <div className="as-cand-avatar">
-                          {getInitials(r.fullName)}
-                        </div>
-                        <div className="as-cand-info">
-                          <span className="as-cand-name" title={r.fullName}>{r.fullName}</span>
-                          <span className="as-cand-mobile">{r.mobileNumber || '—'}</span>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="as-td-test">
-                      <span className="as-test-title" title={r.testTitle}>{r.testTitle}</span>
-                    </td>
-                    <td className="as-td-dt">
-                      <div className="as-dt-cell" title={fmtDt(r.startedAt)}>
-                        <span className="as-dt-d">{fmtDate(r.startedAt)}</span>
-                        <span className="as-dt-t">{fmtTime(r.startedAt)}</span>
-                      </div>
-                    </td>
-                    <td className="as-td-dt">
-                      <div className="as-dt-cell" title={fmtDt(r.submittedAt)}>
-                        <span className="as-dt-d">{fmtDate(r.submittedAt)}</span>
-                        <span className="as-dt-t">{fmtTime(r.submittedAt)}</span>
-                      </div>
-                    </td>
-                    <td className="as-td-time">{r.timeTakenMinutes != null ? `${r.timeTakenMinutes}m` : '—'}</td>
-                    <td className="as-td-num as-td-correct">{r.correct}</td>
-                    <td className="as-td-num as-td-wrong">{r.wrong}</td>
-                    <td className="as-td-num as-td-unanswered">{r.unanswered}</td>
-                    <td className="as-td-num as-td-total">{r.totalQuestions != null ? r.totalQuestions : '—'}</td>
-                    <td className="as-td-score">
-                      <span className="as-score-badge">
-                        {r.score}{r.maxScore != null ? ` / ${r.maxScore}` : ''}
-                      </span>
-                    </td>
-                    <td className="as-td-tabsw">{tabSwitchBadge(r.tabSwitchCount)}</td>
-                    <td className="as-td-result">
-                      <button
-                        className="as-btn-table-review"
-                        onClick={() => setActiveReviewId(r.candidateId)}
-                        title="View candidate answers & review"
-                      >
-                        <Eye size={12} strokeWidth={2.2}/> View
-                      </button>
-                    </td>
-                    <td className="as-col-remark">
-                      {r.interviewRemark ? (
-                        <div className="as-remark-wrapper">
-                          <button
-                            type="button"
-                            className="as-remark-btn has-content"
-                            onClick={() => { setRemarkModalCandidate(r); setRemarkText(r.interviewRemark || '') }}
-                            aria-label={`Interview Remark: ${r.interviewRemark} (Click to edit)`}
-                          >
-                            <MessageSquare size={11} className="as-remark-icon" />
-                            <span className="as-remark-text">{r.interviewRemark}</span>
-                            <Edit3 size={10} className="as-remark-edit-icon" />
-                          </button>
-                          <div className="as-custom-tooltip" role="tooltip">
-                            <div className="as-tooltip-tag">Interview Remark</div>
-                            <div className="as-tooltip-text">{r.interviewRemark}</div>
-                            <div className="as-tooltip-hint">Click to edit</div>
+                <thead>
+                  <tr>
+                    <th className="as-th-sl">#</th>
+                    <th className="as-th-candidate">Candidate</th>
+                    <th className="as-th-test">Test</th>
+                    <th className="as-th-dt">Start</th>
+                    <th className="as-th-dt">Submit</th>
+                    <th className="as-th-time">Time</th>
+                    <th className="as-th-num" title="Correct answers">✓</th>
+                    <th className="as-th-num" title="Wrong answers">✗</th>
+                    <th className="as-th-num" title="Unanswered">○</th>
+                    <th className="as-th-num" title="Total questions">Total</th>
+                    <th className="as-th-score">Score</th>
+                    <th className="as-th-tabsw" title="Exam tab switch count">Tab Sw.</th>
+                    <th className="as-th-result">Result</th>
+                    <th className="as-th-remark">Remark</th>
+                    <th className="as-th-shortlist">Shortlist</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {paginatedResults.map((r, idx) => (
+                    <tr key={r.candidateId} className="as-result-row">
+                      <td className="as-td-sl">{startIndex + idx + 1}</td>
+                      <td className="as-td-candidate">
+                        <div className="as-cand-cell">
+                          <div className="as-cand-avatar">
+                            {getInitials(r.fullName)}
+                          </div>
+                          <div className="as-cand-info">
+                            <span className="as-cand-name" title={r.fullName}>{r.fullName}</span>
+                            <span className="as-cand-mobile">{r.mobileNumber || '—'}</span>
                           </div>
                         </div>
-                      ) : (
+                      </td>
+                      <td className="as-td-test">
+                        <span className="as-test-title" title={r.testTitle}>{r.testTitle}</span>
+                      </td>
+                      <td className="as-td-dt">
+                        <div className="as-dt-cell" title={fmtDt(r.startedAt)}>
+                          <span className="as-dt-d">{fmtDate(r.startedAt)}</span>
+                          <span className="as-dt-t">{fmtTime(r.startedAt)}</span>
+                        </div>
+                      </td>
+                      <td className="as-td-dt">
+                        {r.submittedAt ? (
+                          <div className="as-dt-cell" title={fmtDt(r.submittedAt)}>
+                            <span className="as-dt-d">{fmtDate(r.submittedAt)}</span>
+                            <span className="as-dt-t">{fmtTime(r.submittedAt)}</span>
+                          </div>
+                        ) : (
+                          <span className="as-badge-in-progress" title="Candidate test is in progress">In Progress</span>
+                        )}
+                      </td>
+                      <td className="as-td-time">{r.timeTakenMinutes != null ? `${r.timeTakenMinutes}m` : '—'}</td>
+                      <td className="as-td-num as-td-correct">{r.correct}</td>
+                      <td className="as-td-num as-td-wrong">{r.wrong}</td>
+                      <td className="as-td-num as-td-unanswered">{r.unanswered}</td>
+                      <td className="as-td-num as-td-total">{r.totalQuestions != null ? r.totalQuestions : '—'}</td>
+                      <td className="as-td-score">
+                        <span className="as-score-badge">
+                          {r.score}{r.maxScore != null ? ` / ${r.maxScore}` : ''}
+                        </span>
+                      </td>
+                      <td className="as-td-tabsw">{tabSwitchBadge(r.tabSwitchCount)}</td>
+                      <td className="as-td-result">
+                        <button
+                          className="as-btn-table-review"
+                          onClick={() => setActiveReviewId(r.candidateId)}
+                          title="View candidate answers & review"
+                        >
+                          <Eye size={12} strokeWidth={2.2}/> View
+                        </button>
+                      </td>
+                      <td className="as-col-remark">
+                        {r.interviewRemark ? (
+                          <div className="as-remark-wrapper">
+                            <button
+                              type="button"
+                              className="as-remark-btn has-content"
+                              onClick={() => { setRemarkModalCandidate(r); setRemarkText(r.interviewRemark || '') }}
+                              aria-label={`Interview Remark: ${r.interviewRemark} (Click to edit)`}
+                            >
+                              <MessageSquare size={11} className="as-remark-icon" />
+                              <span className="as-remark-text">{r.interviewRemark}</span>
+                              <Edit3 size={10} className="as-remark-edit-icon" />
+                            </button>
+                            <div className="as-custom-tooltip" role="tooltip">
+                              <div className="as-tooltip-tag">Interview Remark</div>
+                              <div className="as-tooltip-text">{r.interviewRemark}</div>
+                              <div className="as-tooltip-hint">Click to edit</div>
+                            </div>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className="as-remark-btn is-empty"
+                            onClick={() => { setRemarkModalCandidate(r); setRemarkText('') }}
+                            aria-label="Add interview remark"
+                          >
+                            <Plus size={11} />
+                            <span>Remark</span>
+                          </button>
+                        )}
+                      </td>
+                      <td className="as-col-shortlist">
                         <button
                           type="button"
-                          className="as-remark-btn is-empty"
-                          onClick={() => { setRemarkModalCandidate(r); setRemarkText('') }}
-                          aria-label="Add interview remark"
+                          className={`as-shortlist-check ${r.isShortlisted ? 'checked' : 'unchecked'}`}
+                          onClick={() => toggleShortlist(r)}
+                          disabled={updatingShortlistId === r.candidateId}
+                          aria-label={r.isShortlisted ? 'Shortlisted candidate. Click to remove from shortlist.' : 'Not shortlisted. Click to shortlist candidate.'}
                         >
-                          <Plus size={11} />
-                          <span>Remark</span>
+                          <span className="as-check-indicator" aria-hidden="true">
+                            <Star
+                              size={13}
+                              className="as-star-svg"
+                              fill={r.isShortlisted ? '#0F766E' : 'none'}
+                              stroke={r.isShortlisted ? '#0F766E' : '#94a3b8'}
+                              strokeWidth={r.isShortlisted ? 1.5 : 2}
+                            />
+                          </span>
+                          <span className="as-check-text">
+                            {r.isShortlisted ? 'Shortlisted' : 'Shortlist'}
+                          </span>
                         </button>
-                      )}
-                    </td>
-                    <td className="as-col-shortlist">
-                      <button
-                        type="button"
-                        className={`as-shortlist-check ${r.isShortlisted ? 'checked' : 'unchecked'}`}
-                        onClick={() => toggleShortlist(r)}
-                        disabled={updatingShortlistId === r.candidateId}
-                        aria-label={r.isShortlisted ? 'Shortlisted candidate. Click to remove from shortlist.' : 'Not shortlisted. Click to shortlist candidate.'}
-                      >
-                        <span className="as-check-indicator" aria-hidden="true">
-                          <Star
-                            size={13}
-                            className="as-star-svg"
-                            fill={r.isShortlisted ? '#0F766E' : 'none'}
-                            stroke={r.isShortlisted ? '#0F766E' : '#94a3b8'}
-                            strokeWidth={r.isShortlisted ? 1.5 : 2}
-                          />
-                        </span>
-                        <span className="as-check-text">
-                          {r.isShortlisted ? 'Shortlisted' : 'Shortlist'}
-                        </span>
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
         )}
       </Card>
+
+      {/* ── Floating Sticky Pagination Dock (Always shown at end of screen, reduced width) ── */}
+      {filtered.length > 0 && (
+        <div className="as-pagination-dock-wrapper">
+          <div className="as-pagination-bar as-pagination-dock">
+            <div className="as-pagination-left">
+              <span className="as-pagination-info">
+                Showing <strong>{startIndex + 1}</strong>–<strong>{endIndex}</strong> of <strong>{totalItems}</strong>
+              </span>
+              <div className="as-page-size-wrap">
+                <span className="as-page-size-label">Rows:</span>
+                <select
+                  className="as-page-size-select"
+                  value={pageSize}
+                  onChange={e => {
+                    setPageSize(Number(e.target.value))
+                    setCurrentPage(1)
+                  }}
+                >
+                  {[10, 15, 25, 50, 100].map(sz => (
+                    <option key={sz} value={sz}>{sz}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="as-pagination-right">
+                <button
+                  type="button"
+                  className="as-page-btn as-page-btn-nav"
+                  onClick={() => setCurrentPage(1)}
+                  disabled={currentPage === 1}
+                  title="First page"
+                  aria-label="First page"
+                >
+                  <ChevronsLeft size={13} />
+                </button>
+                <button
+                  type="button"
+                  className="as-page-btn as-page-btn-nav"
+                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  disabled={currentPage === 1}
+                  title="Previous page"
+                  aria-label="Previous page"
+                >
+                  <ChevronLeft size={13} />
+                </button>
+
+                <div className="as-page-numbers">
+                  {getPageNumbers(currentPage, totalPages).map((p, i) =>
+                    p === '...' ? (
+                      <span key={`ellipsis-${i}`} className="as-page-ellipsis">…</span>
+                    ) : (
+                      <button
+                        key={p}
+                        type="button"
+                        className={`as-page-btn ${currentPage === p ? 'active' : ''}`}
+                        onClick={() => setCurrentPage(p)}
+                        aria-label={`Page ${p}`}
+                        aria-current={currentPage === p ? 'page' : undefined}
+                      >
+                        {p}
+                      </button>
+                    )
+                  )}
+                </div>
+
+                <button
+                  type="button"
+                  className="as-page-btn as-page-btn-nav"
+                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  title="Next page"
+                  aria-label="Next page"
+                >
+                  <ChevronRight size={13} />
+                </button>
+                <button
+                  type="button"
+                  className="as-page-btn as-page-btn-nav"
+                  onClick={() => setCurrentPage(totalPages)}
+                  disabled={currentPage === totalPages}
+                  title="Last page"
+                  aria-label="Last page"
+                >
+                  <ChevronsRight size={13} />
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* ── Interview Remark Modal ── */}
       {remarkModalCandidate && (
