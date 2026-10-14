@@ -1594,7 +1594,8 @@ function ResultsTab({ results, setResults, onRefresh, onError, reviewCandidateId
             </div>
           </div>
         ) : (
-          <div className="as-results-table-wrap">
+          <>
+            <div className="as-results-table-wrap">
             <table className="as-results-table">
                 <thead>
                   <tr>
@@ -1727,101 +1728,100 @@ function ResultsTab({ results, setResults, onRefresh, onError, reviewCandidateId
                 </tbody>
               </table>
             </div>
-        )}
-      </Card>
 
-      {/* ── Floating Sticky Pagination Dock (Always shown at end of screen, reduced width) ── */}
-      {filtered.length > 0 && (
-        <div className="as-pagination-dock-wrapper">
-          <div className="as-pagination-bar as-pagination-dock">
-            <div className="as-pagination-left">
-              <span className="as-pagination-info">
-                Showing <strong>{startIndex + 1}</strong>–<strong>{endIndex}</strong> of <strong>{totalItems}</strong>
-              </span>
-              <div className="as-page-size-wrap">
-                <span className="as-page-size-label">Rows:</span>
-                <select
-                  className="as-page-size-select"
-                  value={pageSize}
-                  onChange={e => {
-                    setPageSize(Number(e.target.value))
-                    setCurrentPage(1)
-                  }}
-                >
-                  {[10, 15, 25, 50, 100].map(sz => (
-                    <option key={sz} value={sz}>{sz}</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            {totalPages > 1 && (
-              <div className="as-pagination-right">
-                <button
-                  type="button"
-                  className="as-page-btn as-page-btn-nav"
-                  onClick={() => setCurrentPage(1)}
-                  disabled={currentPage === 1}
-                  title="First page"
-                  aria-label="First page"
-                >
-                  <ChevronsLeft size={13} />
-                </button>
-                <button
-                  type="button"
-                  className="as-page-btn as-page-btn-nav"
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  title="Previous page"
-                  aria-label="Previous page"
-                >
-                  <ChevronLeft size={13} />
-                </button>
-
-                <div className="as-page-numbers">
-                  {getPageNumbers(currentPage, totalPages).map((p, i) =>
-                    p === '...' ? (
-                      <span key={`ellipsis-${i}`} className="as-page-ellipsis">…</span>
-                    ) : (
-                      <button
-                        key={p}
-                        type="button"
-                        className={`as-page-btn ${currentPage === p ? 'active' : ''}`}
-                        onClick={() => setCurrentPage(p)}
-                        aria-label={`Page ${p}`}
-                        aria-current={currentPage === p ? 'page' : undefined}
-                      >
-                        {p}
-                      </button>
-                    )
-                  )}
+            {/* ── Small Height Pagination Bar Attached with Table Last ── */}
+            {filtered.length > 0 && (
+              <div className="as-pagination-bar">
+                <div className="as-pagination-left">
+                  <span className="as-pagination-info">
+                    Showing <strong>{startIndex + 1}</strong>–<strong>{endIndex}</strong> of <strong>{totalItems}</strong>
+                  </span>
+                  <div className="as-page-size-wrap">
+                    <span className="as-page-size-label">Rows:</span>
+                    <select
+                      className="as-page-size-select"
+                      value={pageSize}
+                      onChange={e => {
+                        setPageSize(Number(e.target.value))
+                        setCurrentPage(1)
+                      }}
+                    >
+                      {[10, 15, 25, 50, 100].map(sz => (
+                        <option key={sz} value={sz}>{sz}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
-                <button
-                  type="button"
-                  className="as-page-btn as-page-btn-nav"
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  title="Next page"
-                  aria-label="Next page"
-                >
-                  <ChevronRight size={13} />
-                </button>
-                <button
-                  type="button"
-                  className="as-page-btn as-page-btn-nav"
-                  onClick={() => setCurrentPage(totalPages)}
-                  disabled={currentPage === totalPages}
-                  title="Last page"
-                  aria-label="Last page"
-                >
-                  <ChevronsRight size={13} />
-                </button>
+                {totalPages > 1 && (
+                  <div className="as-pagination-right">
+                    <button
+                      type="button"
+                      className="as-page-btn as-page-btn-nav"
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                      title="First page"
+                      aria-label="First page"
+                    >
+                      <ChevronsLeft size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      className="as-page-btn as-page-btn-nav"
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      title="Previous page"
+                      aria-label="Previous page"
+                    >
+                      <ChevronLeft size={13} />
+                    </button>
+
+                    <div className="as-page-numbers">
+                      {getPageNumbers(currentPage, totalPages).map((p, i) =>
+                        p === '...' ? (
+                          <span key={`ellipsis-${i}`} className="as-page-ellipsis">…</span>
+                        ) : (
+                          <button
+                            key={p}
+                            type="button"
+                            className={`as-page-btn ${currentPage === p ? 'active' : ''}`}
+                            onClick={() => setCurrentPage(p)}
+                            aria-label={`Page ${p}`}
+                            aria-current={currentPage === p ? 'page' : undefined}
+                          >
+                            {p}
+                          </button>
+                        )
+                      )}
+                    </div>
+
+                    <button
+                      type="button"
+                      className="as-page-btn as-page-btn-nav"
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      title="Next page"
+                      aria-label="Next page"
+                    >
+                      <ChevronRight size={13} />
+                    </button>
+                    <button
+                      type="button"
+                      className="as-page-btn as-page-btn-nav"
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                      title="Last page"
+                      aria-label="Last page"
+                    >
+                      <ChevronsRight size={13} />
+                    </button>
+                  </div>
+                )}
               </div>
             )}
-          </div>
-        </div>
-      )}
+          </>
+        )}
+      </Card>
 
       {/* ── Interview Remark Modal ── */}
       {remarkModalCandidate && (
