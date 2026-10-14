@@ -1503,83 +1503,85 @@ function ResultsTab({ results, setResults, onRefresh, onError, reviewCandidateId
         ))}
       </div>
 
-      {/* ── Top Toolbar: Search, Filters & Export Results ── */}
-      <div className="as-toolbar as-filter-row">
-        <div className="as-toolbar-left as-filter-group-main">
-          <div className="as-search-box">
-            <Search size={15} className="as-search-icon" />
-            <input
-              type="text"
-              className="as-search-input"
-              placeholder="Search candidate name or mobile…"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-            />
-            {search && (
-              <button type="button" className="as-search-clear" onClick={() => setSearch('')} title="Clear search">
-                <X size={13} />
-              </button>
-            )}
-          </div>
-
-          <div className="as-test-filter-select">
-            <CardSelect value={filterTest} onChange={setFilterTest} options={[{id:'', title:'All Tests'}, ...allTests]} placeholder="Filter by Test…" icon={<Filter size={14}/>}/>
-          </div>
-
-          <div className="as-shortlist-tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={filterShortlist === ''}
-              className={`as-shortlist-tab-btn ${filterShortlist === '' ? 'active' : ''}`}
-              onClick={() => setFilterShortlist('')}
-            >
-              <span>All</span>
-              <span className="as-tab-badge">{results.length}</span>
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={filterShortlist === 'shortlisted'}
-              className={`as-shortlist-tab-btn ${filterShortlist === 'shortlisted' ? 'active' : ''}`}
-              onClick={() => setFilterShortlist('shortlisted')}
-            >
-              <Star
-                size={12}
-                fill={filterShortlist === 'shortlisted' ? '#0F766E' : 'none'}
-                stroke={filterShortlist === 'shortlisted' ? '#0F766E' : 'currentColor'}
-                strokeWidth={2}
+      {/* ── Top Toolbar: Search, Filters & Export Results (Covered with Card) ── */}
+      <Card className="as-filter-card">
+        <div className="as-toolbar as-filter-row">
+          <div className="as-toolbar-left as-filter-group-main">
+            <div className="as-search-box">
+              <Search size={15} className="as-search-icon" />
+              <input
+                type="text"
+                className="as-search-input"
+                placeholder="Search candidate name or mobile…"
+                value={search}
+                onChange={e => setSearch(e.target.value)}
               />
-              <span>Shortlisted</span>
-              <span className="as-tab-badge">{results.filter(r => r.isShortlisted).length}</span>
+              {search && (
+                <button type="button" className="as-search-clear" onClick={() => setSearch('')} title="Clear search">
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            <div className="as-test-filter-select">
+              <CardSelect value={filterTest} onChange={setFilterTest} options={[{id:'', title:'All Tests'}, ...allTests]} placeholder="Filter by Test…" icon={<Filter size={14}/>}/>
+            </div>
+
+            <div className="as-shortlist-tabs" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={filterShortlist === ''}
+                className={`as-shortlist-tab-btn ${filterShortlist === '' ? 'active' : ''}`}
+                onClick={() => setFilterShortlist('')}
+              >
+                <span>All</span>
+                <span className="as-tab-badge">{results.length}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={filterShortlist === 'shortlisted'}
+                className={`as-shortlist-tab-btn ${filterShortlist === 'shortlisted' ? 'active' : ''}`}
+                onClick={() => setFilterShortlist('shortlisted')}
+              >
+                <Star
+                  size={12}
+                  fill={filterShortlist === 'shortlisted' ? '#0F766E' : 'none'}
+                  stroke={filterShortlist === 'shortlisted' ? '#0F766E' : 'currentColor'}
+                  strokeWidth={2}
+                />
+                <span>Shortlisted</span>
+                <span className="as-tab-badge">{results.filter(r => r.isShortlisted).length}</span>
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={filterShortlist === 'not_shortlisted'}
+                className={`as-shortlist-tab-btn ${filterShortlist === 'not_shortlisted' ? 'active' : ''}`}
+                onClick={() => setFilterShortlist('not_shortlisted')}
+              >
+                <span>Not Shortlisted</span>
+                <span className="as-tab-badge">{results.filter(r => !r.isShortlisted).length}</span>
+              </button>
+            </div>
+          </div>
+
+          <div className="as-toolbar-right as-filter-group-actions">
+            <button className="as-toolbar-icon-btn" onClick={onRefresh} title="Refresh results">
+              <RefreshCw size={15} />
             </button>
             <button
-              type="button"
-              role="tab"
-              aria-selected={filterShortlist === 'not_shortlisted'}
-              className={`as-shortlist-tab-btn ${filterShortlist === 'not_shortlisted' ? 'active' : ''}`}
-              onClick={() => setFilterShortlist('not_shortlisted')}
+              className="as-btn-export"
+              onClick={download}
+              disabled={downloading}
             >
-              <span>Not Shortlisted</span>
-              <span className="as-tab-badge">{results.filter(r => !r.isShortlisted).length}</span>
+              <Download size={14} strokeWidth={2.4} />
+              <span>{downloading ? 'Preparing…' : 'Export Excel'}</span>
             </button>
           </div>
         </div>
-
-        <div className="as-toolbar-right as-filter-group-actions">
-          <button className="as-toolbar-icon-btn" onClick={onRefresh} title="Refresh results">
-            <RefreshCw size={15} />
-          </button>
-          <button
-            className="as-btn-export"
-            onClick={download}
-            disabled={downloading}
-          >
-            <Download size={14} strokeWidth={2.4} />
-            <span>{downloading ? 'Preparing…' : 'Export Excel'}</span>
-          </button>
-        </div>
-      </div>
+      </Card>
 
       {/* ── Table Container (Fit without scroll at >= 1200px) ── */}
       <Card style={{ overflow:'visible' }}>
