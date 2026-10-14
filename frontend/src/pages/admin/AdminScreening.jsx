@@ -77,7 +77,7 @@ function fmtTime(iso) {
     return new Date(withOffset).toLocaleTimeString('en-IN', {
       hour: '2-digit', minute: '2-digit', hour12: true,
       timeZone: 'Asia/Kolkata',
-    })
+    }) + ' IST'
   } catch { return '' }
 }
 
