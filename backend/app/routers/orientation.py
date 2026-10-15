@@ -18,7 +18,7 @@ from sqlalchemy import func
 from app.database import get_db
 from app import models, orientation_ranks, storage
 from app.auth import (
-    get_current_user, require_admin, require_super_admin,
+    require_module, get_current_user, require_admin, require_super_admin,
     require_vessel_approver, normalize_name
 )
 from app.security_upload import validate_safe_upload
@@ -95,14 +95,14 @@ class AdminOrientationDecideRequest(BaseModel):
 # --- Admin Orientation Programs ---
 
 @router.get("/api/admin/orientation/programs")
-def admin_list_orientation_programs(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+def admin_list_orientation_programs(admin: models.User = Depends(require_module("orientation")), db: Session = Depends(get_db)):
     programs = db.query(models.OrientationProgram).order_by(models.OrientationProgram.order).all()
     return [orientation_program_summary(p) for p in programs]
 
 
 @router.post("/api/admin/orientation/programs")
 def admin_create_orientation_program(req: OrientationProgramRequest,
-                                     admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                                     admin: models.User = Depends(require_module("orientation")), db: Session = Depends(get_db)):
     title = (req.title or "").strip()
     if not title:
         raise HTTPException(400, "Title is required")
@@ -125,7 +125,7 @@ def admin_create_orientation_program(req: OrientationProgramRequest,
 def admin_programs_enrollments_alias(
     program_id: str | None = None,
     status: str | None = None,
-    admin: models.User = Depends(require_admin),
+    admin: models.User = Depends(require_module("orientation")),
     db: Session = Depends(get_db),
 ):
     """Fallback alias if enrollments is requested under /programs/enrollments."""
@@ -135,7 +135,7 @@ def admin_programs_enrollments_alias(
 @router.get("/api/admin/orientation/programs/results", include_in_schema=False)
 def admin_programs_results_alias(
     program_id: str | None = None,
-    admin: models.User = Depends(require_admin),
+    admin: models.User = Depends(require_module("orientation")),
     db: Session = Depends(get_db),
 ):
     """Fallback alias if results is requested under /programs/results."""
@@ -143,7 +143,7 @@ def admin_programs_results_alias(
 
 
 @router.get("/api/admin/orientation/programs/{program_id}")
-def admin_get_orientation_program(program_id: str, admin: models.User = Depends(require_admin),
+def admin_get_orientation_program(program_id: str, admin: models.User = Depends(require_module("orientation")),
                                   db: Session = Depends(get_db)):
     program = db.get(models.OrientationProgram, program_id)
     if not program:
@@ -156,7 +156,7 @@ def admin_get_orientation_program(program_id: str, admin: models.User = Depends(
 
 @router.put("/api/admin/orientation/programs/{program_id}")
 def admin_update_orientation_program(program_id: str, req: OrientationProgramRequest,
-                                     admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                                     admin: models.User = Depends(require_module("orientation")), db: Session = Depends(get_db)):
     program = db.get(models.OrientationProgram, program_id)
     if not program:
         raise HTTPException(404, "Program not found")
@@ -175,7 +175,7 @@ def admin_update_orientation_program(program_id: str, req: OrientationProgramReq
 
 
 @router.patch("/api/admin/orientation/programs/{program_id}/toggle")
-def admin_toggle_orientation_program(program_id: str, admin: models.User = Depends(require_admin),
+def admin_toggle_orientation_program(program_id: str, admin: models.User = Depends(require_module("orientation")),
                                      db: Session = Depends(get_db)):
     program = db.get(models.OrientationProgram, program_id)
     if not program:
@@ -186,7 +186,7 @@ def admin_toggle_orientation_program(program_id: str, admin: models.User = Depen
 
 
 @router.delete("/api/admin/orientation/programs/{program_id}")
-def admin_delete_orientation_program(program_id: str, admin: models.User = Depends(require_admin),
+def admin_delete_orientation_program(program_id: str, admin: models.User = Depends(require_module("orientation")),
                                      db: Session = Depends(get_db)):
     program = db.get(models.OrientationProgram, program_id)
     if not program:
@@ -197,7 +197,7 @@ def admin_delete_orientation_program(program_id: str, admin: models.User = Depen
 
 
 @router.get("/api/admin/orientation/programs.xlsx")
-def admin_orientation_programs_xlsx(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+def admin_orientation_programs_xlsx(admin: models.User = Depends(require_module("orientation")), db: Session = Depends(get_db)):
     """Export all orientation programs as an Excel workbook — one sheet per program."""
     from openpyxl import Workbook
     from openpyxl.styles import Font, Alignment, Border, Side
@@ -284,7 +284,7 @@ def admin_orientation_programs_xlsx(admin: models.User = Depends(require_admin),
 
 @router.post("/api/admin/orientation/programs/{program_id}/tasks")
 def admin_add_orientation_task(program_id: str, req: OrientationTaskRequest,
-                               admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                               admin: models.User = Depends(require_module("orientation")), db: Session = Depends(get_db)):
     program = db.get(models.OrientationProgram, program_id)
     if not program:
         raise HTTPException(404, "Program not found")
@@ -304,7 +304,7 @@ def admin_add_orientation_task(program_id: str, req: OrientationTaskRequest,
 
 @router.put("/api/admin/orientation/programs/{program_id}/tasks/{task_id}")
 def admin_update_orientation_task(program_id: str, task_id: str, req: OrientationTaskRequest,
-                                  admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                                  admin: models.User = Depends(require_module("orientation")), db: Session = Depends(get_db)):
     task = db.get(models.OrientationTask, task_id)
     if not task or task.program_id != program_id:
         raise HTTPException(404, "Task not found")
@@ -320,7 +320,7 @@ def admin_update_orientation_task(program_id: str, task_id: str, req: Orientatio
 
 @router.delete("/api/admin/orientation/programs/{program_id}/tasks/{task_id}")
 def admin_delete_orientation_task(program_id: str, task_id: str,
-                                  admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                                  admin: models.User = Depends(require_module("orientation")), db: Session = Depends(get_db)):
     task = db.get(models.OrientationTask, task_id)
     if not task or task.program_id != program_id:
         raise HTTPException(404, "Task not found")
@@ -337,7 +337,7 @@ def admin_delete_orientation_task(program_id: str, task_id: str,
 
 @router.put("/api/admin/orientation/programs/{program_id}/reorder")
 def admin_reorder_orientation_tasks(program_id: str, req: OrientationReorderRequest,
-                                    admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                                    admin: models.User = Depends(require_module("orientation")), db: Session = Depends(get_db)):
     program = db.get(models.OrientationProgram, program_id)
     if not program:
         raise HTTPException(404, "Program not found")
@@ -372,7 +372,7 @@ def orientation_candidate_view(db, u, program_id=None):
 
 
 @router.get("/api/admin/orientation/vessels")
-def admin_list_orientation_vessels(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+def admin_list_orientation_vessels(admin: models.User = Depends(require_module("orientation")), db: Session = Depends(get_db)):
     _norm = orientation_ranks._norm
     learners = db.query(models.User).filter(
         models.User.role == "learner",
@@ -428,7 +428,7 @@ def admin_list_orientation_candidates(
     rank: str | None = None,
     vessel: str | None = None,
     on_sail: bool = False,
-    admin: models.User = Depends(require_admin),
+    admin: models.User = Depends(require_module("orientation")),
     db: Session = Depends(get_db),
 ):
     users = db.query(models.User).filter_by(role="learner", is_active=True).all()
@@ -452,7 +452,7 @@ def admin_list_orientation_candidates(
 def admin_list_orientation_enrollments(
     program_id: str | None = None,
     status: str | None = None,
-    admin: models.User = Depends(require_admin),
+    admin: models.User = Depends(require_module("orientation")),
     db: Session = Depends(get_db),
 ):
     q = db.query(models.OrientationEnrollment)
@@ -490,7 +490,7 @@ def admin_list_orientation_enrollments(
 
 @router.post("/api/admin/orientation/enrollments")
 def admin_create_orientation_enrollment(req: OrientationEnrollRequest,
-                                        admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                                        admin: models.User = Depends(require_module("orientation")), db: Session = Depends(get_db)):
     learner = db.get(models.User, req.learnerId)
     if not learner or learner.role != "learner":
         raise HTTPException(404, "Crew member not found")
@@ -519,7 +519,7 @@ def admin_create_orientation_enrollment(req: OrientationEnrollRequest,
 
 @router.delete("/api/admin/orientation/enrollments/{enrollment_id}")
 def admin_delete_orientation_enrollment(enrollment_id: str,
-                                        admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                                        admin: models.User = Depends(require_module("orientation")), db: Session = Depends(get_db)):
     enrollment = db.get(models.OrientationEnrollment, enrollment_id)
     if not enrollment:
         raise HTTPException(404, "Enrollment not found")
@@ -577,7 +577,7 @@ def orientation_enrollment_result(db, e):
 
 @router.get("/api/admin/orientation/results")
 def admin_orientation_results(program_id: str | None = None,
-                              admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                              admin: models.User = Depends(require_module("orientation")), db: Session = Depends(get_db)):
     q = db.query(models.OrientationEnrollment)
     if program_id:
         q = q.filter_by(program_id=program_id)
@@ -587,7 +587,7 @@ def admin_orientation_results(program_id: str | None = None,
 
 @router.get("/api/admin/orientation/results.xlsx")
 def admin_orientation_results_xlsx(program_id: str | None = None,
-                                   admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                                   admin: models.User = Depends(require_module("orientation")), db: Session = Depends(get_db)):
     from openpyxl import Workbook
     from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
     from openpyxl.utils import get_column_letter

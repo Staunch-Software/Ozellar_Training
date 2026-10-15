@@ -30,6 +30,7 @@ from .routers import (
     orientation,
     admin_users,
     reporting,
+    briefing,
 )
 
 smartpal_scheduler = None
@@ -149,3 +150,4 @@ app.include_router(screening.router)
 app.include_router(orientation.router)
 app.include_router(admin_users.router)
 app.include_router(reporting.router)
+app.include_router(briefing.router)

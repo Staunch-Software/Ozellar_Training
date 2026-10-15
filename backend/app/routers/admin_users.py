@@ -10,7 +10,7 @@ from sqlalchemy import func
 from app.database import get_db
 from app import models, email_service
 from app.auth import (
-    require_admin, require_super_admin, verify_password, hash_password, parse_ddmmyyyy
+    ADMIN_MODULES, user_modules, require_module, require_admin, require_super_admin, verify_password, hash_password, parse_ddmmyyyy
 )
 from app.certificates import build_certificate_pdf
 from app.notifications_service import notify
@@ -29,6 +29,9 @@ class CreateUserRequest(BaseModel):
     ppNo: str | None = None
     email: str | None = None        # admin / super_admin
     password: str | None = None     # admin / super_admin
+    modules: list[str] | None = None      # admin: granted modules (auth.ADMIN_MODULES)
+    department: str | None = None         # admin: briefing department
+    designation: str | None = None        # admin: technical_director | managing_director
 
 
 class UpdateUserRequest(BaseModel):
@@ -39,6 +42,9 @@ class UpdateUserRequest(BaseModel):
     role: str | None = None
     password: str | None = None
     currentPassword: str | None = None
+    modules: list[str] | None = None
+    department: str | None = None
+    designation: str | None = None
 
 
 class AssignRequest(BaseModel):
@@ -68,8 +74,56 @@ def admin_user_view(db, u):
     return v
 
 
+DEPARTMENTS = ("qhse", "marine", "technical", "manning_it_accounts")
+DESIGNATIONS = ("technical_director", "managing_director")
+
+
+def admin_panel_view(u):
+    return {
+        "id": u.id, "role": u.role, "name": u.full_name,
+        "email": u.email, "rank": u.rank,
+        "isActive": bool(u.is_active),
+        "createdAt": to_ist_iso(u.created_at),
+        "modules": user_modules(u),
+        "department": u.department,
+        "designation": u.designation,
+    }
+
+
+def _clean_access(db, actor, user, modules, department, designation, fields_set):
+    """Validate + apply modules/department/designation (admin role only).
+    Granting module access / TD-MD designation is super_admin-only so a
+    user-management admin can't escalate themselves."""
+    if user.role != "admin":
+        return
+    if actor.role != "super_admin" and fields_set & {"modules", "designation"}:
+        raise HTTPException(403, "Only a super admin can change module access or designation")
+    if "modules" in fields_set:
+        bad = [m for m in (modules or []) if m not in ADMIN_MODULES]
+        if bad:
+            raise HTTPException(400, f"Unknown module(s): {', '.join(bad)}")
+        user.modules = list(dict.fromkeys(modules or []))
+    if "department" in fields_set:
+        if department and department not in DEPARTMENTS:
+            raise HTTPException(400, "Invalid department")
+        user.department = department or None
+    if "designation" in fields_set:
+        if designation and designation not in DESIGNATIONS:
+            raise HTTPException(400, "Invalid designation")
+        if designation:
+            clash = (db.query(models.User)
+                     .filter(models.User.designation == designation,
+                             models.User.is_active == True,  # noqa: E712
+                             models.User.id != (user.id or ""))
+                     .first())
+            if clash:
+                raise HTTPException(400, f"{clash.full_name} is already the "
+                                         f"{designation.replace('_', ' ').title()}")
+        user.designation = designation or None
+
+
 @router.get("/api/admin/users")
-def admin_list_users(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+def admin_list_users(admin: models.User = Depends(require_module("user_management")), db: Session = Depends(get_db)):
     """Crew (learner) users only."""
     users = (db.query(models.User).filter_by(role="learner")
              .order_by(models.User.full_name).all())
@@ -77,7 +131,7 @@ def admin_list_users(admin: models.User = Depends(require_admin), db: Session = 
 
 
 @router.get("/api/admin/office-staff")
-def admin_list_office_staff(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+def admin_list_office_staff(admin: models.User = Depends(require_module("user_management")), db: Session = Depends(get_db)):
     """List all office staff users (learners with rank 'OFFICE STAFF')."""
     users = (db.query(models.User)
              .filter(models.User.role == "learner",
@@ -100,7 +154,7 @@ def admin_list_office_staff(admin: models.User = Depends(require_admin), db: Ses
 
 
 @router.post("/api/admin/users")
-def admin_create_user(req: CreateUserRequest, admin: models.User = Depends(require_admin),
+def admin_create_user(req: CreateUserRequest, admin: models.User = Depends(require_module("user_management")),
                       db: Session = Depends(get_db)):
     name = (req.fullName or "").strip()
     if not name:
@@ -141,7 +195,7 @@ def admin_create_user(req: CreateUserRequest, admin: models.User = Depends(requi
 
 @router.patch("/api/admin/users/{user_id}")
 def admin_update_user(user_id: str, req: UpdateUserRequest,
-                      admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                      admin: models.User = Depends(require_module("user_management")), db: Session = Depends(get_db)):
     user = db.get(models.User, user_id)
     if not user:
         raise HTTPException(404, "User not found")
@@ -160,24 +214,19 @@ def admin_update_user(user_id: str, req: UpdateUserRequest,
 
 
 @router.get("/api/admin/panel/admins")
-def admin_panel_list_admins(admin: models.User = Depends(require_admin),
+def admin_panel_list_admins(admin: models.User = Depends(require_module("user_management")),
                             db: Session = Depends(get_db)):
     """List all admin and super_admin users."""
     users = (db.query(models.User)
              .filter(models.User.role.in_(["admin", "super_admin"]))
              .order_by(models.User.role, models.User.full_name)
              .all())
-    return [{
-        "id": u.id, "role": u.role, "name": u.full_name,
-        "email": u.email, "rank": u.rank,
-        "isActive": bool(u.is_active),
-        "createdAt": to_ist_iso(u.created_at),
-    } for u in users]
+    return [admin_panel_view(u) for u in users]
 
 
 @router.post("/api/admin/panel/admins")
 def admin_panel_create_admin(req: CreateUserRequest,
-                             admin: models.User = Depends(require_admin),
+                             admin: models.User = Depends(require_module("user_management")),
                              db: Session = Depends(get_db)):
     """Create a new admin or super_admin user."""
     if req.role not in ("admin", "super_admin"):
@@ -197,20 +246,19 @@ def admin_panel_create_admin(req: CreateUserRequest,
         rank=(req.rank or "").strip() or None,
         password_hash=hash_password(req.password),
     )
+    if req.role == "admin":
+        # New admins start with only the modules they're explicitly granted.
+        _clean_access(db, admin, user, req.modules or [], req.department, req.designation,
+                      {"modules", "department", "designation"})
     db.add(user)
     db.commit()
     db.refresh(user)
-    return {
-        "id": user.id, "role": user.role, "name": user.full_name,
-        "email": user.email, "rank": user.rank,
-        "isActive": bool(user.is_active),
-        "createdAt": to_ist_iso(user.created_at),
-    }
+    return admin_panel_view(user)
 
 
 @router.patch("/api/admin/panel/admins/{user_id}")
 def admin_panel_update_admin(user_id: str, req: UpdateUserRequest,
-                             admin: models.User = Depends(require_admin),
+                             admin: models.User = Depends(require_module("user_management")),
                              db: Session = Depends(get_db)):
     """Activate/deactivate or update an admin/super_admin user."""
     user = db.get(models.User, user_id)
@@ -237,17 +285,14 @@ def admin_panel_update_admin(user_id: str, req: UpdateUserRequest,
         elif user.id == admin.id:
             raise HTTPException(400, "Current password is required to change your password")
         user.password_hash = hash_password(req.password)
+    _clean_access(db, admin, user, req.modules, req.department, req.designation,
+                  set(req.model_fields_set))
     db.commit()
-    return {
-        "id": user.id, "role": user.role, "name": user.full_name,
-        "email": user.email, "rank": user.rank,
-        "isActive": bool(user.is_active),
-        "createdAt": to_ist_iso(user.created_at),
-    }
+    return admin_panel_view(user)
 
 
 @router.post("/api/admin/users/{user_id}/courses/{course_id}/reassign")
-def admin_reassign_course(user_id: str, course_id: str, admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+def admin_reassign_course(user_id: str, course_id: str, admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     user = db.get(models.User, user_id)
     if not user:
         raise HTTPException(404, "User not found")
@@ -305,7 +350,7 @@ def admin_inline_approve(user_id: str, course_id: str,
 
 @router.post("/api/admin/users/{user_id}/enrollments")
 def admin_assign(user_id: str, req: AssignRequest,
-                 admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                 admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     user = db.get(models.User, user_id)
     if not user or user.role != "learner":
         raise HTTPException(404, "Learner not found")
@@ -326,7 +371,7 @@ def admin_assign(user_id: str, req: AssignRequest,
 
 @router.delete("/api/admin/users/{user_id}/enrollments/{course_id}")
 def admin_unassign(user_id: str, course_id: str,
-                   admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                   admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     db.query(models.Enrollment).filter_by(learner_id=user_id, course_id=course_id).delete()
     db.commit()
     return {"ok": True}
@@ -334,7 +379,7 @@ def admin_unassign(user_id: str, course_id: str,
 
 @router.put("/api/admin/users/{user_id}/enrollments")
 def admin_bulk_set_enrollments(user_id: str, req: BulkAssignRequest,
-                               admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                               admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     """Set a learner's full course assignment list in one call."""
     user = db.get(models.User, user_id)
     if not user or user.role != "learner":

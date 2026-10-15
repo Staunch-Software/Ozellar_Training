@@ -89,12 +89,25 @@ export function ProtectedRoute({ children }) {
   return children
 }
 
-// admin-only routes; signed-in learners/test-takers are bounced away
-export function AdminRoute({ children }) {
+// Admin-panel modules (keys match backend auth.ADMIN_MODULES) and where each lives.
+export const MODULE_HOME = {
+  courses: '/admin/course-management/courses',
+  orientation: '/admin/orientation-program/programs',
+  assessment: '/admin/screening',
+  briefing: '/admin/briefings',
+  user_management: '/admin/user-management',
+}
+export const hasModule = (u, key) =>
+  (u?.role === 'admin' || u?.role === 'super_admin') && (u?.modules || []).includes(key)
+
+// admin-only routes; signed-in learners/test-takers are bounced away.
+// `module` restricts the route to admins granted that module.
+export function AdminRoute({ children, module }) {
   const { user, loading } = useAuth()
   if (loading) return <div className="spinner">Loading…</div>
   if (!user) return <Navigate to="/" replace />
   if (user.role !== 'admin' && user.role !== 'super_admin') return <Navigate to={homeFor(user)} replace />
+  if (module && !hasModule(user, module)) return <Navigate to={homeFor(user)} replace />
   return children
 }
 
@@ -131,7 +144,13 @@ export function OfficeStaffRoute({ children }) {
 
 // where a signed-in user belongs by role
 export const homeFor = (u) => {
-  if (u?.role === 'admin' || u?.role === 'super_admin') return '/admin'
+  if (u?.role === 'admin' || u?.role === 'super_admin') {
+    // The dashboard is the course-management overview; admins without that module
+    // land on the first module they were granted instead.
+    if (hasModule(u, 'courses')) return '/admin'
+    const first = Object.keys(MODULE_HOME).find((k) => hasModule(u, k))
+    return first ? MODULE_HOME[first] : '/admin/no-access'
+  }
   if (u?.role === 'test_taker') return '/test/welcome'
   if (u?.isVesselApprover) return '/approvals'
   if (u?.role === 'learner' && (u?.rank || '').toUpperCase() === 'OFFICE STAFF') return '/office-courses'

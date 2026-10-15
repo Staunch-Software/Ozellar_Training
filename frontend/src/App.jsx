@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, createContext, useContext } from 'react'
 import { Routes, Route, Link, NavLink, useNavigate, useLocation, Navigate } from 'react-router-dom'
 import { GraduationCap, Search, Sun, Moon, LogOut, Menu, X } from 'lucide-react'
 import NotificationBell from './NotificationBell.jsx'
+import { getMyBriefing } from './api.js'
 import Login from './pages/Login.jsx'
 import MyCourses from './pages/MyCourses.jsx'
 import CrewDashboardRouter from './pages/CrewDashboardRouter.jsx'
@@ -37,6 +38,9 @@ import AdminScreeningPreview from './pages/admin/AdminScreeningPreview.jsx'
 import AdminScreeningResultReview from './pages/admin/AdminScreeningResultReview.jsx'
 import AdminCoursePreview from './pages/admin/AdminCoursePreview.jsx'
 import AdminUserManagement from './pages/admin/AdminUserManagement.jsx'
+import AdminBriefings from './pages/admin/AdminBriefings.jsx'
+import AdminBriefingDetail from './pages/admin/AdminBriefingDetail.jsx'
+import Briefing from './pages/Briefing.jsx'
 import TestWelcome from './pages/test/TestWelcome.jsx'
 import TestExam from './pages/test/TestExam.jsx'
 import TestResult from './pages/test/TestResult.jsx'
@@ -65,6 +69,11 @@ export function TopNav({ searchQuery, onSearch }) {
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const mobileNavRef = useRef(null)
   const signOut = () => { logout(); navigate('/') }
+  const [hasBriefing, setHasBriefing] = useState(false)
+  useEffect(() => {
+    if (user?.role !== 'learner') return
+    getMyBriefing().then((b) => setHasBriefing(!!b)).catch(() => {})
+  }, [user?.id, user?.role])
 
   useEffect(() => {
     const onDoc = (e) => { if (mobileNavRef.current && !mobileNavRef.current.contains(e.target)) setMobileNavOpen(false) }
@@ -98,6 +107,7 @@ export function TopNav({ searchQuery, onSearch }) {
         {user?.isVesselApprover && (
           <NavLink to="/approvals" className={({ isActive }) => (isActive ? 'on' : '')}>Approvals</NavLink>
         )}
+        {hasBriefing && <NavLink to="/pre-joining-briefing" className={({ isActive }) => (isActive ? 'on' : '')}>Briefing</NavLink>}
         <NavLink to="/certificates" className={({ isActive }) => (isActive ? 'on' : '')}>Certificates</NavLink>
         <NavLink to="/help" className={({ isActive }) => (isActive ? 'on' : '')}>Help</NavLink>
       </div>
@@ -156,6 +166,11 @@ export function TopNav({ searchQuery, onSearch }) {
                   Approvals
                 </NavLink>
               )}
+              {hasBriefing && (
+                <NavLink to="/pre-joining-briefing" className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                  Briefing
+                </NavLink>
+              )}
               <NavLink to="/certificates" className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
                 Certificates
               </NavLink>
@@ -200,6 +215,7 @@ export default function App() {
         <Route path="/dashboard" element={P(<CrewDashboardRouter />)} />
             <Route path="/my-courses" element={P(<MyCourses />)} />
         <Route path="/orientation" element={P(<Orientation />)} />
+        <Route path="/pre-joining-briefing" element={P(<Briefing />)} />
         <Route path="/certificates" element={P(<Certificates />)} />
         <Route path="/help" element={P(<Help />)} />
         <Route path="/course/:slug" element={P(<CourseReader />)} />
@@ -218,15 +234,15 @@ export default function App() {
         <Route path="/office-courses" element={<OfficeStaffRoute><OfficeStaffCourseList /></OfficeStaffRoute>} />
         <Route path="/office-courses/:slug" element={<OfficeStaffRoute><OfficeStaffCourseReader /></OfficeStaffRoute>} />
 
-        <Route path="/admin/courses/:id/preview" element={<AdminRoute><AdminCoursePreview /></AdminRoute>} />
-        <Route path="/admin/orientation/:id/preview" element={<AdminRoute><AdminOrientationPreview /></AdminRoute>} />
-        <Route path="/admin/screening/:id/preview" element={<AdminRoute><AdminScreeningPreview /></AdminRoute>} />
-        <Route path="/admin/screening/results/:id" element={<AdminRoute><AdminScreeningResultReview /></AdminRoute>} />
+        <Route path="/admin/courses/:id/preview" element={<AdminRoute module="courses"><AdminCoursePreview /></AdminRoute>} />
+        <Route path="/admin/orientation/:id/preview" element={<AdminRoute module="orientation"><AdminOrientationPreview /></AdminRoute>} />
+        <Route path="/admin/screening/:id/preview" element={<AdminRoute module="assessment"><AdminScreeningPreview /></AdminRoute>} />
+        <Route path="/admin/screening/results/:id" element={<AdminRoute module="assessment"><AdminScreeningResultReview /></AdminRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
-          <Route index element={<AdminDashboard />} />
+          <Route index element={<AdminRoute module="courses"><AdminDashboard /></AdminRoute>} />
 
           <Route path="courses" element={<Navigate to="/admin/course-management/courses" replace />} />
-          <Route path="course-management" element={<AdminCourseManagement />}>
+          <Route path="course-management" element={<AdminRoute module="courses"><AdminCourseManagement /></AdminRoute>}>
             <Route index element={<Navigate to="courses" replace />} />
             <Route path="courses" element={<AdminCourses />} />
             <Route path="assignments" element={<AdminAssignments />} />
@@ -235,8 +251,8 @@ export default function App() {
           </Route>
 
           {/* Keep builder at /admin/courses/:id so navigation from inside courses works properly */}
-          <Route path="courses/:id" element={<AdminCourseBuilder />} />
-          <Route path="courses/:id/certificate" element={<AdminCourseCertificate />} />
+          <Route path="courses/:id" element={<AdminRoute module="courses"><AdminCourseBuilder /></AdminRoute>} />
+          <Route path="courses/:id/certificate" element={<AdminRoute module="courses"><AdminCourseCertificate /></AdminRoute>} />
 
           {/* Compatibility redirects for legacy /admin/orientation/* paths */}
           <Route path="orientation" element={<Navigate to="/admin/orientation-program/programs" replace />} />
@@ -245,7 +261,7 @@ export default function App() {
           <Route path="orientation/results" element={<Navigate to="/admin/orientation-program/results" replace />} />
           <Route path="orientation/candidates" element={<Navigate to="/admin/orientation-program/candidates" replace />} />
 
-          <Route path="orientation-program" element={<AdminOrientationManagement />}>
+          <Route path="orientation-program" element={<AdminRoute module="orientation"><AdminOrientationManagement /></AdminRoute>}>
             <Route index element={<Navigate to="programs" replace />} />
             <Route path="programs" element={<AdminOrientationPrograms />} />
             <Route path="enrollments" element={<AdminOrientationEnrollments />} />
@@ -253,10 +269,14 @@ export default function App() {
             <Route path="candidates" element={<AdminOrientationCandidates />} />
           </Route>
           {/* Keep builder at /admin/orientation/:id, same reasoning as the course builder */}
-          <Route path="orientation/:id" element={<AdminOrientationBuilder />} />
+          <Route path="orientation/:id" element={<AdminRoute module="orientation"><AdminOrientationBuilder /></AdminRoute>} />
 
-          <Route path="screening" element={<AdminScreening />} />
-          <Route path="user-management" element={<AdminUserManagement />} />
+          <Route path="screening" element={<AdminRoute module="assessment"><AdminScreening /></AdminRoute>} />
+          <Route path="user-management" element={<AdminRoute module="user_management"><AdminUserManagement /></AdminRoute>} />
+
+          <Route path="briefings" element={<AdminRoute module="briefing"><AdminBriefings /></AdminRoute>} />
+          <Route path="briefings/:id" element={<AdminRoute module="briefing"><AdminBriefingDetail /></AdminRoute>} />
+          <Route path="no-access" element={<div className="spinner">No admin modules have been assigned to your account yet. Please contact a super admin.</div>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

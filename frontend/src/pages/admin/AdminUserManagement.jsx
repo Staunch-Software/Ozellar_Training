@@ -6,7 +6,60 @@ import { adminPanelListAdmins, adminPanelCreateAdmin, adminPanelUpdateAdmin, adm
 import Pagination from '../../components/Pagination.jsx'
 import { useAuth } from '../../auth.jsx'
 
-const EMPTY_CREATE = { role: 'admin', fullName: '', email: '', password: '', rank: '' }
+const EMPTY_CREATE = { role: 'admin', fullName: '', email: '', password: '', rank: '', modules: [], department: '', designation: '' }
+
+const MODULE_OPTIONS = [
+  ['courses', 'Course management'],
+  ['orientation', 'Orientation Program'],
+  ['assessment', 'Assessment (screening)'],
+  ['briefing', 'Pre-joining briefing'],
+  ['user_management', 'User management'],
+]
+const DEPARTMENT_OPTIONS = [
+  ['qhse', 'QHSE'], ['marine', 'Marine'], ['technical', 'Technical'],
+  ['manning_it_accounts', 'Manning / IT / Accounts'],
+]
+const DESIGNATION_OPTIONS = [['technical_director', 'Technical Director'], ['managing_director', 'Managing Director']]
+
+/* Module access + briefing department/designation. Only super admins can change
+   these (the API enforces it too); for a super_admin target all modules apply. */
+function AccessFields({ form, set }) {
+  const { user: me } = useAuth()
+  if (me?.role !== 'super_admin' || form.role !== 'admin') return null
+  const toggleModule = (key) => set('modules',
+    form.modules.includes(key) ? form.modules.filter(m => m !== key) : [...form.modules, key])
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, marginTop: 4 }}>
+      <div>
+        <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-mut)', marginBottom: 6 }}>
+          Module access — this admin can only see the modules ticked here
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: 8 }}>
+          {MODULE_OPTIONS.map(([key, label]) => (
+            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+              <input type="checkbox" checked={form.modules.includes(key)} onChange={() => toggleModule(key)} />
+              {label}
+            </label>
+          ))}
+        </div>
+      </div>
+      <div className="form-grid">
+        <Field label="Briefing department">
+          <select value={form.department || ''} onChange={e => set('department', e.target.value)}>
+            <option value="">— None —</option>
+            {DEPARTMENT_OPTIONS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          </select>
+        </Field>
+        <Field label="Briefing approver role">
+          <select value={form.designation || ''} onChange={e => set('designation', e.target.value)}>
+            <option value="">— None —</option>
+            {DESIGNATION_OPTIONS.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
+          </select>
+        </Field>
+      </div>
+    </div>
+  )
+}
 
 const getInitials = (name) => {
   if (!name) return '?'
@@ -107,6 +160,7 @@ function Modal({ title, icon, accent, onClose, children }) {
 
 /* ─── Create Admin modal ─── */
 function CreateModal({ onClose, onCreated }) {
+  const { user: me } = useAuth()
   const [form, setForm] = useState(EMPTY_CREATE)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -118,7 +172,14 @@ function CreateModal({ onClose, onCreated }) {
     e.preventDefault()
     setError(''); setBusy(true)
     try {
-      await adminPanelCreateAdmin(form)
+      const body = { ...form }
+      if (me?.role !== 'super_admin' || form.role !== 'admin') {
+        delete body.modules; delete body.department; delete body.designation
+      } else {
+        body.department = form.department || null
+        body.designation = form.designation || null
+      }
+      await adminPanelCreateAdmin(body)
       onCreated()
       onClose()
     } catch (err) {
@@ -174,6 +235,7 @@ function CreateModal({ onClose, onCreated }) {
             </div>
           </Field>
         </div>
+        <AccessFields form={form} set={set} />
 
         {error && <div className="form-error" style={{ marginTop: 14 }}><AlertCircle size={15} /> {error}</div>}
 
@@ -192,7 +254,11 @@ function CreateModal({ onClose, onCreated }) {
 function EditModal({ user, onClose, onSaved }) {
   const { user: me } = useAuth()
   const isSelf = me?.id === user.id
-  const [form, setForm] = useState({ fullName: user.name || '', rank: user.rank || '', role: user.role || 'admin' })
+  const [form, setForm] = useState({
+    fullName: user.name || '', rank: user.rank || '', role: user.role || 'admin',
+    modules: user.modules || [], department: user.department || '', designation: user.designation || '',
+  })
+  const setField = (k, v) => setForm(f => ({ ...f, [k]: v }))
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const cfg = ROLE_CONFIG[form.role] || ROLE_CONFIG.admin
@@ -202,9 +268,13 @@ function EditModal({ user, onClose, onSaved }) {
     if (!form.fullName.trim()) { setError('Full name is required'); return }
     setError(''); setBusy(true)
     try {
-      await adminPanelUpdateAdmin(user.id, {
-        fullName: form.fullName.trim(), rank: form.rank.trim(), role: form.role,
-      })
+      const body = { fullName: form.fullName.trim(), rank: form.rank.trim(), role: form.role }
+      if (me?.role === 'super_admin' && form.role === 'admin') {
+        body.modules = form.modules
+        body.department = form.department || null
+        body.designation = form.designation || null
+      }
+      await adminPanelUpdateAdmin(user.id, body)
       onSaved()
       onClose()
     } catch (err) {
@@ -272,6 +342,7 @@ function EditModal({ user, onClose, onSaved }) {
             <input value={form.rank} onChange={e => setForm(f => ({ ...f, rank: e.target.value }))}
               placeholder="e.g. Fleet Manager" />
           </Field>
+          <AccessFields form={form} set={setField} />
 
           {error && <div className="form-error"><AlertCircle size={14} /> {error}</div>}
         </div>
