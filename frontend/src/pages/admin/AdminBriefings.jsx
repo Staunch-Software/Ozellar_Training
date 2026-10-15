@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ClipboardCheck, UserPlus, Download, Trash2, X, AlertCircle, Search } from 'lucide-react'
+import { Link, useNavigate } from 'react-router-dom'
+import { ClipboardCheck, UserPlus, Download, Trash2, X, AlertCircle, Search, ArrowRight } from 'lucide-react'
 import {
   adminListBriefings, adminCreateBriefing, adminDeleteBriefing, adminBriefingCandidates,
   adminBriefingBriefers, getMyBriefingTasks, downloadBriefingPdf,
@@ -9,6 +9,8 @@ import { hasModule, useAuth } from '../../auth.jsx'
 import { StatusPill, fmtDate } from '../../components/BriefingForm.jsx'
 import { useConfirm } from '../../components/ConfirmDialog.jsx'
 import '../../briefing.css'
+
+const initials = (n) => (n || '?').trim().split(/\s+/).slice(0, 2).map((w) => w[0]).join('').toUpperCase()
 
 function AssignModal({ onClose, onDone }) {
   const [q, setQ] = useState('')
@@ -122,6 +124,7 @@ function AssignModal({ onClose, onDone }) {
 
 export default function AdminBriefings() {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [rows, setRows] = useState(null)
   const [tasks, setTasks] = useState(null)
   const [q, setQ] = useState('')
@@ -172,26 +175,26 @@ export default function AdminBriefings() {
       {error && <div className="brf-error"><AlertCircle size={15} /> {error}</div>}
 
       {(myOpen.length > 0 || myDirector.length > 0) && (
-        <div className="brf-card">
-          <h3>Waiting for you</h3>
-          <table className="brf-table">
-            <tbody>
-              {myOpen.map((t) => (
-                <tr key={`${t.id}-${t.department}`}>
-                  <td><b>{t.learnerName}</b> <span className="mut">· {t.rank}</span></td>
-                  <td>{t.label} briefing{t.joiningVessel ? ` · ${t.joiningVessel}` : ''}</td>
-                  <td style={{ textAlign: 'right' }}><Link className="brf-link" to={`/admin/briefings/${t.id}`}>Open →</Link></td>
-                </tr>
-              ))}
-              {myDirector.map((t) => (
-                <tr key={`d-${t.id}`}>
-                  <td><b>{t.learnerName}</b> <span className="mut">· {t.rank}</span></td>
-                  <td>Director approval{t.joiningVessel ? ` · ${t.joiningVessel}` : ''}</td>
-                  <td style={{ textAlign: 'right' }}><Link className="brf-link" to={`/admin/briefings/${t.id}`}>Review →</Link></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="brf-card brf-waiting">
+          <div className="brf-waiting-head">
+            <h3>Waiting for you</h3>
+            <span className="brf-count">{myOpen.length + myDirector.length}</span>
+          </div>
+          <div className="brf-tasks">
+            {[...myOpen.map((t) => ({ ...t, kind: 'section' })), ...myDirector.map((t) => ({ ...t, kind: 'director' }))].map((t) => (
+              <Link key={`${t.kind}-${t.id}-${t.department || ''}`} to={`/admin/briefings/${t.id}`} className="brf-task">
+                <span className="brf-avatar">{initials(t.learnerName)}</span>
+                <span className="brf-task-main">
+                  <span className="brf-task-name">{t.learnerName}</span>
+                  <span className="brf-task-meta">
+                    {[t.rank, t.joiningVessel && `Joining ${t.joiningVessel}`, t.briefingDate && fmtDate(t.briefingDate)].filter(Boolean).join('  ·  ')}
+                  </span>
+                </span>
+                <span className={`brf-task-tag ${t.kind}`}>{t.kind === 'director' ? 'Director approval' : `${t.label} briefing`}</span>
+                <span className="brf-task-cta">{t.kind === 'director' ? 'Review' : 'Start'} <ArrowRight size={15} /></span>
+              </Link>
+            ))}
+          </div>
         </div>
       )}
 
@@ -218,14 +221,15 @@ export default function AdminBriefings() {
               </thead>
               <tbody>
                 {visible.map((r) => (
-                  <tr key={r.id}>
+                  <tr key={r.id} className="brf-row" tabIndex={0} onClick={() => navigate(`/admin/briefings/${r.id}`)}
+                    onKeyDown={(e) => e.key === 'Enter' && navigate(`/admin/briefings/${r.id}`)}>
                     <td><Link className="brf-link" to={`/admin/briefings/${r.id}`}>{r.learnerName}</Link><div className="mut" style={{ fontSize: 12 }}>{r.rank}</div></td>
                     <td>{r.joiningVessel || '—'}</td>
                     <td>{fmtDate(r.briefingDate)}</td>
                     <td>{r.sectionsDone} / {r.sectionsTotal}</td>
                     <td>{r.tdDone ? '✔' : '–'} / {r.mdDone ? '✔' : '–'}</td>
                     <td><StatusPill status={r.status} /></td>
-                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
+                    <td style={{ textAlign: 'right', whiteSpace: 'nowrap' }} onClick={(e) => e.stopPropagation()}>
                       <button className="btn sm" onClick={() => downloadBriefingPdf(r.id, r.learnerName).catch((e) => setError(e.message))}>
                         <Download size={13} /> PDF
                       </button>{' '}

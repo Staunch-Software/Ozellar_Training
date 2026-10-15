@@ -82,3 +82,31 @@
   .brf-items tr { display: block; border-bottom: 1px solid var(--border); padding: 6px 0; }
   .brf-items td { display: block; border: none; padding: 4px 14px; width: auto !important; }
 }
+
+/* "Waiting for you" task cards */
+.brf-waiting { padding: 18px 18px 14px; border-left: 4px solid var(--accent); }
+.brf-waiting-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+.brf-waiting-head h3 { margin: 0; }
+.brf-count { min-width: 22px; height: 22px; padding: 0 7px; border-radius: 99px; background: var(--accent); color: var(--on-accent); font-size: 12px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; }
+.brf-tasks { display: flex; flex-direction: column; gap: 10px; }
+.brf-task { display: flex; align-items: center; gap: 14px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); text-decoration: none; color: var(--text); transition: border-color .15s, box-shadow .15s, transform .15s; }
+.brf-task:hover { border-color: var(--accent); box-shadow: var(--shadow); transform: translateY(-1px); }
+.brf-avatar { width: 40px; height: 40px; flex: none; border-radius: 50%; background: var(--accent-weak); color: var(--accent); font-weight: 800; font-size: 14px; display: inline-flex; align-items: center; justify-content: center; }
+.brf-task-main { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.brf-task-name { font-weight: 700; font-size: 14.5px; }
+.brf-task-meta { color: var(--text-mut); font-size: 12.5px; white-space: pre-wrap; overflow: hidden; text-overflow: ellipsis; }
+.brf-task-tag { flex: none; font-size: 11.5px; font-weight: 700; padding: 4px 11px; border-radius: 99px; background: var(--warn-weak); color: var(--warn); white-space: nowrap; }
+.brf-task-tag.director { background: rgba(99,102,241,.14); color: #6366f1; }
+.brf-task-cta { flex: none; display: inline-flex; align-items: center; gap: 5px; font-size: 13px; font-weight: 700; color: var(--accent); }
+.brf-task:hover .brf-task-cta svg { transform: translateX(3px); }
+.brf-task-cta svg { transition: transform .15s; }
+@media (max-width: 640px) {
+  .brf-task { flex-wrap: wrap; }
+  .brf-task-main { flex-basis: calc(100% - 60px); }
+  .brf-task-tag { margin-left: 54px; }
+  .brf-task-cta { margin-left: auto; }
+}
+
+/* clickable table rows */
+.brf-row { cursor: pointer; transition: background .12s; }
+.brf-row:hover, .brf-row:focus-visible { background: var(--surface-2); outline: none; }
