@@ -92,12 +92,9 @@ def admin_panel_view(u):
 
 def _clean_access(db, actor, user, modules, department, designation, fields_set):
     """Validate + apply modules/department/designation (admin role only).
-    Granting module access / TD-MD designation is super_admin-only so a
-    user-management admin can't escalate themselves."""
+    Callable by anyone with the user_management module (enforced by the route)."""
     if user.role != "admin":
         return
-    if actor.role != "super_admin" and fields_set & {"modules", "designation"}:
-        raise HTTPException(403, "Only a super admin can change module access or designation")
     if "modules" in fields_set:
         bad = [m for m in (modules or []) if m not in ADMIN_MODULES]
         if bad:

@@ -24,15 +24,14 @@ Backend (from `backend/`, checked-in venv at `backend/.venv`):
 ```bash
 ./.venv/Scripts/python.exe -m uvicorn app.main:app --port 8008   # run API (docs at /docs)
 ./.venv/Scripts/python.exe -m alembic upgrade head               # create/upgrade schema (owns DDL)
-./.venv/Scripts/python.exe -m app.seed                           # non-destructive content + demo users
-SEED_MODE=prod ./.venv/Scripts/python.exe -m app.seed            # prod seed: admin + courses only
 ```
 The Vite dev proxy targets **`127.0.0.1:8008`** (`frontend/vite.config.js`), so run
-the API on 8008 (older notes said 8000). `main.py`'s lifespan auto-seeds if the
-courses/users tables are empty.
+the API on 8008 (older notes said 8000). There is **no seed script** any more
+(`app/seed.py` was removed): a fresh DB has no users, so the first admin must be
+created directly in the database.
 
 Schema is owned by **Alembic** (`backend/alembic/`), not `create_all`. Fresh DB:
-`alembic upgrade head` then `python -m app.seed`. After a model change:
+`alembic upgrade head`. After a model change:
 `alembic revision --autogenerate -m "..."` then `upgrade head`. `alembic/env.py`
 pulls `DATABASE_URL` + `Base.metadata` from the app and runs from `backend/`.
 
@@ -57,7 +56,7 @@ port. If bind fails, find and `taskkill /PID <child> /T /F` the child.
 
 ## Backend architecture
 
-`app/main.py` is thin: lifespan (auto-seed, APScheduler jobs), CORS, and
+`app/main.py` is thin: lifespan (APScheduler jobs), CORS, and
 `include_router` for each module in `app/routers/`. All endpoints live in
 routers: `auth`, `courses`, `assessments`, `course_builder`, `screening`,
 `orientation`, `admin_users`, `reporting`, `notifications`, `uploads`.
@@ -70,11 +69,9 @@ serialization), `notifications_service.notify()`, `time_utils.py` (IST formattin
 are strings now (a migration moved them off integers). The older "int vs str
 learner_id" split no longer applies. `crew_id` is still the human-facing login ID.
 
-**Content is DB-seeded.** `app/courses_seed.json` is the source of truth for the
-three original courses (Cargo, HSM, Cyber). `seed.py` upserts course content
-(replacing chapters/questions per course), creates the admin (and demo crew in
-non-prod) only if missing, and never touches progress/attempts/certificates.
-Courses can also be authored in the admin Course Builder (DB only — not in the seed JSON).
+**Content lives in the DB.** Courses are authored in the admin Course Builder.
+`app/courses_seed.json` is only a reference copy of the original three courses
+(Cargo, HSM, Cyber) — nothing loads it, since `seed.py` was removed.
 
 **Roles & auth** (`app/auth.py`, `routers/auth.py`): `User.role` is `learner`,
 `admin`, or `super_admin` (`require_admin` accepts both; `require_super_admin`
@@ -96,8 +93,8 @@ NULL = all) is checked by `require_module(key)` in `auth.py` (keys in `ADMIN_MOD
 always passes). Admin routers use `require_module(...)` instead of `require_admin`;
 the frontend mirrors this with `hasModule()`/`<AdminRoute module=...>` and filters the
 `AdminLayout` tabs, and `homeFor` sends module-limited admins to their first module.
-Only a super_admin can change an admin's modules/designation (`_clean_access` in
-`admin_users.py`). `User.department` + `User.designation` (technical_director /
+Anyone with the `user_management` module can change an admin's modules/department/
+designation (`_clean_access` in `admin_users.py`). `User.department` + `User.designation` (technical_director /
 managing_director) exist for the briefing feature.
 
 **Pre-joining briefing** (form OF-MA-010; `routers/briefing.py`, `briefing_template.py`,
@@ -186,10 +183,9 @@ management, reports). Styling is plain CSS files alongside pages plus `styles.cs
 conversion (`services/pptx_processor.py`) and `ffmpeg` on PATH for video compression
 (`video.py`); Playwright browsers are needed for the SmartPAL sync.
 
-## Seed logins (dev)
+## Logins
 
-- Admin: `admin@ozellarmarine.com` / `Admin@123`
-- Crew (name + DOB): `Rajan Kumar` / `14051990` (OZ1024); `Arjun Nair` / `02111995` (OZ1088)
+No seeded logins exist any more; use the accounts already in your database.
 
 ## Deployment
 

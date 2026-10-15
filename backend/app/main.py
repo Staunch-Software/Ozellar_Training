@@ -88,19 +88,7 @@ def send_pending_digest_job():
 async def lifespan(app: FastAPI):
     global smartpal_scheduler, email_scheduler
 
-    # 1. DB auto-seed
-    db = SessionLocal()
-    try:
-        if db.query(models.Course).count() == 0 or db.query(models.User).count() == 0:
-            from .seed import run
-            run()
-    except Exception as e:
-        print(f"[startup] auto-seed skipped ({e}). "
-              f"Run:  alembic upgrade head  &&  python -m app.seed")
-    finally:
-        db.close()
-
-    # 2. Start Schedulers
+    # Start Schedulers
     from .smartpal_sync import schedule_jobs
 
     if os.getenv("SMARTPAL_USERNAME") and os.getenv("SMARTPAL_PASSWORD"):

@@ -9,7 +9,10 @@ already exist at `/var/www/ozellar/media`.
 VM: `Deployer@52.172.91.85` (Ubuntu). Run everything on the VM unless noted.
 The API runs on local port **8021** (change everywhere if taken).
 
-Production seed = **admin + the 3 courses only** (no demo crew, no enrollments).
+There is **no seed script** (`app/seed.py` was removed). The schema comes from
+Alembic only; course content is authored in the admin Course Builder, and users
+already exist in the database (a brand-new empty database has no admin, so the
+first admin must be inserted manually).
 
 ---
 
@@ -80,15 +83,13 @@ python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
 ```
 
-## 6. Create the schema and seed (production data only)
+## 6. Create / upgrade the schema
 
 ```bash
 cd /opt/ozellar/backend
 .venv/bin/python -m alembic upgrade head
-SEED_MODE=prod .venv/bin/python -m app.seed   # admin + 3 courses ONLY
+.venv/bin/python -m alembic current      # shows the applied head
 ```
-
-Expect: `[prod] Seeded 3 courses and the admin only (no demo crew, no enrollments).`
 
 ## 7. Run the API under systemd (port 8021)
 
@@ -169,11 +170,51 @@ cd /opt/ozellar && git pull
 cd backend && .venv/bin/pip install -r requirements.txt && .venv/bin/python -m alembic upgrade head
 sudo systemctl restart ozellar-api
 # frontend changed:
-cd ../frontend && npm ci && npm run build && sudo cp -r dist/* /var/www/ozellar/
+cd ../frontend && npm ci && npm run build && sudo cp -r dist/* /var/www/ozellar/   && sudo chown -R www-data:www-data /var/www/ozellar
 ```
 
-`SEED_MODE=prod python -m app.seed` is safe to re-run (non-destructive: refreshes
-course content, never touches real users/progress/certs).
+Only restart the service / reload nginx / re-copy `ozellar-api.service` when that
+specific file (or the backend code) changed — a frontend-only change needs just the
+build and copy.
+
+## Releasing: pre-joining briefing + admin module access
+
+Migration `a7c3e91d4b20` adds the `briefings` / `briefing_sections` tables and the
+`users.modules`, `users.department`, `users.designation` columns. Existing admins keep
+access to every module (`modules` NULL = all). Nothing else (nginx, systemd, seed)
+needs to change.
+
+```bash
+cd /opt/ozellar
+git fetch && git checkout <branch-with-the-feature>     # or merge it first, then `git pull`
+cd backend
+.venv/bin/pip install -r requirements.txt               # no new packages for this release
+.venv/bin/python -m alembic upgrade head                # expect: Running upgrade ... -> a7c3e91d4b20
+.venv/bin/python -m alembic current                     # a7c3e91d4b20
+sudo systemctl restart ozellar-api && sudo systemctl status ozellar-api --no-pager
+cd ../frontend && npm ci && npm run build
+sudo cp -r dist/* /var/www/ozellar/ && sudo chown -R www-data:www-data /var/www/ozellar
+```
+
+Required on the VM: `libmagic1`, `ffmpeg`, `libreoffice-impress` (already needed by
+uploads / PPTX import).
+
+One-time setup in the app after deploying:
+1. Make sure at least one account has the **User management** module (it can set
+   admin modules, departments and the Technical/Managing Director roles).
+2. User management → edit each office admin: tick their modules, set the
+   **department** for the four department briefers (QHSE / Marine / Technical /
+   Manning-IT-Accounts).
+3. Set one admin as **Technical Director** and one as **Managing Director** — a
+   briefing can't be assigned until both exist.
+4. Create a coordinator for assigning briefings: an admin with the Briefing module
+   and **no department** (department briefers only see their own sections).
+5. Smoke test: assign → each department approves → TD and MD approve → the officer
+   confirms on `/pre-joining-briefing` → download the PDF.
+
+Note: `ozellar-api.service` runs `-w 3`, and each worker starts the APScheduler jobs
+(approval digest, SmartPAL sync), so scheduled jobs would run three times. Use
+`-w 1` or move the schedulers out of worker startup before enabling SMTP/SmartPAL.
 
 ## Moving existing uploads to Azure Blob Storage
 

@@ -21,11 +21,10 @@ const DEPARTMENT_OPTIONS = [
 ]
 const DESIGNATION_OPTIONS = [['technical_director', 'Technical Director'], ['managing_director', 'Managing Director']]
 
-/* Module access + briefing department/designation. Only super admins can change
-   these (the API enforces it too); for a super_admin target all modules apply. */
+/* Module access + briefing department/designation, shown to anyone who can open
+   User management. A super_admin target always has every module, so no fields. */
 function AccessFields({ form, set }) {
-  const { user: me } = useAuth()
-  if (me?.role !== 'super_admin' || form.role !== 'admin') return null
+  if (form.role !== 'admin') return null
   const toggleModule = (key) => set('modules',
     form.modules.includes(key) ? form.modules.filter(m => m !== key) : [...form.modules, key])
   return (
@@ -160,7 +159,6 @@ function Modal({ title, icon, accent, onClose, children }) {
 
 /* ─── Create Admin modal ─── */
 function CreateModal({ onClose, onCreated }) {
-  const { user: me } = useAuth()
   const [form, setForm] = useState(EMPTY_CREATE)
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -173,7 +171,7 @@ function CreateModal({ onClose, onCreated }) {
     setError(''); setBusy(true)
     try {
       const body = { ...form }
-      if (me?.role !== 'super_admin' || form.role !== 'admin') {
+      if (form.role !== 'admin') {
         delete body.modules; delete body.department; delete body.designation
       } else {
         body.department = form.department || null
@@ -269,7 +267,7 @@ function EditModal({ user, onClose, onSaved }) {
     setError(''); setBusy(true)
     try {
       const body = { fullName: form.fullName.trim(), rank: form.rank.trim(), role: form.role }
-      if (me?.role === 'super_admin' && form.role === 'admin') {
+      if (form.role === 'admin') {
         body.modules = form.modules
         body.department = form.department || null
         body.designation = form.designation || null
