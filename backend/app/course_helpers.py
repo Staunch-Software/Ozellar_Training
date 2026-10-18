@@ -114,13 +114,33 @@ def cert_pdf_data(cert, user, course):
 
 
 def _maybe_auto_complete_course(db, course, progress, learner_id):
-    """Courses with no final assessment pass automatically once every chapter is done."""
-    if course.questions or progress.passed:
+    """Courses with no final assessment pass automatically once every chapter is done.
+
+    Courses with an assessment are restored to passed when a module addition reset
+    `passed` and the learner has since finished all lessons, provided they already hold
+    a passing attempt that was not rejected (no retake needed — only the new content).
+    """
+    if progress.passed:
         return False
     all_chapter_ids = {ch.id for ch in course.chapters}
     done = set(progress.completed_chapters or [])
     if not all_chapter_ids or not (done >= all_chapter_ids):
         return False
+
+    if course.questions:
+        has_pass = db.query(models.Attempt).filter_by(
+            learner_id=learner_id, course_id=course.id, passed=True).first() is not None
+        if not has_pass:
+            return False
+        latest_ap = (db.query(models.AssessmentApproval)
+                     .filter_by(learner_id=learner_id, course_id=course.id)
+                     .order_by(models.AssessmentApproval.created_at.desc()).first())
+        if latest_ap and latest_ap.status == "rejected":
+            return False
+        progress.passed = True
+        db.flush()
+        return True
+
     progress.passed = True
     db.flush()
 
