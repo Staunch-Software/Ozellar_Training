@@ -119,7 +119,17 @@ def list_courses(user: models.User = Depends(get_current_user), db: Session = De
             if not assigned:
                 return []
             q = q.filter(models.Course.id.in_(assigned))
-    return [serialize_course(db, c, get_progress(db, lid, c.id)) for c in q.all()]
+    courses = q.all()
+    healed = False
+    result = []
+    for c in courses:
+        p = get_progress(db, lid, c.id)
+        if p and user.role == "learner":
+            healed = _maybe_auto_complete_course(db, c, p, lid) or healed
+        result.append(serialize_course(db, c, p))
+    if healed:
+        db.commit()
+    return result
 
 
 @router.get("/api/courses/{slug}")
@@ -128,7 +138,10 @@ def get_course(slug: str, user: models.User = Depends(get_current_user), db: Ses
     if not c:
         raise HTTPException(404, "Course not found")
     require_enrollment(db, user, c.id)
-    return serialize_course(db, c, get_progress(db, user.id, c.id), detail=True)
+    p = get_progress(db, user.id, c.id)
+    if p and user.role == "learner" and _maybe_auto_complete_course(db, c, p, user.id):
+        db.commit()
+    return serialize_course(db, c, p, detail=True)
 
 
 @router.post("/api/courses/{course_id}/chapters/{chapter_id}/complete")
