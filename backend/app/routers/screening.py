@@ -19,7 +19,7 @@ from app.config import UPLOAD_DIR
 from app.database import get_db
 from app import models, storage
 from app.auth import (
-    create_screening_token, get_current_candidate, candidate_public,
+    require_module, create_screening_token, get_current_candidate, candidate_public,
     require_admin, verify_password, hash_password, normalize_name,
     check_rate_limit, clear_rate_limit
 )
@@ -393,14 +393,14 @@ def screening_result(
 # --- Admin Screening Endpoints ---
 
 @router.get("/api/admin/screening/tests")
-def admin_list_tests(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+def admin_list_tests(admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)):
     tests = db.query(models.ScreeningTest).order_by(models.ScreeningTest.created_at.desc()).all()
     return [serialize_test(t) for t in tests]
 
 
 @router.post("/api/admin/screening/tests")
 def admin_create_test(req: CreateTestRequest,
-                       admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                       admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)):
     test = models.ScreeningTest(
         title=req.title, timer_minutes=req.timerMinutes,
         correct_score=req.correctScore, wrong_penalty=req.wrongPenalty,
@@ -418,7 +418,7 @@ def admin_create_test(req: CreateTestRequest,
 
 @router.get("/api/admin/screening/tests/{test_id}")
 def admin_get_test(test_id: str,
-                   admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                   admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)):
     test = db.get(models.ScreeningTest, test_id)
     if not test:
         raise HTTPException(404, "Test not found")
@@ -427,7 +427,7 @@ def admin_get_test(test_id: str,
 
 @router.post("/api/admin/screening/tests/{test_id}/duplicate")
 def admin_duplicate_test(test_id: str,
-                       admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                       admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)):
     test = db.get(models.ScreeningTest, test_id)
     if not test:
         raise HTTPException(404, "Test not found")
@@ -478,7 +478,7 @@ def admin_duplicate_test(test_id: str,
 
 @router.patch("/api/admin/screening/tests/{test_id}")
 def admin_update_test(test_id: str, req: CreateTestRequest,
-                       admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                       admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)):
     test = db.get(models.ScreeningTest, test_id)
     if not test:
         raise HTTPException(404, "Test not found")
@@ -492,7 +492,7 @@ def admin_update_test(test_id: str, req: CreateTestRequest,
 
 @router.patch("/api/admin/screening/tests/{test_id}/toggle")
 def admin_toggle_test(test_id: str,
-                       admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                       admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)):
     test = db.get(models.ScreeningTest, test_id)
     if not test:
         raise HTTPException(404, "Test not found")
@@ -503,7 +503,7 @@ def admin_toggle_test(test_id: str,
 
 @router.delete("/api/admin/screening/tests/{test_id}")
 def admin_delete_test(test_id: str,
-                       admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                       admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)):
     test = db.get(models.ScreeningTest, test_id)
     if not test:
         raise HTTPException(404, "Test not found")
@@ -514,7 +514,7 @@ def admin_delete_test(test_id: str,
 
 @router.post("/api/admin/screening/tests/{test_id}/sections")
 def admin_add_section(test_id: str, req: SectionRequest,
-                       admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                       admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)):
     test = db.get(models.ScreeningTest, test_id)
     if not test:
         raise HTTPException(404, "Test not found")
@@ -533,7 +533,7 @@ def admin_add_section(test_id: str, req: SectionRequest,
 
 @router.patch("/api/admin/screening/tests/{test_id}/sections/{section_id}")
 def admin_update_section(test_id: str, section_id: str, req: SectionRequest,
-                          admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                          admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)):
     sec = db.get(models.ScreeningSection, section_id)
     if not sec or sec.test_id != test_id:
         raise HTTPException(404, "Section not found")
@@ -546,7 +546,7 @@ def admin_update_section(test_id: str, section_id: str, req: SectionRequest,
 
 @router.delete("/api/admin/screening/tests/{test_id}/sections/{section_id}")
 def admin_delete_section(test_id: str, section_id: str,
-                          admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                          admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)):
     sec = db.get(models.ScreeningSection, section_id)
     if not sec or sec.test_id != test_id:
         raise HTTPException(404, "Section not found")
@@ -561,7 +561,7 @@ def admin_delete_section(test_id: str, section_id: str,
 @router.put("/api/admin/screening/tests/{test_id}/sections/{section_id}/questions")
 def admin_save_section_questions(
     test_id: str, section_id: str, req: BulkQuestionsRequest,
-    admin: models.User = Depends(require_admin), db: Session = Depends(get_db),
+    admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db),
 ):
     """Replace all questions in a section."""
     sec = db.get(models.ScreeningSection, section_id)
@@ -604,7 +604,7 @@ async def admin_upload_screening_question_image(
 @router.get("/api/admin/screening/candidates")
 def admin_list_candidates(
     test_id: Optional[str] = None,
-    admin: models.User = Depends(require_admin), db: Session = Depends(get_db)
+    admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)
 ):
     q = db.query(models.ScreeningCandidate)
     if test_id:
@@ -632,7 +632,7 @@ def admin_list_candidates(
 @router.post("/api/admin/screening/candidates")
 def admin_create_candidate(
     req: CreateCandidateRequest,
-    admin: models.User = Depends(require_admin), db: Session = Depends(get_db)
+    admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)
 ):
     test = db.get(models.ScreeningTest, req.testId)
     if not test:
@@ -656,7 +656,7 @@ def admin_create_candidate(
 @router.patch("/api/admin/screening/candidates/{cand_id}")
 def admin_update_candidate(
     cand_id: str, req: dict,
-    admin: models.User = Depends(require_admin), db: Session = Depends(get_db)
+    admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)
 ):
     c = db.get(models.ScreeningCandidate, cand_id)
     if not c:
@@ -696,7 +696,7 @@ def admin_update_candidate(
 @router.delete("/api/admin/screening/candidates/{cand_id}")
 def admin_delete_candidate(
     cand_id: str,
-    admin: models.User = Depends(require_admin), db: Session = Depends(get_db)
+    admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)
 ):
     c = db.get(models.ScreeningCandidate, cand_id)
     if not c:
@@ -709,7 +709,7 @@ def admin_delete_candidate(
 @router.post("/api/admin/screening/candidates/{cand_id}/reset")
 def admin_reset_candidate(
     cand_id: str,
-    admin: models.User = Depends(require_admin),
+    admin: models.User = Depends(require_module("assessment")),
     db: Session = Depends(get_db),
 ):
     """Reset a screening candidate to fresh 'pending' state so they can re-attend the test.
@@ -754,7 +754,7 @@ def admin_reset_candidate(
 @router.get("/api/admin/screening/results")
 def admin_screening_results(
     test_id: Optional[str] = None,
-    admin: models.User = Depends(require_admin), db: Session = Depends(get_db)
+    admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)
 ):
     q = db.query(models.ScreeningAttempt)
     if test_id:
@@ -803,7 +803,7 @@ def admin_screening_results(
 @router.get("/api/admin/screening/candidates/{cand_id}/answers")
 def admin_get_candidate_answers(
     cand_id: str,
-    admin: models.User = Depends(require_admin),
+    admin: models.User = Depends(require_module("assessment")),
     db: Session = Depends(get_db)
 ):
     """Retrieve detailed questions and answered options for a candidate's attempt."""
@@ -933,7 +933,7 @@ def admin_get_candidate_answers(
 @router.get("/api/admin/screening/results.xlsx")
 def admin_screening_results_xlsx(
     test_id: Optional[str] = None,
-    admin: models.User = Depends(require_admin), db: Session = Depends(get_db)
+    admin: models.User = Depends(require_module("assessment")), db: Session = Depends(get_db)
 ):
     """Download screening results as a styled Excel workbook."""
     import openpyxl

@@ -22,7 +22,7 @@ from app.config import UPLOAD_DIR
 from app.database import get_db, SessionLocal
 from app import models, storage
 from app.video import compress_video
-from app.auth import require_admin, SECRET_KEY, ALGORITHM
+from app.auth import require_module, require_admin, SECRET_KEY, ALGORITHM
 from app.security_upload import validate_safe_upload
 from app.certificates import build_certificate_pdf
 from app.course_helpers import _course_code, _maybe_auto_complete_course
@@ -245,13 +245,13 @@ def _process_video_background(course_id: str, raw_path: str, filename: str,
 
 
 @router.get("/api/admin/courses")
-def admin_list_courses(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+def admin_list_courses(admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     courses = db.query(models.Course).order_by(models.Course.order).all()
     return [admin_course_summary(c) for c in courses]
 
 
 @router.post("/api/admin/courses")
-def admin_create_course(req: CreateCourseRequest, admin: models.User = Depends(require_admin),
+def admin_create_course(req: CreateCourseRequest, admin: models.User = Depends(require_module("courses")),
                         db: Session = Depends(get_db)):
     title = req.title.strip()
     if not title:
@@ -286,7 +286,7 @@ def admin_create_course(req: CreateCourseRequest, admin: models.User = Depends(r
 
 
 @router.put("/api/admin/courses/{course_id}")
-def admin_update_course(course_id: str, req: UpdateCourseRequest, admin: models.User = Depends(require_admin),
+def admin_update_course(course_id: str, req: UpdateCourseRequest, admin: models.User = Depends(require_module("courses")),
                         db: Session = Depends(get_db)):
     course = db.get(models.Course, course_id)
     if not course:
@@ -331,7 +331,7 @@ def admin_update_course(course_id: str, req: UpdateCourseRequest, admin: models.
 
 
 @router.get("/api/admin/courses/{course_id}")
-def admin_get_course_builder(course_id: str, admin: models.User = Depends(require_admin),
+def admin_get_course_builder(course_id: str, admin: models.User = Depends(require_module("courses")),
                              db: Session = Depends(get_db)):
     course = db.get(models.Course, course_id)
     if not course:
@@ -357,7 +357,7 @@ def admin_get_course_builder(course_id: str, admin: models.User = Depends(requir
 
 @router.put("/api/admin/courses/{course_id}/certificate")
 def admin_save_course_certificate(course_id: str, req: SaveCertificateRequest,
-                                  admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                                  admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     course = db.get(models.Course, course_id)
     if not course:
         raise HTTPException(404, "Course not found")
@@ -497,7 +497,7 @@ async def upload_course_pptx(course_id: str, background_tasks: BackgroundTasks,
 
 
 @router.get("/api/admin/courses/{course_id}/pptx-status")
-def pptx_status(course_id: str, admin: models.User = Depends(require_admin)):
+def pptx_status(course_id: str, admin: models.User = Depends(require_module("courses"))):
     job = _pptx_job_read(course_id)
     if not job:
         return {"stage": "idle", "pct": 0, "done": True, "error": None, "message": ""}
@@ -555,7 +555,7 @@ async def admin_upload_video(course_id: str, background_tasks: BackgroundTasks,
 
 
 @router.get("/api/admin/courses/{course_id}/upload-video-status")
-def video_upload_status(course_id: str, admin: models.User = Depends(require_admin)):
+def video_upload_status(course_id: str, admin: models.User = Depends(require_module("courses"))):
     job = _video_job_read(course_id)
     if not job:
         return {"stage": "idle", "pct": 0, "done": True, "error": None, "message": "", "url": None, "chapter_id": None}
@@ -572,7 +572,7 @@ def video_upload_status(course_id: str, admin: models.User = Depends(require_adm
 
 @router.post("/api/admin/courses/{course_id}/quiz-chapters")
 def admin_create_quiz_chapter(course_id: str, req: CreateQuizChapterRequest,
-                              admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                              admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     course = db.get(models.Course, course_id)
     if not course:
         raise HTTPException(404, "Course not found")
@@ -604,7 +604,7 @@ def admin_create_quiz_chapter(course_id: str, req: CreateQuizChapterRequest,
 
 @router.put("/api/admin/courses/{course_id}/chapters/{chapter_id}/quiz-questions")
 def admin_save_quiz_questions(course_id: str, chapter_id: str, req: SaveQuizQuestionsRequest,
-                              admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                              admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     ch = db.get(models.Chapter, chapter_id)
     if not ch or ch.course_id != course_id:
         raise HTTPException(404, "Chapter not found")
@@ -623,7 +623,7 @@ def admin_save_quiz_questions(course_id: str, chapter_id: str, req: SaveQuizQues
 
 @router.put("/api/admin/courses/{course_id}/reorder")
 def admin_reorder_chapters(course_id: str, req: ReorderRequest,
-                           admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                           admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     course = db.get(models.Course, course_id)
     if not course:
         raise HTTPException(404, "Course not found")
@@ -639,7 +639,7 @@ def admin_reorder_chapters(course_id: str, req: ReorderRequest,
 
 @router.delete("/api/admin/courses/{course_id}/chapters/{chapter_id}")
 def admin_delete_chapter(course_id: str, chapter_id: str,
-                         admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                         admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     ch = db.get(models.Chapter, chapter_id)
     if not ch or ch.course_id != course_id:
         raise HTTPException(404, "Chapter not found")
@@ -667,7 +667,7 @@ def admin_delete_chapter(course_id: str, chapter_id: str,
 
 @router.put("/api/admin/courses/{course_id}/assessment")
 def admin_save_assessment(course_id: str, req: SaveAssessmentRequest,
-                          admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+                          admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     course = db.get(models.Course, course_id)
     if not course:
         raise HTTPException(404, "Course not found")

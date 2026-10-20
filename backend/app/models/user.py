@@ -1,6 +1,6 @@
 """User, authentication, and sync log database models."""
 import uuid
-from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Date, func
+from sqlalchemy import Column, Integer, String, Text, Boolean, DateTime, Date, JSON, func
 from ..database import Base
 
 
@@ -48,6 +48,13 @@ class User(Base):
     # Resolved single "the" mobile number: Permanent Mobile if set, else
     # Local Mobile (the seafarer's present/current mobile) — per instruction.
     mobile_number = Column(String)
+    # Admin-panel access control (admins only). `modules` is a JSON list of
+    # module keys (see auth.ADMIN_MODULES); NULL = all. `department` is the
+    # pre-joining-briefing department; `designation` marks the fixed
+    # Technical Director / Managing Director approvers.
+    modules = Column(JSON)
+    department = Column(String)     # qhse|marine|technical|manning_it_accounts
+    designation = Column(String)    # technical_director|managing_director
 
 
 class RateLimit(Base):

@@ -2,9 +2,9 @@ import '../../components/Navbar.css';
 import './AdminShared.css';
 import { useState, useRef, useEffect } from 'react'
 import { Outlet, NavLink, Link, useNavigate, useLocation } from 'react-router-dom'
-import { Shield, LayoutDashboard, LogOut, BookOpen, ClipboardList, ChevronDown, Users, GraduationCap, Menu, X, Lock } from 'lucide-react'
+import { Shield, LayoutDashboard, LogOut, BookOpen, ClipboardList, ClipboardCheck, ChevronDown, Users, GraduationCap, Menu, X, Lock } from 'lucide-react'
 import { ThemeToggle } from '../../App.jsx'
-import { useAuth } from '../../auth.jsx'
+import { useAuth, hasModule } from '../../auth.jsx'
 import AdminNotificationBell from '../../AdminNotificationBell.jsx'
 import { adminPanelUpdateAdmin } from '../../api.js'
 
@@ -324,6 +324,7 @@ export default function AdminLayout() {
   // Close it automatically whenever the route changes (link tapped, back/forward)
   useEffect(() => { setMobileNavOpen(false) }, [location.pathname])
 
+  const can = (key) => hasModule(user, key)
   const tab = ({ isActive }) => (isActive ? 'admin-tab on' : 'admin-tab')
 
   // Custom isActive check for Course Management to stay highlighted when child routes are active
@@ -353,10 +354,11 @@ export default function AdminLayout() {
           <span className="brand-text">Ozellar<span className="brand-light">Admin</span></span>
         </Link>
         <div className="navlinks">
-          <NavLink to="/admin" end className={tab}><LayoutDashboard size={16} /> Dashboard</NavLink>
-          <NavLink to="/admin/course-management/courses" className={isCourseManagementActive() ? 'admin-tab on' : 'admin-tab'}><BookOpen size={16} /> Course management</NavLink>
-          <NavLink to="/admin/orientation-program/programs" className={isOrientationActive() ? 'admin-tab on' : 'admin-tab'}><GraduationCap size={16} /> Orientation Program</NavLink>
-          <NavLink to="/admin/screening" className={tab}><ClipboardList size={16} /> Assessment</NavLink>
+          {can('courses') && <NavLink to="/admin" end className={tab}><LayoutDashboard size={16} /> Dashboard</NavLink>}
+          {can('courses') && <NavLink to="/admin/course-management/courses" className={isCourseManagementActive() ? 'admin-tab on' : 'admin-tab'}><BookOpen size={16} /> Course management</NavLink>}
+          {can('orientation') && <NavLink to="/admin/orientation-program/programs" className={isOrientationActive() ? 'admin-tab on' : 'admin-tab'}><GraduationCap size={16} /> Orientation Program</NavLink>}
+          {can('assessment') && <NavLink to="/admin/screening" className={tab}><ClipboardList size={16} /> Assessment</NavLink>}
+          {can('briefing') && <NavLink to="/admin/briefings" className={tab}><ClipboardCheck size={16} /> Briefing</NavLink>}
         </div>
         <div className="nav-right">
           <AdminNotificationBell />
@@ -375,18 +377,21 @@ export default function AdminLayout() {
 
             {mobileNavOpen && (
               <div className="mobile-nav-panel">
-                <NavLink to="/admin" end className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                {can('courses') && <NavLink to="/admin" end className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
                   <LayoutDashboard size={16} /> Dashboard
-                </NavLink>
-                <NavLink to="/admin/course-management/courses" className={isCourseManagementActive() ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                </NavLink>}
+                {can('courses') && <NavLink to="/admin/course-management/courses" className={isCourseManagementActive() ? 'mobile-nav-link on' : 'mobile-nav-link'}>
                   <BookOpen size={16} /> Course management
-                </NavLink>
-                <NavLink to="/admin/orientation-program/programs" className={isOrientationActive() ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                </NavLink>}
+                {can('orientation') && <NavLink to="/admin/orientation-program/programs" className={isOrientationActive() ? 'mobile-nav-link on' : 'mobile-nav-link'}>
                   <GraduationCap size={16} /> Orientation Program
-                </NavLink>
-                <NavLink to="/admin/screening" className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                </NavLink>}
+                {can('assessment') && <NavLink to="/admin/screening" className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
                   <ClipboardList size={16} /> Assessment
-                </NavLink>
+                </NavLink>}
+                {can('briefing') && <NavLink to="/admin/briefings" className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                  <ClipboardCheck size={16} /> Briefing
+                </NavLink>}
               </div>
             )}
           </div>

@@ -521,3 +521,38 @@ export async function adminDownloadOrientationResultsXlsx(programId) {
   a.remove()
   URL.revokeObjectURL(objUrl)
 }
+
+
+// pre-joining briefing (form OF-MA-010)
+export const adminBriefingCandidates = (q = '', allRanks = false, vessel = '') =>
+  req(`/admin/briefings/candidates?q=${encodeURIComponent(q)}&all_ranks=${allRanks}${vessel ? `&vessel=${encodeURIComponent(vessel)}` : ''}`)
+export const adminBriefingBriefers = () => req('/admin/briefings/briefers')
+export const adminCreateBriefing = (body) => req('/admin/briefings', { method: 'POST', body: JSON.stringify(body) })
+export const adminListBriefings = (status = '') => req(`/admin/briefings${status ? `?status=${status}` : ''}`)
+export const adminDeleteBriefing = (id) => req(`/admin/briefings/${id}`, { method: 'DELETE' })
+export const adminReassignBriefer = (id, dept, brieferId) =>
+  req(`/admin/briefings/${id}/sections/${dept}/briefer`, { method: 'PUT', body: JSON.stringify({ brieferId }) })
+export const getBriefing = (id) => req(`/briefings/${id}`)
+export const getMyBriefingTasks = () => req('/briefings/my-tasks')
+export const saveBriefingSection = (id, dept, answers) =>
+  req(`/briefings/${id}/sections/${dept}`, { method: 'PUT', body: JSON.stringify({ answers }) })
+export const approveBriefingSection = (id, dept, answers) =>
+  req(`/briefings/${id}/sections/${dept}/approve`, { method: 'POST', body: JSON.stringify({ answers }) })
+export const directorApproveBriefing = (id) => req(`/briefings/${id}/director-approve`, { method: 'POST' })
+export const getMyBriefing = () => req('/my/briefing')
+export const acknowledgeBriefing = (id, comments) =>
+  req(`/briefings/${id}/acknowledge`, { method: 'POST', body: JSON.stringify({ comments }) })
+
+// the briefing PDF needs the auth header, so fetch it as a blob
+export async function downloadBriefingPdf(id, name) {
+  const res = await fetch(`${API}/briefings/${id}/pdf`, { headers: { Authorization: `Bearer ${getToken()}` } })
+  if (!res.ok) throw new Error('Could not download the briefing')
+  const url = URL.createObjectURL(await res.blob())
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `Pre-joining_briefing_${(name || id).replace(/[^A-Za-z0-9]+/g, '_')}.pdf`
+  document.body.appendChild(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}

@@ -21,6 +21,7 @@ from .screening import (
     ScreeningAttempt,
 )
 from .notification import Notification
+from .briefing import Briefing, BriefingSection
 
 __all__ = [
     # User / Auth / Sync
@@ -53,4 +54,7 @@ __all__ = [
     "ScreeningAttempt",
     # Notifications
     "Notification",
+    # Pre-joining briefing
+    "Briefing",
+    "BriefingSection",
 ]

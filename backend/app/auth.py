@@ -91,6 +91,30 @@ def require_admin(user: "models.User" = Depends(get_current_user)) -> "models.Us
     return user
 
 
+# Admin-panel modules an admin can be granted access to. super_admin has all.
+# `User.modules` NULL (legacy rows) is treated as "all" so nobody is locked out.
+ADMIN_MODULES = ["courses", "orientation", "assessment", "briefing", "user_management"]
+
+
+def user_modules(user: "models.User") -> list:
+    if user.role == "super_admin":
+        return list(ADMIN_MODULES)
+    if user.role != "admin":
+        return []
+    if user.modules is None:
+        return list(ADMIN_MODULES)
+    return [m for m in user.modules if m in ADMIN_MODULES]
+
+
+def require_module(key: str):
+    """Dependency factory: admin (or super_admin) who has been granted `key`."""
+    def dep(user: "models.User" = Depends(require_admin)) -> "models.User":
+        if key not in user_modules(user):
+            raise HTTPException(403, "You do not have access to this module")
+        return user
+    return dep
+
+
 def require_super_admin(user: "models.User" = Depends(get_current_user)) -> "models.User":
     if user.role != "super_admin":
         raise HTTPException(403, "Super admin access required")
@@ -122,6 +146,9 @@ def user_public(u: "models.User") -> dict:
         "signOnDate": u.sign_on_date.isoformat() if u.sign_on_date else None,
         "reliefDate": u.relief_date.isoformat() if u.relief_date else None,
         "hasPhoto": os.path.exists(photo_path),
+        "modules": user_modules(u),
+        "department": u.department,
+        "designation": u.designation,
         "isVesselApprover": approver_info is not None,
         "approverVessel": approver_info["vessel"] if approver_info else None,
         "approverDepartment": approver_info["department"] if approver_info else None,

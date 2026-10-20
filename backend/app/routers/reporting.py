@@ -13,7 +13,7 @@ from sqlalchemy import func
 
 from app.database import get_db
 from app import models
-from app.auth import require_admin, get_current_user
+from app.auth import require_module, require_admin, get_current_user
 from app.course_helpers import (
     _maybe_auto_complete_course, enrolled_course_ids, get_progress
 )
@@ -96,13 +96,13 @@ def _report(db):
 
 
 @router.get("/api/admin/report")
-def admin_report(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+def admin_report(admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     courses, rows = _report(db)
     return {"courses": [{"id": c.id, "title": c.title} for c in courses], "rows": rows}
 
 
 @router.post("/api/admin/maintenance/reconcile-progress")
-def admin_reconcile_progress(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+def admin_reconcile_progress(admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     """One-off heal for learners stuck from past chapter deletions."""
     healed = []
     for course in db.query(models.Course).all():
@@ -259,7 +259,7 @@ def admin_dashboard_stats(admin: models.User = Depends(require_admin), db: Sessi
 
 
 @router.get("/api/admin/report.csv")
-def admin_report_csv(admin: models.User = Depends(require_admin), db: Session = Depends(get_db)):
+def admin_report_csv(admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     courses, rows = _report(db)
     buf = io.StringIO()
     w = csv.writer(buf)
@@ -284,7 +284,7 @@ def admin_report_csv(admin: models.User = Depends(require_admin), db: Session = 
 
 @router.get("/api/admin/report.xlsx")
 def admin_report_xlsx(
-    admin: models.User = Depends(require_admin),
+    admin: models.User = Depends(require_module("courses")),
     db: Session = Depends(get_db),
     crew_search: str = None,
     course_id:   str = None,

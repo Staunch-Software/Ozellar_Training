@@ -55,15 +55,9 @@ From `backend/` (commands use the checked-in venv):
 # 2. create all tables — schema is owned by Alembic, NOT auto-created
 .\.venv\Scripts\python.exe -m alembic upgrade head
 
-# 3. seed course content + demo users + enrollments (non-destructive; safe to re-run)
-.\.venv\Scripts\python.exe -m app.seed
-
-# 4. run the API  (docs at http://localhost:8000/docs)
+# 3. run the API  (docs at http://localhost:8000/docs)
 .\.venv\Scripts\python.exe -m uvicorn app.main:app --port 8000
 ```
-
-**Order matters:** run `alembic upgrade head` *before* `app.seed` — seeding
-into an empty schema fails because the tables don't exist yet.
 
 ### Frontend (React + Vite)
 
@@ -110,10 +104,9 @@ psql -U postgres -d ozellar_learn -c "\dt"
 Expected tables: `users, courses, chapters, questions, progress, certificates,
 enrollments, attempts, alembic_version`.
 
-**Content is DB-seeded.** `backend/app/courses_seed.json` is the single source of
-truth for all course content and assessment questions. `app.seed` upserts that
-content and ensures the demo users/enrollments exist — it does **not** drop
-tables or touch real learner progress.
+**No seed script.** Course content lives in the database (author it in the admin
+Course Builder). `backend/app/courses_seed.json` is kept only as a data reference
+for the original three courses; nothing loads it automatically.
 
 ---
 
@@ -134,8 +127,7 @@ Course/
     │   ├── auth.py           JWT, bcrypt, login helpers, rate limiter
     │   ├── models.py         Course, Chapter, Question, Progress, Certificate, Enrollment, Attempt
     │   ├── database.py       engine/session; reads DATABASE_URL
-    │   ├── seed.py           non-destructive seed from courses_seed.json
-    │   └── courses_seed.json single source of truth for content
+    │   └── courses_seed.json reference copy of the original three courses (not loaded)
     └── alembic/              database migrations
 ```
 
