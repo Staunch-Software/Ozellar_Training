@@ -247,7 +247,12 @@ export const adminReorderChapters = (courseId, order) =>
   req(`/admin/courses/${courseId}/reorder`, { method: 'PUT', body: JSON.stringify({ order }) })
 export const adminDeleteChapter = (courseId, chapterId) =>
   req(`/admin/courses/${courseId}/chapters/${chapterId}`, { method: 'DELETE' })
-export const adminSaveAssessment = (courseId, body) =>
+export const adminDuplicateCourse = (courseId) =>
+  req(`/admin/courses/${courseId}/duplicate`, { method: 'POST' })
+export const adminCopyChapter = (courseId, chapterId, targetCourseId, move = false) =>
+  req(`/admin/courses/${courseId}/chapters/${chapterId}/copy`,
+    { method: 'POST', body: JSON.stringify({ targetCourseId, move }) })
+export const adminSaveAssessment =(courseId, body) =>
   req(`/admin/courses/${courseId}/assessment`, { method: 'PUT', body: JSON.stringify(body) })
 
 // File uploads need FormData, so they can't go through req()'s JSON-only body.

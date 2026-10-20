@@ -1,8 +1,8 @@
 import './AdminCourses.css';
 import { useEffect, useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { BookOpen, Plus, AlertCircle, X, ChevronRight, Search, GraduationCap } from 'lucide-react'
-import { adminListCourses, adminCreateCourse, adminListUsers } from '../../api.js'
+import { BookOpen, Plus, AlertCircle, X, ChevronRight, Search, GraduationCap, Copy, Check } from 'lucide-react'
+import { adminListCourses, adminCreateCourse, adminListUsers, adminDuplicateCourse } from '../../api.js'
 
 const EMPTY = { title: '', subtitle: '', durationLabel: '', passMark: 80, maxAttempts: '' }
 
@@ -24,6 +24,27 @@ export default function AdminCourses() {
     adminListUsers().then(setUsers)
   }
   useEffect(() => { load() }, [])
+
+  const [copyDialog, setCopyDialog] = useState(null)   // { course, error }
+  const [copyingId, setCopyingId] = useState(null)
+  const [toast, setToast] = useState('')
+
+  const duplicate = async () => {
+    const c = copyDialog.course
+    setCopyDialog({ course: c, error: '' })
+    setCopyingId(c.id)
+    try {
+      const created = await adminDuplicateCourse(c.id)
+      setCopyDialog(null)
+      setToast(`Created "${created.title}"`)
+      setTimeout(() => setToast(''), 5000)
+      load()
+    } catch (err) {
+      setCopyDialog({ course: c, error: err.message || 'Could not copy course' })
+    } finally {
+      setCopyingId(null)
+    }
+  }
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -99,6 +120,42 @@ export default function AdminCourses() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+      {copyDialog && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: 16 }}
+          onClick={() => !copyingId && setCopyDialog(null)}>
+          <div style={{ width: 'min(440px, 100%)', background: 'var(--surface, #fff)', borderRadius: 16, boxShadow: '0 24px 60px rgba(15,23,42,0.3)', overflow: 'hidden' }}
+            onClick={(e) => e.stopPropagation()}>
+            <div style={{ padding: '24px 24px 8px', display: 'flex', gap: 14 }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(79,70,229,0.1)', color: '#4f46e5', display: 'grid', placeItems: 'center', flex: 'none' }}>
+                <Copy size={20} />
+              </div>
+              <div style={{ minWidth: 0 }}>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>Copy this course?</div>
+                <div style={{ fontWeight: 600, fontSize: 14, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{copyDialog.course.title}</div>
+                <div className="mut" style={{ fontSize: 13, marginTop: 8, lineHeight: 1.5 }}>
+                  A new course will be created with all modules, quizzes, media and the final assessment.
+                  Assignments and learner progress are not copied.
+                </div>
+              </div>
+            </div>
+            {copyDialog.error && (
+              <div className="form-error" style={{ margin: '12px 24px 0' }}><AlertCircle size={15} /> {copyDialog.error}</div>
+            )}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '20px 24px' }}>
+              <button className="btn" disabled={!!copyingId} onClick={() => setCopyDialog(null)}>Cancel</button>
+              <button className="btn primary" disabled={!!copyingId} onClick={duplicate}>
+                {copyingId ? 'Copying…' : copyDialog.error ? 'Try again' : 'Copy course'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1100, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 12, background: '#0f172a', color: '#fff', fontSize: 14, fontWeight: 500, boxShadow: '0 12px 32px rgba(15,23,42,0.35)' }}>
+          <Check size={16} color="#4ade80" /> {toast}
+          <button onClick={() => setToast('')} aria-label="Dismiss" style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', display: 'flex', padding: 0, marginLeft: 6 }}><X size={14} /></button>
+        </div>
+      )}
       <div style={{
         background: 'var(--surface)',
         borderBottom: '1px solid var(--border)',
@@ -285,8 +342,13 @@ export default function AdminCourses() {
                     </div>
                   )}
                 </td>
-                <td style={{ textAlign: 'right', color: 'var(--text-faint)' }}>
-                  <ChevronRight size={18} />
+                <td style={{ textAlign: 'right', color: 'var(--text-faint)', whiteSpace: 'nowrap' }}>
+                  <button className="btn sm" title="Copy this course as a new course" aria-label="Copy course"
+                    disabled={copyingId === c.id} style={{ marginRight: 10 }}
+                    onClick={(e) => { e.stopPropagation(); setCopyDialog({ course: c, error: '' }) }}>
+                    <Copy size={15} />
+                  </button>
+                  <ChevronRight size={18} style={{ verticalAlign: 'middle' }} />
                 </td>
               </tr>
             ))}

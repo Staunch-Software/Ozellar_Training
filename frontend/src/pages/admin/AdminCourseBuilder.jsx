@@ -2,12 +2,13 @@ import { useEffect, useRef, useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ArrowLeft, ArrowUp, ArrowDown, Trash2, Upload, Video, Image as ImageIcon,
-  HelpCircle, Plus, X, AlertCircle, ChevronDown, ChevronUp, Save, Check, Edit2, GripVertical, Settings, Search, Play, Award
+  HelpCircle, Plus, X, AlertCircle, FolderInput, BookOpen, Scissors, Copy, ChevronDown, ChevronUp, Save, Check, Edit2, GripVertical, Settings, Search, Play, Award
 } from 'lucide-react'
 import {
   adminGetCourseBuilder, adminUploadPptx, adminUploadVideo, adminVideoUploadStatus,
   adminCreateQuizChapter, adminSaveQuizQuestions, adminReorderChapters, adminDeleteChapter,
-  adminSaveAssessment, adminUpdateCourse, adminListUsers, adminPptxStatus
+  adminSaveAssessment, adminUpdateCourse, adminListUsers, adminPptxStatus,
+  adminListCourses, adminCopyChapter
 } from '../../api.js'
 
 const EMPTY_Q = () => ({ q: '', options: ['', '', '', ''], answer: 0, explain: '' })
@@ -46,6 +47,27 @@ export default function AdminCourseBuilder() {
   const [videoProcessing, setVideoProcessing] = useState(false)
   const [showSettingsModal, setShowSettingsModal] = useState(false)
   const [usersList, setUsersList] = useState([])
+  // Copy / move a module to another course
+  const [copyChapter, setCopyChapter] = useState(null)   // chapter being copied
+  const [allCourses, setAllCourses] = useState([])
+  const [copyTarget, setCopyTarget] = useState('')
+  const [copyMove, setCopyMove] = useState(false)
+
+  const openCopy = async (chapter) => {
+    setCopyChapter(chapter)
+    setCopyTarget(id)
+    setCopyMove(false)
+    try { setAllCourses(await adminListCourses()) } catch (err) { setError(err.message || 'Could not load courses') }
+  }
+
+  const submitCopy = () => withBusy(async () => {
+    const targetTitle = allCourses.find((c) => c.id === copyTarget)?.title || 'the selected course'
+    await adminCopyChapter(id, copyChapter.id, copyTarget, copyMove)
+    setCopyChapter(null)
+    await load()
+    setSuccessMsg(`Module ${copyMove ? 'moved' : 'copied'} to "${targetTitle}".`)
+    setTimeout(() => setSuccessMsg(''), 8000)
+  })
 
   const openSettings = async () => {
     setShowSettingsModal(true)
@@ -317,6 +339,82 @@ export default function AdminCourseBuilder() {
       {error && <div className="form-error" style={{ marginBottom: 14 }}><AlertCircle size={15} /> {error}</div>}
       {successMsg && <div style={{ color: 'var(--success)', marginBottom: 14, display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px', background: 'rgba(34, 197, 94, 0.1)', borderRadius: 6, fontSize: 14, fontWeight: 500 }}><Check size={16} /> {successMsg}</div>}
 
+      {copyChapter && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.55)', display: 'grid', placeItems: 'center', zIndex: 1000, padding: 16 }}
+          onClick={() => !busy && setCopyChapter(null)}>
+          <div style={{ width: 'min(520px, 100%)', background: 'var(--surface, #fff)', borderRadius: 16, boxShadow: '0 24px 60px rgba(15,23,42,0.3)', overflow: 'hidden' }}
+            onClick={(e) => e.stopPropagation()}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '20px 22px', borderBottom: '1px solid var(--border)' }}>
+              <div style={{ width: 42, height: 42, borderRadius: 12, background: 'rgba(79,70,229,0.1)', color: '#4f46e5', display: 'grid', placeItems: 'center', flex: 'none' }}>
+                <FolderInput size={20} />
+              </div>
+              <div style={{ minWidth: 0, flex: 1 }}>
+                <div style={{ fontWeight: 700, fontSize: 16 }}>Copy or move module</div>
+                <div className="mut" style={{ fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {copyChapter.n}. {copyChapter.title}
+                </div>
+              </div>
+              <button className="btn sm" disabled={busy} onClick={() => setCopyChapter(null)} aria-label="Close"><X size={14} /></button>
+            </div>
+
+            <div style={{ padding: 22 }}>
+              <div className="eyebrow" style={{ marginBottom: 8 }}>Action</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 20 }}>
+                {[
+                  { move: false, icon: Copy, label: 'Copy', sub: 'Keep it here too' },
+                  { move: true, icon: Scissors, label: 'Move', sub: 'Remove from this course' },
+                ].map(({ move: m, icon: Icon, label, sub }) => {
+                  const disabled = m && copyTarget === id
+                  const active = copyMove === m
+                  return (
+                    <button key={label} type="button" disabled={disabled} onClick={() => setCopyMove(m)}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', padding: '12px 14px', borderRadius: 12,
+                        border: `2px solid ${active ? '#4f46e5' : 'var(--border)'}`, background: active ? 'rgba(79,70,229,0.07)' : 'transparent',
+                        opacity: disabled ? 0.45 : 1, cursor: disabled ? 'not-allowed' : 'pointer', color: 'inherit',
+                      }}>
+                      <Icon size={18} color={active ? '#4f46e5' : undefined} />
+                      <span><b style={{ display: 'block', fontSize: 14 }}>{label}</b><span className="mut" style={{ fontSize: 12 }}>{sub}</span></span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <div className="eyebrow" style={{ marginBottom: 8 }}>Destination course</div>
+              <div style={{ maxHeight: 220, overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 12 }}>
+                {allCourses.map((c) => {
+                  const active = copyTarget === c.id
+                  return (
+                    <button key={c.id} type="button"
+                      onClick={() => { setCopyTarget(c.id); if (c.id === id) setCopyMove(false) }}
+                      style={{
+                        width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px', border: 'none',
+                        borderBottom: '1px solid var(--border)', background: active ? 'rgba(79,70,229,0.07)' : 'transparent',
+                        cursor: 'pointer', textAlign: 'left', color: 'inherit',
+                      }}>
+                      <BookOpen size={16} color={active ? '#4f46e5' : undefined} />
+                      <span style={{ flex: 1, fontSize: 14, fontWeight: active ? 600 : 400 }}>{c.title}</span>
+                      {c.id === id && <span className="pill" style={{ background: 'var(--surface-2)' }}>This course</span>}
+                      {active && <Check size={16} color="#4f46e5" />}
+                    </button>
+                  )
+                })}
+              </div>
+              <div className="mut" style={{ fontSize: 12.5, marginTop: 8 }}>The module is added at the end of the chosen course.</div>
+
+              {error && <div className="form-error" style={{ marginTop: 14 }}><AlertCircle size={15} /> {error}</div>}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10, padding: '14px 22px', borderTop: '1px solid var(--border)', background: 'var(--surface-2)' }}>
+              <button className="btn" disabled={busy} onClick={() => setCopyChapter(null)}>Cancel</button>
+              <button className="btn primary" disabled={busy || !copyTarget || (copyMove && copyTarget === id)} onClick={submitCopy}>
+                {busy ? 'Working…' : copyMove ? 'Move module' : 'Copy module'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="admin-card" style={{ padding: 0, marginBottom: chapters.length > 0 ? 20 : 0, border: chapters.length === 0 ? 'none' : undefined, background: chapters.length === 0 ? 'transparent' : undefined }}>
         {chapters.map((ch, i) => {
           let dragStyle = { transition: 'all 0.2s' }
@@ -338,7 +436,7 @@ export default function AdminCourseBuilder() {
               onDragStartCapture={(e) => e.target.style.cursor = 'grabbing'}
             >
               <ModuleRow chapter={ch} index={i} total={chapters.length}
-                busy={busy} onMove={move} onDelete={remove} onInsertQuiz={insertQuiz}
+                busy={busy} onMove={move} onDelete={remove} onInsertQuiz={insertQuiz} onCopy={() => openCopy(ch)}
                 quizOpen={openQuiz === ch.id} onToggleQuiz={() => setOpenQuiz(openQuiz === ch.id ? null : ch.id)}
                 confirmingDelete={confirmDeleteId === ch.id}
                 onRequestDelete={() => setConfirmDeleteId(confirmDeleteId === ch.id ? null : ch.id)}
@@ -564,7 +662,7 @@ function VideoProgress({ upload, proc }) {
   )
 }
 
-function ModuleRow({ chapter: ch, index, total, busy, onMove, onDelete, onInsertQuiz, quizOpen, onToggleQuiz,
+function ModuleRow({ chapter: ch, index, total, busy, onMove, onDelete, onInsertQuiz, onCopy, quizOpen, onToggleQuiz,
                      confirmingDelete, onRequestDelete, onSaveQuiz, setDraggable, onPreviewImage }) {
   const isQuiz = ch.kind === 'quiz'
   const hasImage = !!ch.image
@@ -609,6 +707,8 @@ function ModuleRow({ chapter: ch, index, total, busy, onMove, onDelete, onInsert
   )}
   <button className="btn sm" disabled={busy} title="Insert quiz after this module"
     onClick={() => onInsertQuiz(ch.id)}><HelpCircle size={14} /></button>
+  <button className="btn sm" disabled={busy} title="Copy or move to another course"
+    onClick={onCopy}><FolderInput size={14} /></button>
   <button className="btn sm" disabled={busy || index === 0} title="Move up"
     onClick={() => onMove(index, -1)}><ArrowUp size={14} /></button>
   <button className="btn sm" disabled={busy || index === total - 1} title="Move down"
