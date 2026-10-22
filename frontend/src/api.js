@@ -143,6 +143,18 @@ export async function adminFetchCertificatePdfUrl(userId, courseId) {
   }
   return URL.createObjectURL(await res.blob())
 }
+// Vessel approver (Master / Chief Engineer): crew on their vessel + progress
+export const getVesselCrew = () => req('/approver/vessel-crew')
+export async function fetchVesselCrewCertificatePdfUrl(crewId, courseId) {
+  const res = await fetch(`${API}/approver/vessel-crew/${crewId}/courses/${courseId}/certificate.pdf`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail || 'Could not load the certificate')
+  }
+  return URL.createObjectURL(await res.blob())
+}
 export const adminReport = () => req('/admin/report')
 export const adminDashboardStats = () => req('/admin/dashboard-stats')
 export const adminApproveCertificate = (userId, courseId, remark = '') =>
