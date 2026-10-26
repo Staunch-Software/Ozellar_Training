@@ -33,6 +33,7 @@ import AdminOrientationEnrollments from './pages/admin/AdminOrientationEnrollmen
 import AdminOrientationResults from './pages/admin/AdminOrientationResults.jsx'
 import Orientation from './pages/Orientation.jsx'
 import ApproverDashboard from './pages/ApproverDashboard.jsx'
+import VesselCrew from './pages/VesselCrew.jsx'
 import AdminScreening from './pages/admin/AdminScreening.jsx'
 import AdminScreeningPreview from './pages/admin/AdminScreeningPreview.jsx'
 import AdminScreeningResultReview from './pages/admin/AdminScreeningResultReview.jsx'
@@ -107,6 +108,9 @@ export function TopNav({ searchQuery, onSearch }) {
         {user?.isVesselApprover && (
           <NavLink to="/approvals" className={({ isActive }) => (isActive ? 'on' : '')}>Approvals</NavLink>
         )}
+        {user?.isVesselApprover && (
+          <NavLink to="/vessel-crew" className={({ isActive }) => (isActive ? 'on' : '')}>Vessel Crew</NavLink>
+        )}
         {hasBriefing && <NavLink to="/pre-joining-briefing" className={({ isActive }) => (isActive ? 'on' : '')}>Briefing</NavLink>}
         <NavLink to="/certificates" className={({ isActive }) => (isActive ? 'on' : '')}>Certificates</NavLink>
         <NavLink to="/help" className={({ isActive }) => (isActive ? 'on' : '')}>Help</NavLink>
@@ -164,6 +168,11 @@ export function TopNav({ searchQuery, onSearch }) {
               {user?.isVesselApprover && (
                 <NavLink to="/approvals" className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
                   Approvals
+                </NavLink>
+              )}
+              {user?.isVesselApprover && (
+                <NavLink to="/vessel-crew" className={({ isActive }) => isActive ? 'mobile-nav-link on' : 'mobile-nav-link'}>
+                  Vessel Crew
                 </NavLink>
               )}
               {hasBriefing && (
@@ -229,6 +238,8 @@ export default function App() {
 
         {/* Orientation Program approver (vessel Master / Chief Engineer) */}
         <Route path="/approvals" element={<ApproverRoute><ApproverDashboard /></ApproverRoute>} />
+
+        <Route path="/vessel-crew" element={<ApproverRoute><VesselCrew /></ApproverRoute>} />
 
         {/* Office Staff browse-only routes */}
         <Route path="/office-courses" element={<OfficeStaffRoute><OfficeStaffCourseList /></OfficeStaffRoute>} />

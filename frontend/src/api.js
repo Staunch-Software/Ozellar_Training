@@ -143,6 +143,18 @@ export async function adminFetchCertificatePdfUrl(userId, courseId) {
   }
   return URL.createObjectURL(await res.blob())
 }
+// Vessel approver (Master / Chief Engineer): crew on their vessel + progress
+export const getVesselCrew = () => req('/approver/vessel-crew')
+export async function fetchVesselCrewCertificatePdfUrl(crewId, courseId) {
+  const res = await fetch(`${API}/approver/vessel-crew/${crewId}/courses/${courseId}/certificate.pdf`, {
+    headers: { Authorization: `Bearer ${getToken()}` },
+  })
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}))
+    throw new Error(body.detail || 'Could not load the certificate')
+  }
+  return URL.createObjectURL(await res.blob())
+}
 export const adminReport = () => req('/admin/report')
 export const adminDashboardStats = () => req('/admin/dashboard-stats')
 export const adminApproveCertificate = (userId, courseId, remark = '') =>
@@ -247,7 +259,12 @@ export const adminReorderChapters = (courseId, order) =>
   req(`/admin/courses/${courseId}/reorder`, { method: 'PUT', body: JSON.stringify({ order }) })
 export const adminDeleteChapter = (courseId, chapterId) =>
   req(`/admin/courses/${courseId}/chapters/${chapterId}`, { method: 'DELETE' })
-export const adminSaveAssessment = (courseId, body) =>
+export const adminDuplicateCourse = (courseId) =>
+  req(`/admin/courses/${courseId}/duplicate`, { method: 'POST' })
+export const adminCopyChapter = (courseId, chapterId, targetCourseId, move = false) =>
+  req(`/admin/courses/${courseId}/chapters/${chapterId}/copy`,
+    { method: 'POST', body: JSON.stringify({ targetCourseId, move }) })
+export const adminSaveAssessment =(courseId, body) =>
   req(`/admin/courses/${courseId}/assessment`, { method: 'PUT', body: JSON.stringify(body) })
 
 // File uploads need FormData, so they can't go through req()'s JSON-only body.

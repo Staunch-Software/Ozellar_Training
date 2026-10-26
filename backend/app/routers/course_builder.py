@@ -637,13 +637,141 @@ def admin_reorder_chapters(course_id: str, req: ReorderRequest,
     return {"ok": True}
 
 
-@router.delete("/api/admin/courses/{course_id}/chapters/{chapter_id}")
-def admin_delete_chapter(course_id: str, chapter_id: str,
-                         admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
+def _upload_prefix(course_id: str) -> str:
+    return f"/api/uploads/{course_id}/"
+
+
+def _copy_media(src_course_id: str, dst_course_id: str, path: str | None) -> str | None:
+    """Duplicate one uploaded file into the destination course and return its new URL.
+    Paths outside this course's upload namespace (legacy /slides, /media) are shared as-is."""
+    if not path or not path.startswith(_upload_prefix(src_course_id)):
+        return path
+    filename = os.path.basename(path)
+    if src_course_id == dst_course_id:
+        # Same namespace: a copy needs its own file so deleting one module can't break the other.
+        stem, ext = os.path.splitext(filename)
+        new_name = f"{stem}-{uuid.uuid4().hex[:6]}{ext}"
+        storage.copy(src_course_id, filename, dst_course_id, new_name)
+        return f"{_upload_prefix(dst_course_id)}{new_name}"
+    storage.copy(src_course_id, filename, dst_course_id)
+    return f"{_upload_prefix(dst_course_id)}{filename}"
+
+
+def _clone_chapter(db, src: models.Chapter, dst_course_id: str, order: int, n: int) -> models.Chapter:
+    new = models.Chapter(
+        id=f"{dst_course_id}-{'quiz' if src.kind == 'quiz' else 'ch'}-{n}-{uuid.uuid4().hex[:8]}",
+        course_id=dst_course_id, n=n, order=order, kind=src.kind,
+        chapter_label=src.chapter_label, title=src.title, intro=src.intro,
+        sections=json.loads(json.dumps(src.sections)) if src.sections is not None else None,
+        figure=src.figure,
+        image=_copy_media(src.course_id, dst_course_id, src.image),
+        videos=[_copy_media(src.course_id, dst_course_id, v) for v in (src.videos or [])],
+    )
+    db.add(new)
+    for qq in src.quiz_questions:
+        db.add(models.ChapterQuestion(
+            chapter=new, prompt=qq.prompt, options=list(qq.options or []),
+            answer=qq.answer, explain=qq.explain, order=qq.order,
+        ))
+    return new
+
+
+_COPY_SUFFIX = re.compile(r"\s*\((\d+)\)\s*$")
+
+
+def _next_copy_title(db, title: str) -> str:
+    base = _COPY_SUFFIX.sub("", title).strip()
+    highest = 1
+    for (t,) in db.query(models.Course.title).all():
+        if t == base:
+            continue
+        m = _COPY_SUFFIX.search(t or "")
+        if m and _COPY_SUFFIX.sub("", t).strip() == base:
+            highest = max(highest, int(m.group(1)))
+    return f"{base} ({highest + 1})"
+
+
+@router.post("/api/admin/courses/{course_id}/duplicate")
+def admin_duplicate_course(course_id: str, admin: models.User = Depends(require_module("courses")),
+                           db: Session = Depends(get_db)):
+    """Copy a whole course (modules, quizzes, media, final assessment, certificate
+    settings) into a new course titled 'Name (2)', 'Name (3)', …. Enrollments and
+    learner progress are not copied."""
+    src = db.get(models.Course, course_id)
+    if not src:
+        raise HTTPException(404, "Course not found")
+    title = _next_copy_title(db, src.title)
+    orders = [c.order or 0 for c in db.query(models.Course).all()]
+    new = models.Course(
+        slug=_unique_course_slug(db, _slugify(title)), title=title, subtitle=src.subtitle,
+        icon=src.icon, gradient=src.gradient, duration_label=src.duration_label,
+        status="not-started", status_note=src.status_note, pass_mark=src.pass_mark,
+        max_attempts=src.max_attempts,
+        cert=json.loads(json.dumps(src.cert)) if src.cert is not None else None,
+        target_ranks=list(src.target_ranks or []), target_users=list(src.target_users or []),
+        order=(max(orders) + 1) if orders else 0,
+    )
+    db.add(new)
+    db.flush()
+    for ch in sorted(src.chapters, key=lambda c: c.order):
+        _clone_chapter(db, ch, new.id, ch.order, ch.n)
+    for q in sorted(src.questions, key=lambda q: q.order):
+        db.add(models.Question(course_id=new.id, prompt=q.prompt, options=list(q.options or []),
+                               answer=q.answer, explain=q.explain, order=q.order))
+    db.commit()
+    db.refresh(new)
+    return admin_course_summary(new)
+
+
+class CopyChapterRequest(BaseModel):
+    targetCourseId: str
+    move: bool = False
+
+
+@router.post("/api/admin/courses/{course_id}/chapters/{chapter_id}/copy")
+def admin_copy_chapter(course_id: str, chapter_id: str, req: CopyChapterRequest,
+                       admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
+    """Copy a module (or move it, with move=true) to the end of another course
+    (or the same course when targetCourseId == course_id and move is false)."""
     ch = db.get(models.Chapter, chapter_id)
     if not ch or ch.course_id != course_id:
         raise HTTPException(404, "Chapter not found")
-    prefix = f"/api/uploads/{course_id}/"
+    target = db.get(models.Course, req.targetCourseId)
+    if not target:
+        raise HTTPException(404, "Target course not found")
+    if req.move and target.id == course_id:
+        raise HTTPException(400, "Choose a different course to move this module to")
+
+    new = _clone_chapter(db, ch, target.id, _next_chapter_order(target), _next_chapter_n(target))
+    db.flush()
+    db.refresh(target)
+    _revoke_course_completion(db, target.id)
+
+    files_to_remove = _delete_chapter(db, course_id, chapter_id) if req.move else []
+    db.commit()
+    for p in files_to_remove:
+        storage.delete(course_id, os.path.basename(p))
+    db.refresh(new)
+    return admin_chapter_detail(new)
+
+
+@router.delete("/api/admin/courses/{course_id}/chapters/{chapter_id}")
+def admin_delete_chapter(course_id: str, chapter_id: str,
+                         admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
+    files_to_remove = _delete_chapter(db, course_id, chapter_id)
+    db.commit()
+    for p in files_to_remove:
+        storage.delete(course_id, os.path.basename(p))
+    return {"ok": True}
+
+
+def _delete_chapter(db, course_id: str, chapter_id: str) -> list[str]:
+    """Remove a chapter and renumber the rest. The caller commits, then deletes
+    the returned stored-file paths."""
+    ch = db.get(models.Chapter, chapter_id)
+    if not ch or ch.course_id != course_id:
+        raise HTTPException(404, "Chapter not found")
+    prefix = _upload_prefix(course_id)
     files_to_remove = [p for p in [ch.image, *(ch.videos or [])] if p and p.startswith(prefix)]
     db.query(models.ChapterQuestion).filter_by(chapter_id=chapter_id).delete()
     db.delete(ch)
@@ -651,7 +779,8 @@ def admin_delete_chapter(course_id: str, chapter_id: str,
 
     course = db.get(models.Course, course_id)
     if course:
-        remaining = sorted(course.chapters, key=lambda c: c.order)
+        # The loaded collection may still hold the just-deleted chapter, so skip it explicitly.
+        remaining = sorted((c for c in course.chapters if c.id != chapter_id), key=lambda c: c.order)
         for i, r in enumerate(remaining):
             r.order = i
             r.n = i + 1
@@ -659,10 +788,7 @@ def admin_delete_chapter(course_id: str, chapter_id: str,
         db.flush()
         for p in db.query(models.Progress).filter_by(course_id=course_id).all():
             _maybe_auto_complete_course(db, course, p, p.learner_id)
-    db.commit()
-    for p in files_to_remove:
-        storage.delete(course_id, os.path.basename(p))
-    return {"ok": True}
+    return files_to_remove
 
 
 @router.put("/api/admin/courses/{course_id}/assessment")

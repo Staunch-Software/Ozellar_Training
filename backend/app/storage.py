@@ -9,6 +9,7 @@ Callers address files by (course_id, filename); this module hides whether
 that maps to a local path or a blob named "{course_id}/{filename}".
 """
 import os
+import time
 from typing import Iterator, Optional
 
 UPLOAD_DIR = os.getenv(
@@ -65,6 +66,32 @@ def get_size(course_id: str, filename: str) -> Optional[int]:
             return None
     path = _local_path(course_id, filename)
     return os.path.getsize(path) if os.path.isfile(path) else None
+
+
+def copy(src_course_id: str, filename: str, dst_course_id: str, new_filename: Optional[str] = None) -> bool:
+    """Duplicate a stored file into a course's namespace (optionally renamed).
+    Returns False when the source file is missing."""
+    new_filename = new_filename or filename
+    if _USE_AZURE:
+        src = _container_client.get_blob_client(_blob_name(src_course_id, filename))
+        dst = _container_client.get_blob_client(_blob_name(dst_course_id, new_filename))
+        try:
+            dst.start_copy_from_url(src.url)
+            for _ in range(600):
+                if dst.get_blob_properties().copy.status != "pending":
+                    break
+                time.sleep(0.5)
+            return dst.get_blob_properties().copy.status == "success"
+        except Exception:
+            return False
+    import shutil
+    src_path = _local_path(src_course_id, filename)
+    if not os.path.isfile(src_path):
+        return False
+    dst_path = _local_path(dst_course_id, new_filename)
+    os.makedirs(os.path.dirname(dst_path), exist_ok=True)
+    shutil.copy2(src_path, dst_path)
+    return True
 
 
 def delete(course_id: str, filename: str) -> None:
