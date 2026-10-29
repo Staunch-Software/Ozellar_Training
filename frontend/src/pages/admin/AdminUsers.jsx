@@ -1,8 +1,9 @@
 import './AdminUsers.css';
-import { useEffect, useState, useRef } from 'react'
-import { UserPlus, Check, Ban, AlertCircle, X, Search, Users, ChevronDown } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { UserPlus, Check, Ban, AlertCircle, X, Search, Users } from 'lucide-react'
 import { adminListUsers, adminCreateUser, adminUpdateUser } from '../../api.js'
 import Pagination from '../../components/Pagination.jsx'
+import CardSelect from '../../components/CardSelect.jsx'
 
 const EMPTY = { role: 'learner', fullName: '', crewId: '', dob: '', rank: '', ppNo: '' }
 
@@ -26,23 +27,11 @@ export default function AdminUsers() {
   const [busy, setBusy] = useState(false)
   const [search, setSearch] = useState('')
   const [rankFilter, setRankFilter] = useState('')
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
-  const dropdownRef = useRef(null)
   const [currentPage, setCurrentPage] = useState(1)
 
   const load = () => adminListUsers().then(setUsers)
   useEffect(() => { load() }, [])
   useEffect(() => { setCurrentPage(1) }, [search, rankFilter])
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false)
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -121,7 +110,7 @@ export default function AdminUsers() {
           <div style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', marginTop: '1px' }}>Seafarers</div>
         </div>
 
-                <div className="users-head-actions">
+        <div className="users-head-actions">
           {!showForm && (
             <>
               <div className="rpt-search-wrap users-search" style={{ margin: 0 }}>
@@ -140,46 +129,17 @@ export default function AdminUsers() {
                 )}
               </div>
               
-                            <div className="users-rank-wrap" ref={dropdownRef}>
-                <div 
-                  className="rpt-field users-rank-field" 
-                  style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-                  onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                >
-                  <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '13px' }}>
-                    {rankFilter || 'All Ranks'}
-                  </span>
-                  <ChevronDown 
-                    size={14} 
-                    className="mut" 
-                    style={{ transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} 
-                  />
-                </div>
-                
-                {isDropdownOpen && (
-                  <div style={{
-                    position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
-                    background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px',
-                    boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', zIndex: 50,
-                    maxHeight: '240px', overflowY: 'auto'
-                  }}>
-                    <div 
-                      className={`premium-select-option ${!rankFilter ? 'selected' : ''}`}
-                      onClick={() => { setRankFilter(''); setIsDropdownOpen(false) }}
-                    >
-                      All Ranks
-                    </div>
-                    {uniqueRanks.map(r => (
-                      <div 
-                        key={r}
-                        className={`premium-select-option ${rankFilter === r ? 'selected' : ''}`}
-                        onClick={() => { setRankFilter(r); setIsDropdownOpen(false) }}
-                      >
-                        {r}
-                      </div>
-                    ))}
-                  </div>
-                )}
+              <div style={{ minWidth: 170, maxWidth: 220 }}>
+                <CardSelect
+                  className="users-rank-field"
+                  value={rankFilter}
+                  onChange={setRankFilter}
+                  placeholder="All Ranks"
+                  options={[
+                    { value: '', label: 'All Ranks' },
+                    ...uniqueRanks.map(r => ({ value: r, label: r }))
+                  ]}
+                />
               </div>
             </>
           )}
@@ -219,7 +179,7 @@ export default function AdminUsers() {
 
       <div className="admin-card" style={{ padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
         <div className="admin-table-wrap users-table-wrap" style={{ flex: 1 }}>
-  <table className="admin-table">
+          <table className="admin-table">
             <thead>
               <tr>
                 <th style={{ width: 60 }}>SI No.</th><th>Name</th><th>Role</th><th>Login ID</th><th>Rank</th>
@@ -232,47 +192,47 @@ export default function AdminUsers() {
                   <td className="mut" style={{ fontSize: 12 }}>{(currentPage - 1) * itemsPerPage + index + 1}</td>
                   <td>
                     <div className="users-name-cell" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-  <div style={{
-    width: '32px',
-    height: '32px',
-    borderRadius: '50%',
-    background: 'rgba(2,132,199,0.1)',
-    color: '#0284c7',
-    display: 'grid',
-    placeItems: 'center',
-    fontSize: '12px',
-    fontWeight: 700,
-    flexShrink: 0
-  }}>
-    {getInitials(u.name)}
-  </div>
-  <b className="users-name-text">{u.name}</b>
-</div>
+                      <div style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
+                        background: 'rgba(2,132,199,0.1)',
+                        color: '#0284c7',
+                        display: 'grid',
+                        placeItems: 'center',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        flexShrink: 0
+                      }}>
+                        {getInitials(u.name)}
+                      </div>
+                      <b className="users-name-text">{u.name}</b>
+                    </div>
                   </td>
-                <td><span className={`pill ${u.role}`}>{u.role === 'super_admin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : 'Seafarer'}</span></td>
-                <td className="mono">{u.role === 'admin' || u.role === 'super_admin' ? u.email : u.crewId}</td>
-                <td>{u.rank ? u.rank.toUpperCase() : '—'}</td>
-                <td className="mono">{formatMobile(u.mobileNo) || '—'}</td>
-                <td>{u.role === 'learner' ? `${u.passedCount}/${u.assignedCount} passed` : '—'}</td>
-                <td>
-                  <span 
-                    className={`pill ${u.isActive ? 'ok' : 'off'}`}
-                    style={{ 
-                      background: u.isActive ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', 
-                      color: u.isActive ? '#166534' : '#991b1b',
-                      border: 'none'
-                    }}
-                  >
-                    {u.isActive ? 'Active' : 'Inactive'}
-                  </span>
-                </td>
-                <td style={{ textAlign: 'right' }}>
-                  <button className="btn sm" onClick={() => toggleActive(u)}>
-                    {u.isActive ? <><Ban size={14} /> Deactivate</> : <><Check size={14} /> Activate</>}
-                  </button>
-                </td>
-              </tr>
-            ))}
+                  <td><span className={`pill ${u.role}`}>{u.role === 'super_admin' ? 'Super Admin' : u.role === 'admin' ? 'Admin' : 'Seafarer'}</span></td>
+                  <td className="mono">{u.role === 'admin' || u.role === 'super_admin' ? u.email : u.crewId}</td>
+                  <td>{u.rank ? u.rank.toUpperCase() : '—'}</td>
+                  <td className="mono">{formatMobile(u.mobileNo) || '—'}</td>
+                  <td>{u.role === 'learner' ? `${u.passedCount}/${u.assignedCount} passed` : '—'}</td>
+                  <td>
+                    <span 
+                      className={`pill ${u.isActive ? 'ok' : 'off'}`}
+                      style={{ 
+                        background: u.isActive ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', 
+                        color: u.isActive ? '#166534' : '#991b1b',
+                        border: 'none'
+                      }}
+                    >
+                      {u.isActive ? 'Active' : 'Inactive'}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: 'right' }}>
+                    <button className="btn sm" onClick={() => toggleActive(u)}>
+                      {u.isActive ? <><Ban size={14} /> Deactivate</> : <><Check size={14} /> Activate</>}
+                    </button>
+                  </td>
+                </tr>
+              ))}
             </tbody>
           </table>
         </div>

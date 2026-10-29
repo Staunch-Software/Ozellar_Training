@@ -48,3 +48,10 @@
   height: auto;
 }
 
+.admin .page.page-cm {
+  overflow: hidden;
+  height: calc(100vh - 58px);
+  padding: 0;
+  max-width: none;
+}
+

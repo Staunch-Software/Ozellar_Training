@@ -333,7 +333,9 @@ export default function AdminLayout() {
 
   const isCourseManagementRoute = location.pathname.startsWith('/admin/course-management')
   const isOrientationRoute = location.pathname.startsWith('/admin/orientation-program') || location.pathname.startsWith('/admin/orientation/')
-  const isScreeningRoute = location.pathname.startsWith('/admin/screening'); const isFlushRoute = isCourseManagementRoute || isOrientationRoute
+  const isScreeningRoute = location.pathname.startsWith('/admin/screening')
+  const isUserManagementRoute = location.pathname.startsWith('/admin/user-management')
+  const isFlushRoute = isCourseManagementRoute || isOrientationRoute || isUserManagementRoute
   const isLockedPage = !isCourseManagementRoute && ['/admin/course-management/users', '/admin/course-management/assignments', '/admin/course-management/report'].includes(location.pathname)
 
   return (

@@ -1,58 +1,321 @@
 /* Card-style dropdown — replaces native <select> across the admin UI */
-.cardselect { position: relative; width: 100%; }
-.cardselect--open { z-index: 50; }
-.cardselect--disabled { opacity: .6; }
+.cardselect {
+  position: relative;
+  width: 100%;
+}
+
+.cardselect--open {
+  z-index: 95;
+}
+
+.cardselect--disabled {
+  opacity: .6;
+  pointer-events: none;
+}
 
 .cardselect-trigger {
-  width: 100%; display: flex; align-items: center; justify-content: space-between; gap: 8px;
-  border: 1px solid var(--border-strong); border-radius: 9px;
-  background: var(--surface); color: var(--text); font-family: inherit; font-size: 13.5px;
-  padding: 9px 12px; cursor: pointer; transition: border-color .15s, box-shadow .15s;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  background: var(--surface);
+  color: var(--text);
+  font-family: inherit;
+  font-size: 13.5px;
+  padding: 9px 12px;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s, background .15s;
 }
-.cardselect-trigger:hover:not(:disabled) { border-color: var(--text-faint); }
-.cardselect-trigger--open { border-color: var(--orn-accent, var(--accent)); box-shadow: 0 0 0 3px rgba(224,120,32,.12); }
-.cardselect-trigger:disabled { cursor: default; }
 
-.cardselect-trigger-content { display: flex; align-items: center; gap: 8px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.cardselect-trigger-icon { color: var(--text-mut); flex-shrink: 0; }
-.cardselect-placeholder { color: var(--text-faint); }
-.cardselect-chevron { color: var(--text-faint); flex-shrink: 0; transition: transform .15s; }
-.cardselect-trigger--open .cardselect-chevron { transform: rotate(180deg); }
+.cardselect-trigger:hover:not(:disabled) {
+  border-color: var(--text-faint);
+  background: var(--surface-2, #f8fafc);
+}
 
+.cardselect-trigger:focus-visible,
+.cardselect-trigger--open {
+  outline: none;
+  border-color: var(--select-accent, var(--orn-accent, #6366f1));
+  box-shadow: 0 0 0 3px var(--select-focus-ring, rgba(99, 102, 241, 0.14));
+}
+
+.cardselect-trigger:disabled {
+  cursor: not-allowed;
+}
+
+.cardselect-trigger-content {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cardselect-trigger-icon {
+  color: var(--select-accent, var(--orn-accent, #6366f1));
+  flex-shrink: 0;
+}
+
+.cardselect-label-text {
+  font-weight: 500;
+  color: var(--text);
+}
+
+.cardselect-placeholder {
+  color: var(--text-faint);
+}
+
+.cardselect-chevron {
+  color: var(--text-faint);
+  flex-shrink: 0;
+  transition: transform .2s ease;
+}
+
+.cardselect-trigger--open .cardselect-chevron {
+  transform: rotate(180deg);
+  color: var(--select-accent, var(--orn-accent, #6366f1));
+}
+
+/* Panel positioning (default: downward) */
 .cardselect-panel {
-  position: absolute; top: calc(100% + 6px); left: 0; right: 0; z-index: 60;
-  background: var(--surface); border: 1px solid var(--border-strong); border-radius: 12px;
-  box-shadow: 0 16px 36px -12px rgba(15, 23, 42, .25);
-  padding: 6px; max-height: 280px; overflow-y: auto;
-  display: flex; flex-direction: column; gap: 2px;
-  animation: cardselect-in .12s ease;
+  position: absolute;
+  top: calc(100% + 6px);
+  bottom: auto;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  box-shadow: 0 16px 36px -10px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  padding: 6px;
+  max-height: 280px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  animation: cardselect-in .14s cubic-bezier(0.16, 1, 0.3, 1);
 }
-@keyframes cardselect-in { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Panel positioning (drop-up: upward when near bottom/footer) */
+.cardselect--up .cardselect-panel {
+  top: auto;
+  bottom: calc(100% + 6px);
+  box-shadow: 0 -16px 36px -10px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(0, 0, 0, 0.04);
+  animation: cardselect-in-up .14s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes cardselect-in {
+  from {
+    opacity: 0;
+    transform: translateY(-5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes cardselect-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 .cardselect-option {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  padding: 9px 10px; border-radius: 8px; border: none; background: none;
-  text-align: left; cursor: pointer; color: var(--text); font-family: inherit;
-  transition: background .1s;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text);
+  font-family: inherit;
+  transition: background .12s ease, border-color .12s ease;
 }
-.cardselect-option:hover { background: var(--surface-2); }
-.cardselect-option--active { background: var(--orn-accent-bg, rgba(224,120,32,.08)); }
-.cardselect-option-icon { display: grid; place-items: center; color: var(--text-mut); flex-shrink: 0; }
-.cardselect-option--active .cardselect-option-icon { color: var(--orn-accent, var(--accent)); }
-.cardselect-option-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
-.cardselect-option-label { font-size: 13px; font-weight: 600; }
-.cardselect-option--active .cardselect-option-label { color: var(--orn-accent, var(--accent)); }
-.cardselect-option-desc { font-size: 11px; color: var(--text-mut); margin-top: 1px; }
-.cardselect-option-check { color: var(--orn-accent, var(--accent)); flex-shrink: 0; }
 
-/* neutralize padding/font-size meant for native <select> elements when
-   those utility classes (orn-filter-select, orn-select-sm) are applied
-   to this wrapper div instead */
+.cardselect-option:hover {
+  background: var(--surface-2);
+}
+
+.cardselect-option--active {
+  background: var(--select-active-bg, var(--orn-accent-bg, rgba(99, 102, 241, 0.08)));
+  border-color: var(--select-active-border, rgba(99, 102, 241, 0.2));
+}
+
+.cardselect-option-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 7px;
+  background: var(--surface-2, #f1f5f9);
+  display: grid;
+  place-items: center;
+  color: var(--text-mut);
+  flex-shrink: 0;
+  transition: all .12s ease;
+}
+
+.cardselect-option:hover .cardselect-option-icon {
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+}
+
+.cardselect-option--active .cardselect-option-icon {
+  background: var(--select-accent, var(--orn-accent, #6366f1));
+  color: #ffffff;
+}
+
+.cardselect-option-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.cardselect-option-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.cardselect-option--active .cardselect-option-label {
+  color: var(--select-accent, var(--orn-accent, #6366f1));
+}
+
+.cardselect-option-desc {
+  font-size: 11.5px;
+  color: var(--text-mut);
+  margin-top: 1px;
+  line-height: 1.3;
+}
+
+.cardselect-option-check {
+  color: var(--select-accent, var(--orn-accent, #6366f1));
+  flex-shrink: 0;
+}
+
+/* neutralize padding/font-size meant for native <select> elements */
 .cardselect.orn-filter-select,
-.cardselect.orn-select-sm { padding: 0; font-size: inherit; }
+.cardselect.orn-select-sm,
+.cardselect.users-rank-field {
+  padding: 0;
+  font-size: inherit;
+}
+
+@media (max-width: 640px) {
+  .cardselect-trigger {
+    min-height: 42px;
+    padding: 9px 11px;
+    font-size: 13.5px;
+  }
+  .cardselect-panel {
+    max-height: min(240px, 42vh);
+    border-radius: 10px;
+    padding: 5px;
+  }
+  .cardselect-option {
+    padding: 8px 9px;
+    min-height: 40px;
+  }
+}
 
 @media (max-width: 480px) {
-  .cardselect-panel { max-height: 220px; padding: 5px; }
-  .cardselect-option { padding: 8px; }
-  .cardselect-trigger { padding: 8px 10px; font-size: 13px; }
+  .cardselect-panel {
+    max-height: min(210px, 38vh);
+    padding: 4px;
+    border-radius: 9px;
+  }
+  .cardselect-option {
+    padding: 7px 8px;
+    gap: 9px;
+  }
+  .cardselect-option-icon {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+  }
+  .cardselect-option-label {
+    font-size: 12.5px;
+  }
+  .cardselect-option-desc {
+    font-size: 11px;
+  }
+  .cardselect-trigger {
+    padding: 8px 10px;
+    font-size: 13px;
+  }
+}
+
+/* ── 2K Displays (min-width: 2560px) ── */
+@media (min-width: 2560px) {
+  .cardselect-trigger {
+    min-height: 46px;
+    padding: 11px 16px;
+    font-size: 15px;
+    border-radius: 11px;
+  }
+  .cardselect-panel {
+    max-height: 380px;
+    border-radius: 14px;
+    padding: 8px;
+  }
+  .cardselect-option {
+    padding: 10px 14px;
+    border-radius: 10px;
+    gap: 13px;
+  }
+  .cardselect-option-label {
+    font-size: 14.5px;
+  }
+  .cardselect-option-desc {
+    font-size: 12.5px;
+  }
+  .cardselect-option-icon {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+/* ── 4K Ultra HD Displays (min-width: 3840px) ── */
+@media (min-width: 3840px) {
+  .cardselect-trigger {
+    min-height: 52px;
+    padding: 13px 18px;
+    font-size: 17px;
+    border-radius: 13px;
+  }
+  .cardselect-panel {
+    max-height: 480px;
+    border-radius: 18px;
+    padding: 10px;
+  }
+  .cardselect-option {
+    padding: 12px 16px;
+    border-radius: 12px;
+    gap: 16px;
+  }
+  .cardselect-option-label {
+    font-size: 16.5px;
+  }
+  .cardselect-option-desc {
+    font-size: 14px;
+  }
+  .cardselect-option-icon {
+    width: 38px;
+    height: 38px;
+  }
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { Check, ChevronDown } from 'lucide-react'
 import './CardSelect.css'
 
@@ -7,52 +7,127 @@ import './CardSelect.css'
  * (icon + label + description) instead of a native <select> list.
  *
  * options: [{ value, label, description?, icon?: Component }]
+ * placement: 'auto' | 'top' | 'bottom'
  */
 export default function CardSelect({
-  value, onChange, options, placeholder = 'Select...', disabled = false, className = '',
+  value,
+  onChange,
+  options,
+  placeholder = 'Select...',
+  disabled = false,
+  className = '',
+  id,
+  placement = 'auto',
 }) {
   const [open, setOpen] = useState(false)
+  const [dropUp, setDropUp] = useState(placement === 'top')
   const ref = useRef(null)
+
+  const updatePlacement = useCallback(() => {
+    if (placement === 'top') {
+      setDropUp(true)
+      return
+    }
+    if (placement === 'bottom') {
+      setDropUp(false)
+      return
+    }
+    if (!ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    const scrollParent = ref.current.closest('.admin-user-modal-body, [data-scroll-container]') || null
+    let spaceBelow = window.innerHeight - rect.bottom
+    let spaceAbove = rect.top
+
+    if (scrollParent) {
+      const pRect = scrollParent.getBoundingClientRect()
+      spaceBelow = pRect.bottom - rect.bottom
+      spaceAbove = rect.top - pRect.top
+    }
+
+    // Panel max-height is ~280px + 6px margin.
+    // If space below is less than 260px and there's enough space above, flip up
+    if (spaceBelow < 260 && spaceAbove > 150) {
+      setDropUp(true)
+    } else {
+      setDropUp(false)
+    }
+  }, [placement])
+
+  const toggleOpen = () => {
+    if (disabled) return
+    if (!open) {
+      updatePlacement()
+    }
+    setOpen((o) => !o)
+  }
 
   useEffect(() => {
     if (!open) return
-    const onDoc = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
+    updatePlacement()
+    const onDoc = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        setOpen(false)
+      }
+    }
+    const onScrollOrResize = () => {
+      updatePlacement()
+    }
     document.addEventListener('mousedown', onDoc)
-    document.addEventListener('keydown', onKey)
+    document.addEventListener('keydown', onKey, true)
+    window.addEventListener('resize', onScrollOrResize)
     return () => {
       document.removeEventListener('mousedown', onDoc)
-      document.removeEventListener('keydown', onKey)
+      document.removeEventListener('keydown', onKey, true)
+      window.removeEventListener('resize', onScrollOrResize)
     }
-  }, [open])
+  }, [open, updatePlacement])
 
-  const current = options.find((o) => String(o.value) === String(value))
+  const current = options.find((o) => String(o.value ?? '') === String(value ?? ''))
   const CurrentIcon = current?.icon
 
+  const rootClasses = [
+    'cardselect',
+    open ? 'cardselect--open' : '',
+    dropUp ? 'cardselect--up' : '',
+    disabled ? 'cardselect--disabled' : '',
+    className,
+  ].filter(Boolean).join(' ')
+
   return (
-    <div className={`cardselect${open ? ' cardselect--open' : ''}${disabled ? ' cardselect--disabled' : ''} ${className}`} ref={ref}>
+    <div className={rootClasses} ref={ref}>
       <button
         type="button"
+        id={id}
+        aria-haspopup="listbox"
+        aria-expanded={open}
         className={`cardselect-trigger${open ? ' cardselect-trigger--open' : ''}`}
-        onClick={() => !disabled && setOpen((o) => !o)}
+        onClick={toggleOpen}
         disabled={disabled}
       >
         <span className="cardselect-trigger-content">
-          {CurrentIcon && <CurrentIcon size={14} className="cardselect-trigger-icon" />}
-          <span className={current ? '' : 'cardselect-placeholder'}>{current ? current.label : placeholder}</span>
+          {CurrentIcon && <CurrentIcon size={15} className="cardselect-trigger-icon" />}
+          <span className={current ? 'cardselect-label-text' : 'cardselect-placeholder'}>
+            {current ? current.label : placeholder}
+          </span>
         </span>
         <ChevronDown size={14} className="cardselect-chevron" />
       </button>
 
       {open && (
-        <div className="cardselect-panel">
+        <div className="cardselect-panel" role="listbox">
           {options.map((o) => {
             const Icon = o.icon
-            const active = String(o.value) === String(value)
+            const active = String(o.value ?? '') === String(value ?? '')
             return (
               <button
                 type="button"
-                key={o.value}
+                key={String(o.value)}
+                role="option"
+                aria-selected={active}
                 className={`cardselect-option${active ? ' cardselect-option--active' : ''}`}
                 onClick={() => { onChange(o.value); setOpen(false) }}
               >
