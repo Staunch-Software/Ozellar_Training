@@ -2009,6 +2009,11 @@
   overflow-x: auto;
 }
 
+.cm-content--flush,
+.cm-content:has(.rpt-root) {
+  padding: 0 !important;
+}
+
 
 /* ── Assignments page: assigned-course chips ── */
 .asg-chip{display:inline-flex;align-items:center;gap:6px;max-width:210px;padding:4px 10px;

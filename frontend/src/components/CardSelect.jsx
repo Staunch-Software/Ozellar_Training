@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
-import { Check, ChevronDown } from 'lucide-react'
+import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { Check, ChevronDown, Search, X } from 'lucide-react'
 import './CardSelect.css'
 
 /**
@@ -8,6 +8,7 @@ import './CardSelect.css'
  *
  * options: [{ value, label, description?, icon?: Component }]
  * placement: 'auto' | 'top' | 'bottom'
+ * searchable: boolean (adds instant search bar inside the panel)
  */
 export default function CardSelect({
   value,
@@ -18,10 +19,13 @@ export default function CardSelect({
   className = '',
   id,
   placement = 'auto',
+  searchable = false,
 }) {
   const [open, setOpen] = useState(false)
   const [dropUp, setDropUp] = useState(placement === 'top')
+  const [filterText, setFilterText] = useState('')
   const ref = useRef(null)
+  const searchInputRef = useRef(null)
 
   const updatePlacement = useCallback(() => {
     if (placement === 'top') {
@@ -62,8 +66,21 @@ export default function CardSelect({
   }
 
   useEffect(() => {
-    if (!open) return
+    if (!open) {
+      setFilterText('')
+      return
+    }
     updatePlacement()
+    if (searchable) {
+      const timer = setTimeout(() => {
+        searchInputRef.current?.focus()
+      }, 50)
+      return () => clearTimeout(timer)
+    }
+  }, [open, searchable, updatePlacement])
+
+  useEffect(() => {
+    if (!open) return
     const onDoc = (e) => {
       if (ref.current && !ref.current.contains(e.target)) setOpen(false)
     }
@@ -88,6 +105,15 @@ export default function CardSelect({
 
   const current = options.find((o) => String(o.value ?? '') === String(value ?? ''))
   const CurrentIcon = current?.icon
+
+  const filteredOptions = useMemo(() => {
+    if (!searchable || !filterText.trim()) return options
+    const q = filterText.trim().toLowerCase()
+    return options.filter((o) =>
+      (o.label || '').toLowerCase().includes(q) ||
+      (o.description || '').toLowerCase().includes(q)
+    )
+  }, [options, searchable, filterText])
 
   const rootClasses = [
     'cardselect',
@@ -119,27 +145,57 @@ export default function CardSelect({
 
       {open && (
         <div className="cardselect-panel" role="listbox">
-          {options.map((o) => {
-            const Icon = o.icon
-            const active = String(o.value ?? '') === String(value ?? '')
-            return (
-              <button
-                type="button"
-                key={String(o.value)}
-                role="option"
-                aria-selected={active}
-                className={`cardselect-option${active ? ' cardselect-option--active' : ''}`}
-                onClick={() => { onChange(o.value); setOpen(false) }}
-              >
-                {Icon && <span className="cardselect-option-icon"><Icon size={14} /></span>}
-                <span className="cardselect-option-text">
-                  <span className="cardselect-option-label">{o.label}</span>
-                  {o.description && <span className="cardselect-option-desc">{o.description}</span>}
-                </span>
-                {active && <Check size={14} className="cardselect-option-check" />}
-              </button>
-            )
-          })}
+          {searchable && (
+            <div className="cardselect-search-wrap" onClick={(e) => e.stopPropagation()}>
+              <Search size={13} className="cardselect-search-icon" />
+              <input
+                ref={searchInputRef}
+                type="text"
+                className="cardselect-search-input"
+                placeholder="Search options..."
+                value={filterText}
+                onChange={(e) => setFilterText(e.target.value)}
+              />
+              {filterText && (
+                <button
+                  type="button"
+                  className="cardselect-search-clear"
+                  onClick={() => setFilterText('')}
+                  aria-label="Clear filter search"
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+          )}
+
+          <div className="cardselect-options-list">
+            {filteredOptions.length === 0 ? (
+              <div className="cardselect-empty">No matching options found</div>
+            ) : (
+              filteredOptions.map((o) => {
+                const Icon = o.icon
+                const active = String(o.value ?? '') === String(value ?? '')
+                return (
+                  <button
+                    type="button"
+                    key={String(o.value)}
+                    role="option"
+                    aria-selected={active}
+                    className={`cardselect-option${active ? ' cardselect-option--active' : ''}`}
+                    onClick={() => { onChange(o.value); setOpen(false) }}
+                  >
+                    {Icon && <span className="cardselect-option-icon"><Icon size={14} /></span>}
+                    <span className="cardselect-option-text">
+                      <span className="cardselect-option-label">{o.label}</span>
+                      {o.description && <span className="cardselect-option-desc">{o.description}</span>}
+                    </span>
+                    {active && <Check size={14} className="cardselect-option-check" />}
+                  </button>
+                )
+              })
+            )}
+          </div>
         </div>
       )}
     </div>

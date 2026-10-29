@@ -4,11 +4,13 @@ import {
   Award, Clock, Circle, FileSpreadsheet, FileText,
   Users, CheckCircle, AlertCircle, Search, X, SlidersHorizontal,
   TrendingUp, Download, RefreshCw, ChevronDown, ChevronLeft, ChevronRight, Eye, BarChart3,
-  MessageSquare, Lock, Phone
+  MessageSquare, Lock, Phone, BookOpen, RotateCcw, Layers
 } from 'lucide-react'
+import CardSelect from '../../components/CardSelect.jsx'
 import { adminReport, adminDownloadReportCsv, adminDownloadReportXlsx, adminApproveCertificate } from '../../api.js'
 import { getToken } from '../../api.js'
 import { useAuth } from '../../auth.jsx'
+import './AdminReports.css'
 
 /* ------------------------------------------------------------------ */
 /*  Approve-with-remark modal                                          */
@@ -267,7 +269,62 @@ export default function AdminReport() {
     }
   }, [filteredRows, selectedCourse])
 
-  const hasFilters = crewSearch || selectedCourse !== 'all' || selectedStatus !== 'all'
+  const courseOptions = useMemo(() => {
+    const opts = [
+      {
+        value: 'all',
+        label: 'All Courses',
+        description: data?.courses?.length ? `${data.courses.length} courses in syllabus` : 'All training courses in fleet syllabus',
+        icon: Layers,
+      }
+    ]
+    if (data?.courses) {
+      data.courses.forEach(c => {
+        opts.push({
+          value: c.id,
+          label: c.title,
+          description: c.subtitle || (c.code ? `Course Code: ${c.code}` : 'Training Module'),
+          icon: BookOpen,
+        })
+      })
+    }
+    return opts
+  }, [data?.courses])
+
+  const statusOptions = useMemo(() => [
+    {
+      value: 'all',
+      label: 'All Statuses',
+      description: 'Show all completion states across fleet',
+      icon: Layers,
+    },
+    {
+      value: 'passed',
+      label: 'Completed',
+      description: 'Assessment passed & certificate ready',
+      icon: CheckCircle,
+    },
+    {
+      value: 'pending',
+      label: 'Pending Approval',
+      description: 'Awaiting administrator certificate approval',
+      icon: Clock,
+    },
+    {
+      value: 'in-progress',
+      label: 'In Progress',
+      description: 'Learner is currently taking the course',
+      icon: RefreshCw,
+    },
+    {
+      value: 'assigned',
+      label: 'Not Started',
+      description: 'Enrolled in syllabus but not yet started',
+      icon: Circle,
+    },
+  ], [])
+
+  const hasFilters = Boolean(crewSearch || selectedCourse !== 'all' || selectedStatus !== 'all')
   const clearAll   = () => {
     setCrewSearch('')
     setSelectedCourse('all')
@@ -358,104 +415,198 @@ export default function AdminReport() {
   return (
     <div className="rpt-root" style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
 
-      {/* ═══════════════════════ PAGE HEADER (Premium Inline) ═══════════════════════ */}
-            <div className="rpt-header">
-        <div className="rpt-header-brand">
-          {/* Accent Bar */}
-          <div style={{
-            width: 4,
-            height: 36,
-            background: 'linear-gradient(180deg, #059669, #10b981)',
-            borderRadius: '0 4px 4px 0',
-            flexShrink: 0
-          }} />
-          
-          {/* Icon Box */}
-          <div style={{
-            width: 36,
-            height: 36,
-            borderRadius: 10,
-            background: 'rgba(5,150,105,0.1)',
-            color: '#059669',
-            display: 'grid',
-            placeItems: 'center',
-            flexShrink: 0
-          }}>
-            <BarChart3 size={18} />
+      {/* ═══════════════════════ PAGE HEADER & FILTERS (Single Unified Row down to 1200px) ═══════════════════════ */}
+      <div className="rpt-header-container">
+        <div className="rpt-header">
+          {/* Left: Brand Identity */}
+          <div className="rpt-header-brand">
+            <div className="rpt-header-accent-bar" />
+            <div className="rpt-header-icon">
+              <BarChart3 size={17} />
+            </div>
+            <div className="rpt-header-title-wrap">
+              <div className="rpt-header-eyebrow">Fleet Training · Compliance</div>
+              <div className="rpt-header-title-row">
+                <h1 className="rpt-header-title">Completion Report</h1>
+                <div className="rpt-header-stat-pill">
+                  <span className="rpt-header-stat-count">{filteredRows.length}</span>
+                  <span className="rpt-header-stat-label">
+                    {hasFilters ? 'Filtered' : 'Seafarers'}
+                  </span>
+                </div>
+              </div>
+            </div>
           </div>
 
-          {/* Title only */}
-          <div style={{ flex: 1, minWidth: 160 }}>
-            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: '#059669', opacity: 0.8 }}>Fleet Training · Compliance</span>
-            <div style={{ fontSize: 17, fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', marginTop: '1px' }}>Completion Report</div>
-          </div>
-        </div>
-
-        {/* Right side controls */}
-                {/* Right side controls */}
-        <div className="rpt-header-actions">
-          <div className="rpt-filter-row" style={{ gap: 8 }}>
-            {/* crew search */}
-            <div className="rpt-search-wrap" style={{ minWidth: 200 }}>
-              <Search size={14} className="rpt-field-icon" />
+          {/* Right: All Filters & Actions in One Single Row */}
+          <div className="rpt-header-controls">
+            {/* Seafarer Search Input */}
+            <div className="rpt-search-wrap">
+              <Search size={13} className="rpt-search-icon" />
               <input
-                className="rpt-field"
+                id="rpt-search-input"
+                type="text"
+                className="rpt-search-input"
                 placeholder="Search seafarers..."
                 value={crewSearch}
                 onChange={e => setCrewSearch(e.target.value)}
-                style={{ padding: '6px 8px 6px 32px' }}
               />
               {crewSearch && (
-                <button className="rpt-x-btn" onClick={() => setCrewSearch('')}>
+                <button
+                  type="button"
+                  className="rpt-search-clear"
+                  onClick={() => setCrewSearch('')}
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
                   <X size={12} />
                 </button>
               )}
             </div>
 
-            {/* course filter */}
-            <div className="rpt-select-wrap">
-              <SlidersHorizontal size={13} className="rpt-field-icon" />
-              <select className="rpt-field rpt-select" value={selectedCourse}
-                onChange={e => setSelectedCourse(e.target.value)}
-                style={{ padding: '6px 24px 6px 30px' }}>
-                <option value="all">All Courses</option>
-                {data.courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-              </select>
-              <ChevronDown size={13} className="rpt-select-caret" />
+            {/* Course Filter Dropdown with CardSelect */}
+            <div className="rpt-select-wrap rpt-select-course">
+              <CardSelect
+                id="rpt-course-filter"
+                value={selectedCourse}
+                onChange={setSelectedCourse}
+                options={courseOptions}
+                placeholder="All Courses"
+                searchable={true}
+                placement="bottom"
+                className="rpt-cardselect rpt-cardselect--course"
+              />
             </div>
 
-            {/* status filter */}
-            <div className="rpt-select-wrap">
-              <Award size={13} className="rpt-field-icon" />
-              <select className="rpt-field rpt-select" value={selectedStatus}
-                onChange={e => setSelectedStatus(e.target.value)}
-                style={{ padding: '6px 24px 6px 30px' }}>
-                <option value="all">All Statuses</option>
-                <option value="passed">✓ Completed</option>
-                <option value="pending">⏳ Pending Approval</option>
-                <option value="in-progress">↻ In Progress</option>
-                <option value="assigned">○ Not Started</option>
-              </select>
-              <ChevronDown size={13} className="rpt-select-caret" />
+            {/* Status Filter Dropdown with CardSelect */}
+            <div className="rpt-select-wrap rpt-select-status">
+              <CardSelect
+                id="rpt-status-filter"
+                value={selectedStatus}
+                onChange={setSelectedStatus}
+                options={statusOptions}
+                placeholder="All Statuses"
+                placement="bottom"
+                className="rpt-cardselect rpt-cardselect--status"
+              />
             </div>
 
+            {/* Reset Filters Pill (when active) */}
             {hasFilters && (
-              <button className="btn sm rpt-clear-all" onClick={clearAll} style={{ padding: '6px 10px' }}>
-                <X size={12} /> Clear
+              <button
+                type="button"
+                className="rpt-reset-pill-btn"
+                onClick={clearAll}
+                title="Reset all filters"
+                id="rpt-reset-filters-btn"
+              >
+                <RotateCcw size={12} />
+                <span>Reset</span>
               </button>
             )}
-          </div>
 
-                    <div className="rpt-download-group">
-            <button className="btn primary sm" onClick={downloadXlsx} disabled={dlXlsx}>
-              <FileSpreadsheet size={14} />
-              {dlXlsx ? 'Preparing…' : hasFilters ? 'Excel (Filtered)' : 'Excel'}
-            </button>
-            <button className="btn sm" onClick={load} title="Refresh report" style={{ padding: '6px 10px' }}>
-              <RefreshCw size={14} />
-            </button>
+            {/* Export & Refresh Action Group */}
+            <div className="rpt-download-group">
+              <button
+                type="button"
+                className="btn primary sm rpt-btn-export rpt-btn-export--xlsx"
+                onClick={downloadXlsx}
+                disabled={dlXlsx}
+                id="rpt-download-xlsx-btn"
+                title="Export report to Microsoft Excel (.xlsx)"
+              >
+                <FileSpreadsheet size={13} />
+                <span>{dlXlsx ? 'Preparing…' : hasFilters ? 'Excel (Filtered)' : 'Excel'}</span>
+              </button>
+
+              <button
+                type="button"
+                className="btn sm rpt-btn-export rpt-btn-export--csv"
+                onClick={downloadCsv}
+                disabled={dlCsv}
+                id="rpt-download-csv-btn"
+                title="Export complete report to CSV"
+              >
+                <FileText size={13} />
+                <span>{dlCsv ? '…' : 'CSV'}</span>
+              </button>
+
+              <button
+                type="button"
+                className={`btn sm rpt-btn-refresh${loading ? ' rpt-btn-refresh--spinning' : ''}`}
+                onClick={load}
+                id="rpt-refresh-btn"
+                title="Refresh report data"
+                aria-label="Refresh report data"
+              >
+                <RefreshCw size={13} />
+              </button>
+            </div>
           </div>
         </div>
+
+        {/* Active Filter Chips Strip (slim bar below header, only when filters active) */}
+        {hasFilters && (
+          <div className="rpt-active-chips-strip">
+            <span className="rpt-active-chips-lead">Active filters:</span>
+            {crewSearch && (
+              <span className="rpt-chip" id="chip-crew-search">
+                <Search size={11} className="rpt-chip-icon" />
+                <span className="rpt-chip-text">"{crewSearch}"</span>
+                <button
+                  type="button"
+                  className="rpt-chip-remove"
+                  onClick={() => setCrewSearch('')}
+                  title="Remove search query"
+                  aria-label="Remove search query"
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+            {selectedCourse !== 'all' && (
+              <span className="rpt-chip" id="chip-course">
+                <BookOpen size={11} className="rpt-chip-icon" />
+                <span className="rpt-chip-text">
+                  Course: {data?.courses?.find(c => c.id === selectedCourse)?.title || selectedCourse}
+                </span>
+                <button
+                  type="button"
+                  className="rpt-chip-remove"
+                  onClick={() => setSelectedCourse('all')}
+                  title="Remove course filter"
+                  aria-label="Remove course filter"
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+            {selectedStatus !== 'all' && (
+              <span className="rpt-chip" id="chip-status">
+                <Award size={11} className="rpt-chip-icon" />
+                <span className="rpt-chip-text">
+                  Status: {statusOptions.find(s => s.value === selectedStatus)?.label || selectedStatus}
+                </span>
+                <button
+                  type="button"
+                  className="rpt-chip-remove"
+                  onClick={() => setSelectedStatus('all')}
+                  title="Remove status filter"
+                  aria-label="Remove status filter"
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+            <button
+              type="button"
+              className="rpt-chip-clear-all"
+              onClick={clearAll}
+            >
+              Clear all
+            </button>
+          </div>
+        )}
       </div>
 
       {error && (

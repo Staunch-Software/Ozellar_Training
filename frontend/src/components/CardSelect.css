@@ -319,3 +319,73 @@
     height: 38px;
   }
 }
+
+
+/* ── CardSelect Internal Search & Options List ── */
+.cardselect-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  overflow-y: auto;
+  max-height: 260px;
+}
+
+.cardselect-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  padding: 4px 6px 6px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 3px;
+  flex-shrink: 0;
+}
+
+.cardselect-search-icon {
+  position: absolute;
+  left: 14px;
+  color: var(--text-mut);
+  pointer-events: none;
+}
+
+.cardselect-search-input {
+  width: 100%;
+  height: 32px;
+  padding: 0 26px 0 28px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12.5px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s, background .15s;
+}
+
+.cardselect-search-input:focus {
+  border-color: var(--select-accent, var(--orn-accent, #6366f1));
+  background: var(--surface);
+}
+
+.cardselect-search-clear {
+  position: absolute;
+  right: 12px;
+  background: none;
+  border: none;
+  color: var(--text-mut);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.cardselect-search-clear:hover {
+  color: var(--text);
+}
+
+.cardselect-empty {
+  padding: 16px 12px;
+  text-align: center;
+  font-size: 12.5px;
+  color: var(--text-faint);
+}

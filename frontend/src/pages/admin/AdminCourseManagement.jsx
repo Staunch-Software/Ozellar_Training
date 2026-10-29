@@ -116,7 +116,7 @@ export default function AdminCourseManagement() {
       </div>
 
       {/* ── Content ── */}
-      <div className="cm-content">
+      <div className={`cm-content${location.pathname.includes('/report') ? ' cm-content--flush' : ''}`}>
         <Outlet />
       </div>
     </div>
