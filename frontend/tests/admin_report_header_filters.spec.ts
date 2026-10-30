@@ -261,4 +261,70 @@ test.describe('Admin Course Management Report - Premium Header & Filters UI', ()
     expect(wheelResult.afterDown).toBeGreaterThanOrEqual(180);
     expect(wheelResult.afterUp).toBe(0);
   });
+  test('table header is sticky at top with solid background and pagination is compact and attached to bottom', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForTimeout(300);
+
+    const tableScroll = page.locator('.rpt-table-scroll');
+    const th = page.locator('.rpt-table th').first();
+    const pagination = page.locator('.rpt-pagination');
+    const tableCard = page.locator('.rpt-table-card');
+
+    // 1. Verify sticky table header CSS
+    const thStyles = await th.evaluate(el => {
+      const cs = window.getComputedStyle(el);
+      return {
+        position: cs.position,
+        top: cs.top,
+        zIndex: cs.zIndex,
+        backgroundColor: cs.backgroundColor,
+      };
+    });
+    expect(thStyles.position).toBe('sticky');
+    expect(thStyles.top).toBe('0px');
+    expect(parseInt(thStyles.zIndex, 10)).toBeGreaterThanOrEqual(10);
+
+    // 2. Scroll table rows internally and verify th remains locked at top
+    await page.evaluate(() => {
+      document.querySelector('.rpt-table-scroll')!.scrollTop = 300;
+    });
+    await page.waitForTimeout(200);
+
+    const stickyMetrics = await page.evaluate(() => {
+      const scrollEl = document.querySelector('.rpt-table-scroll')!;
+      const thEl = document.querySelector('.rpt-table th')!;
+      return {
+        scrollTop: scrollEl.scrollTop,
+        thTopRelative: thEl.getBoundingClientRect().top - scrollEl.getBoundingClientRect().top,
+      };
+    });
+    expect(stickyMetrics.scrollTop).toBeGreaterThanOrEqual(250);
+    expect(Math.abs(stickyMetrics.thTopRelative)).toBeLessThanOrEqual(2);
+
+    // 3. Compact pagination height (38px, <= 42px)
+    const pagHeight = await pagination.evaluate(el => el.getBoundingClientRect().height);
+    expect(pagHeight).toBeLessThanOrEqual(42);
+    expect(pagHeight).toBeGreaterThanOrEqual(36);
+
+    // 4. When pinned, pagination is attached to bottom of table card and fully inside the viewport
+    await page.evaluate(() => {
+      document.querySelector('.cm-wrapper')!.scrollTop = 200;
+    });
+    await page.waitForTimeout(200);
+
+    const pagAttachment = await page.evaluate(() => {
+      const pag = document.querySelector('.rpt-pagination')!;
+      const card = document.querySelector('.rpt-table-card')!;
+      const pagRect = pag.getBoundingClientRect();
+      const cardRect = card.getBoundingClientRect();
+      return {
+        bottomDiff: Math.abs(pagRect.bottom - cardRect.bottom),
+        fullyInWindow: pagRect.bottom <= window.innerHeight,
+        distFromWindowBottom: window.innerHeight - pagRect.bottom,
+      };
+    });
+    expect(pagAttachment.bottomDiff).toBeLessThanOrEqual(2);
+    expect(pagAttachment.fullyInWindow).toBe(true);
+    expect(pagAttachment.distFromWindowBottom).toBeGreaterThan(0);
+  });
 });

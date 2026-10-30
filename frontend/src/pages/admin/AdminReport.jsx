@@ -188,19 +188,46 @@ export default function AdminReport() {
 
   const tableScrollRef = useRef(null)
 
-  /* Seamless wheel scrolling: if outer .cm-wrapper has distance to scroll, scroll it first before internal table scrolling */
+  /* Seamless wheel scrolling: coordinator smoothly collapses top nav cards and KPI strip
+     until the filter header and table card align, then passes scroll down to table rows.
+     Scrolling up at row 1 seamlessly restores KPI and nav cards. */
   useEffect(() => {
     const el = tableScrollRef.current
     if (!el) return
     const onWheel = (e) => {
       const wrapper = el.closest('.cm-wrapper')
-      if (!wrapper) return
-      const maxScroll = Math.max(0, wrapper.scrollHeight - wrapper.clientHeight)
-      if (e.deltaY > 0 && wrapper.scrollTop < maxScroll) {
-        wrapper.scrollTop = Math.min(maxScroll, wrapper.scrollTop + e.deltaY)
+      const card = el.closest('.rpt-table-card')
+      const header = wrapper?.querySelector('.rpt-header-container')
+      if (!wrapper || !card || !header) return
+
+      // Pinned bottom of the filter header inside the viewport:
+      const wrapperTop = wrapper.getBoundingClientRect().top
+      const targetCardTop = wrapperTop + 56 + header.offsetHeight + 10
+      const distanceRemaining = card.getBoundingClientRect().top - targetCardTop
+
+      if (e.deltaY > 0) {
+        if (distanceRemaining > 0.5) {
+          const step = Math.min(distanceRemaining, e.deltaY)
+          wrapper.scrollTop += step
+          const remainingDelta = e.deltaY - step
+          if (remainingDelta > 0) {
+            el.scrollTop += remainingDelta
+          }
+        } else {
+          el.scrollTop += e.deltaY
+        }
         e.preventDefault()
-      } else if (e.deltaY < 0 && el.scrollTop <= 0 && wrapper.scrollTop > 0) {
-        wrapper.scrollTop = Math.max(0, wrapper.scrollTop + e.deltaY)
+      } else if (e.deltaY < 0) {
+        if (el.scrollTop > 0) {
+          const step = Math.min(el.scrollTop, -e.deltaY)
+          el.scrollTop -= step
+          const remainingDelta = -e.deltaY - step
+          if (remainingDelta > 0 && wrapper.scrollTop > 0) {
+            wrapper.scrollTop = Math.max(0, wrapper.scrollTop - remainingDelta)
+          }
+        } else if (wrapper.scrollTop > 0) {
+          wrapper.scrollTop = Math.max(0, wrapper.scrollTop + e.deltaY)
+        }
         e.preventDefault()
       }
     }
@@ -804,7 +831,7 @@ export default function AdminReport() {
             </div>
             <div className="rpt-page-controls">
               <button className="rpt-page-btn" disabled={page === 1} onClick={() => setPage(p => p - 1)}>
-                <ChevronLeft size={16} />
+                <ChevronLeft size={13} />
               </button>
               <div className="rpt-page-nums">
                 {getPageNumbers().map((p, idx) => (
@@ -819,7 +846,7 @@ export default function AdminReport() {
                 ))}
               </div>
               <button className="rpt-page-btn" disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>
-                <ChevronRight size={16} />
+                <ChevronRight size={13} />
               </button>
             </div>
           </div>

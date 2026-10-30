@@ -531,9 +531,9 @@
 .rpt-table-card {
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 176px);
-  min-height: 460px;
-  margin: 10px 24px 14px;
+  height: calc(100vh - 225px);
+  min-height: 420px;
+  margin: 8px 24px 10px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -554,17 +554,21 @@
 /* ── Table ── */
 .rpt-table {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 13.5px;
 }
 
 .rpt-table thead {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 25;
 }
 
 .rpt-table th {
+  position: sticky;
+  top: 0;
+  z-index: 25;
   background: var(--surface-2);
   color: var(--text-mut);
   font-size: 11px;
@@ -573,9 +577,14 @@
   text-transform: uppercase;
   padding: 11px 14px;
   text-align: left;
-  border-bottom: 2px solid var(--border);
+  box-shadow: inset 0 -1px 0 var(--border), 0 2px 5px rgba(0, 0, 0, 0.04);
+  border-bottom: none;
   white-space: nowrap;
   user-select: none;
+}
+
+[data-theme="dark"] .rpt-table th {
+  background: #181d28;
 }
 
 .rpt-table th:first-child {
@@ -907,14 +916,16 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 12px 18px;
+  padding: 5px 16px;
+  min-height: 38px;
+  max-height: 38px;
   border-top: 1px solid var(--border);
   background: var(--surface);
   flex-shrink: 0;
 }
 
 .rpt-page-info {
-  font-size: 12.5px;
+  font-size: 11.5px;
   color: var(--text-mut);
   white-space: nowrap;
 }
@@ -931,16 +942,21 @@
 }
 
 .rpt-page-btn {
-  width: 32px;
-  height: 32px;
+  width: 26px;
+  height: 26px;
   display: grid;
   place-items: center;
   border: 1px solid var(--border-strong);
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--surface);
   color: var(--text);
   cursor: pointer;
   transition: background .12s, border-color .12s, color .12s;
+}
+
+.rpt-page-btn svg {
+  width: 13px;
+  height: 13px;
 }
 
 .rpt-page-btn:hover:not(:disabled) {
@@ -960,16 +976,16 @@
 }
 
 .rpt-page-num {
-  min-width: 32px;
-  height: 32px;
-  padding: 0 4px;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 2px;
   display: grid;
   place-items: center;
   border: 1px solid transparent;
-  border-radius: 8px;
+  border-radius: 6px;
   background: transparent;
   color: var(--text-mut);
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 500;
   cursor: pointer;
   transition: background .12s, color .12s, border-color .12s;
