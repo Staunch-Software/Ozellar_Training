@@ -327,4 +327,46 @@ test.describe('Admin Course Management Report - Premium Header & Filters UI', ()
     expect(pagAttachment.fullyInWindow).toBe(true);
     expect(pagAttachment.distFromWindowBottom).toBeGreaterThan(0);
   });
+
+  test('horizontal table scroll keeps first 4 columns sticky and course headers slide underneath without overflowing', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForTimeout(300);
+
+    // Scroll horizontally 250px
+    await page.evaluate(() => {
+      document.querySelector('.rpt-table-scroll')!.scrollLeft = 250;
+    });
+    await page.waitForTimeout(200);
+
+    const stickyColMetrics = await page.evaluate(() => {
+      const thSino = document.querySelector('.rpt-table thead th.rpt-col-sino')!;
+      const thCrew = document.querySelector('.rpt-table thead th.rpt-col-crew')!;
+      const thId = document.querySelector('.rpt-table thead th.rpt-col-id')!;
+      const thRank = document.querySelector('.rpt-table thead th.rpt-col-rank')!;
+      const thCourse = document.querySelector('.rpt-table thead th.rpt-col-course')!;
+
+      const rankRect = thRank.getBoundingClientRect();
+      const zRank = parseInt(window.getComputedStyle(thRank).zIndex, 10);
+      const zCourse = parseInt(window.getComputedStyle(thCourse).zIndex, 10);
+
+      return {
+        sinoPos: window.getComputedStyle(thSino).position,
+        crewPos: window.getComputedStyle(thCrew).position,
+        idPos: window.getComputedStyle(thId).position,
+        rankPos: window.getComputedStyle(thRank).position,
+        zRank,
+        zCourse,
+        stickyHeadersAboveCourse: zRank > zCourse,
+        rankVisible: rankRect.width > 0 && rankRect.right > rankRect.left,
+      };
+    });
+
+    expect(stickyColMetrics.sinoPos).toBe('sticky');
+    expect(stickyColMetrics.crewPos).toBe('sticky');
+    expect(stickyColMetrics.idPos).toBe('sticky');
+    expect(stickyColMetrics.rankPos).toBe('sticky');
+    expect(stickyColMetrics.stickyHeadersAboveCourse).toBe(true);
+    expect(stickyColMetrics.zRank).toBeGreaterThanOrEqual(30);
+    expect(stickyColMetrics.rankVisible).toBe(true);
+  });
 });
