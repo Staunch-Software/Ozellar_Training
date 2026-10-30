@@ -9,8 +9,10 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
+  height: 100%;
   gap: 0;
   background: var(--bg);
+  overflow: hidden;
 }
 
 /* ── Keyframes ── */
@@ -36,12 +38,11 @@
 .rpt-header-container {
   display: flex;
   flex-direction: column;
-  position: sticky;
-  top: 0;
+  position: relative;
   z-index: 40;
   background: var(--surface);
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.05);
+  border-bottom: none;
+  box-shadow: none;
   animation: rptFadeUp .22s ease-out;
   margin: 0;
   padding: 0;
@@ -361,9 +362,9 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 6px 24px 8px;
-  background: var(--surface-2);
-  border-top: 1px solid var(--border);
+  padding: 4px 24px 6px;
+  background: transparent;
+  border: none;
   flex-wrap: wrap;
   animation: rptFadeUp .15s ease-out;
 }
@@ -458,21 +459,22 @@
 .rpt-kpi-strip {
   display: flex;
   gap: 12px;
-  padding: 16px 24px;
+  padding: 10px 24px 8px;
   flex-wrap: wrap;
   animation: rptFadeUp .3s ease-out;
+  flex-shrink: 0;
 }
 
 .rpt-kpi {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 14px 18px;
+  border-radius: 10px;
+  padding: 10px 16px;
   flex: 1;
-  min-width: 140px;
+  min-width: 130px;
   transition: box-shadow .2s, transform .2s;
   position: relative;
   overflow: hidden;
@@ -497,20 +499,20 @@
 }
 
 .rpt-kpi-icon {
-  width: 42px;
-  height: 42px;
-  border-radius: 11px;
+  width: 38px;
+  height: 38px;
+  border-radius: 9px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
 }
 
 .rpt-kpi-value {
-  font-size: 26px;
+  font-size: 22px;
   font-weight: 800;
   letter-spacing: -0.03em;
   line-height: 1;
-  margin-bottom: 3px;
+  margin-bottom: 2px;
 }
 
 .rpt-kpi-label {
@@ -528,7 +530,7 @@
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  margin: 0 24px 24px;
+  margin: 0 24px 14px;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -540,7 +542,9 @@
 /* ── Table scroll area ── */
 .rpt-table-scroll {
   flex: 1;
-  overflow: auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -1416,6 +1420,16 @@
 }
 
 /* ── Tablet (641px - 900px) ── */
+@media (max-width: 900px) {
+  .rpt-root {
+    overflow-y: auto;
+    height: auto;
+  }
+  .rpt-table-card {
+    min-height: 380px;
+  }
+}
+
 @media (min-width: 641px) and (max-width: 900px) {
   .rpt-header {
     padding: 10px 18px;

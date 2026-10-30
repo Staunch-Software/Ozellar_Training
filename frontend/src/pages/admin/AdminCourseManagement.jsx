@@ -59,8 +59,10 @@ export default function AdminCourseManagement() {
 
   const isActive = (path) => location.pathname === path
 
+  const isReport = location.pathname.includes('/report')
+
   return (
-    <div className="cm-wrapper">
+    <div className={`cm-wrapper${isReport ? ' cm-wrapper--flush' : ''}`}>
 
       {/* ── Compact Header Bar ── */}
       <div className="cm-header">

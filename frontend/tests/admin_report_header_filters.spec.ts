@@ -152,4 +152,41 @@ test.describe('Admin Course Management Report - Premium Header & Filters UI', ()
     expect(courseRect!.y).toBeGreaterThan(searchRect!.y);
     expect(statusRect!.y).toBeGreaterThan(courseRect!.y);
   });
+  test('header has no harsh bottom line and KPI cards are fully visible without scrolling underneath', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.waitForTimeout(300);
+
+    const header = page.locator('.rpt-header-container');
+    await expect(header).toBeVisible();
+
+    // Verify border-bottom is none / 0px (line under filter is removed)
+    const borderBottomWidth = await header.evaluate((el) => getComputedStyle(el).borderBottomWidth);
+    const borderBottomStyle = await header.evaluate((el) => getComputedStyle(el).borderBottomStyle);
+    expect(borderBottomStyle === 'none' || borderBottomWidth === '0px').toBe(true);
+
+    // Verify all 5 KPI cards are visible and not clipped
+    const kpiCards = page.locator('.rpt-kpi');
+    await expect(kpiCards).toHaveCount(5);
+
+    const headerRect = (await header.boundingBox())!;
+    const firstKpiRect = (await kpiCards.first().boundingBox())!;
+
+    // KPI top must be strictly below header bottom (never overlapping or scrolled underneath)
+    expect(firstKpiRect.y).toBeGreaterThanOrEqual(headerRect.y + headerRect.height - 2);
+
+    // Verify KPI card has full height (>= 45px)
+    expect(firstKpiRect.height).toBeGreaterThanOrEqual(45);
+
+    // Verify no outer page scrollbar is forced on desktop
+    const overflowInfo = await page.evaluate(() => {
+      const cmWrapper = document.querySelector('.cm-wrapper');
+      const cmContent = document.querySelector('.cm-content');
+      return {
+        wrapperOverflow: cmWrapper ? cmWrapper.scrollHeight - cmWrapper.clientHeight : 0,
+        contentOverflow: cmContent ? cmContent.scrollHeight - cmContent.clientHeight : 0,
+      };
+    });
+    expect(overflowInfo.wrapperOverflow).toBeLessThanOrEqual(2);
+    expect(overflowInfo.contentOverflow).toBeLessThanOrEqual(2);
+  });
 });
