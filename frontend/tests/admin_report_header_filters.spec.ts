@@ -178,9 +178,10 @@ test.describe('Admin Course Management Report - Premium Header & Filters UI', ()
     const kpiStripRect = (await page.locator('.rpt-kpi-strip').boundingBox())!;
     const headerContainerRect = (await headerContainer.boundingBox())!;
 
+    // Filter header is present at the top directly under cmCards, with KPI cards below it
     expect(cmCardsRect.y).toBeGreaterThanOrEqual(cmHeaderRect.y + cmHeaderRect.height - 2);
-    expect(kpiStripRect.y).toBeGreaterThanOrEqual(cmCardsRect.y + cmCardsRect.height - 2);
-    expect(headerContainerRect.y).toBeGreaterThanOrEqual(kpiStripRect.y + kpiStripRect.height - 2);
+    expect(headerContainerRect.y).toBeGreaterThanOrEqual(cmCardsRect.y + cmCardsRect.height - 2);
+    expect(kpiStripRect.y).toBeGreaterThanOrEqual(headerContainerRect.y + headerContainerRect.height - 2);
   });
 
   test('scrolling down hides top 4 cards and KPI cards while fixing filter header directly under cm-header', async ({ page }) => {
@@ -204,9 +205,9 @@ test.describe('Admin Course Management Report - Premium Header & Filters UI', ()
     const kpiStripRect = (await kpiStrip.boundingBox())!;
     const headerContainerRect = (await headerContainer.boundingBox())!;
 
-    // 1. Both top 4 cards and KPI cards are hidden behind cm-header
+    // 1. Top 4 cards are hidden behind cm-header, and KPI cards are hidden behind pinned filter header
     expect(cmCardsRect.y + cmCardsRect.height).toBeLessThanOrEqual(cmHeaderRect.y + cmHeaderRect.height + 2);
-    expect(kpiStripRect.y + kpiStripRect.height).toBeLessThanOrEqual(cmHeaderRect.y + cmHeaderRect.height + 2);
+    expect(kpiStripRect.y + kpiStripRect.height).toBeLessThanOrEqual(headerContainerRect.y + headerContainerRect.height + 2);
 
     // 2. Filter header is pinned directly under cm-header
     expect(Math.abs(headerContainerRect.y - (cmHeaderRect.y + cmHeaderRect.height))).toBeLessThanOrEqual(2);
@@ -228,9 +229,11 @@ test.describe('Admin Course Management Report - Premium Header & Filters UI', ()
     await page.waitForTimeout(300);
 
     const restoredCardsRect = (await cmCards.boundingBox())!;
+    const restoredHeaderRect = (await headerContainer.boundingBox())!;
     const restoredKpiRect = (await kpiStrip.boundingBox())!;
     expect(restoredCardsRect.y).toBeGreaterThan(cmHeaderRect.y + cmHeaderRect.height - 2);
-    expect(restoredKpiRect.y).toBeGreaterThan(restoredCardsRect.y);
+    expect(restoredHeaderRect.y).toBeGreaterThan(restoredCardsRect.y);
+    expect(restoredKpiRect.y).toBeGreaterThan(restoredHeaderRect.y);
   });
 
   test('mouse wheel on table seamlessly drives outer cm-wrapper scroll until filter pins', async ({ page }) => {
