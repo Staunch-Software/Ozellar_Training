@@ -186,6 +186,29 @@ export default function AdminReport() {
   const [hoverRemark,    setHoverRemark]   = useState(null) // { x, y, learnerName, courseName, remark }
   const ROWS_PER_PAGE = 50
 
+  const tableScrollRef = useRef(null)
+
+  /* Seamless wheel scrolling: if outer .cm-wrapper has distance to scroll, scroll it first before internal table scrolling */
+  useEffect(() => {
+    const el = tableScrollRef.current
+    if (!el) return
+    const onWheel = (e) => {
+      const wrapper = el.closest('.cm-wrapper')
+      if (!wrapper) return
+      const maxScroll = Math.max(0, wrapper.scrollHeight - wrapper.clientHeight)
+      if (e.deltaY > 0 && wrapper.scrollTop < maxScroll) {
+        wrapper.scrollTop = Math.min(maxScroll, wrapper.scrollTop + e.deltaY)
+        e.preventDefault()
+      } else if (e.deltaY < 0 && el.scrollTop <= 0 && wrapper.scrollTop > 0) {
+        wrapper.scrollTop = Math.max(0, wrapper.scrollTop + e.deltaY)
+        e.preventDefault()
+      }
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [loading, data])
+
+
   /* Sync filters whenever URL params change — depends on primitive strings, not the object */
   useEffect(() => {
     setCrewSearch(paramCrew)
@@ -398,6 +421,17 @@ export default function AdminReport() {
   return (
     <div className="rpt-root">
 
+
+      {/* ═══════════════════════ KPI STRIP ════════════════════════════ */}
+      <div className="rpt-kpi-strip">
+        <KpiCard icon={<Users size={16} />} value={kpis.crew}       label="Seafarers Shown"  color="accent" />
+        <KpiCard icon={<CheckCircle size={16} />} value={kpis.passed}    label="Completed"      color="success" />
+        <KpiCard icon={<Clock size={16} />}  value={kpis.wip}        label="In Progress" color="warn" />
+        <KpiCard icon={<Circle size={16} />} value={kpis.notStarted} label="Not Started" color="faint" />
+        <KpiCard icon={<TrendingUp size={16} />} value={`${kpis.passRate}%`} label="Pass Rate" color="accent" highlight />
+      </div>
+
+
       {/* ═══════════════════════ PAGE HEADER & FILTERS (Single Unified Row down to 1200px) ═══════════════════════ */}
       <div className="rpt-header-container">
         <div className="rpt-header">
@@ -596,15 +630,6 @@ export default function AdminReport() {
         <div className="report-error"><AlertCircle size={14} /> {error}</div>
       )}
 
-      {/* ═══════════════════════ KPI STRIP ════════════════════════════ */}
-      <div className="rpt-kpi-strip">
-        <KpiCard icon={<Users size={16} />} value={kpis.crew}       label="Seafarers Shown"  color="accent" />
-        <KpiCard icon={<CheckCircle size={16} />} value={kpis.passed}    label="Completed"      color="success" />
-        <KpiCard icon={<Clock size={16} />}  value={kpis.wip}        label="In Progress" color="warn" />
-        <KpiCard icon={<Circle size={16} />} value={kpis.notStarted} label="Not Started" color="faint" />
-        <KpiCard icon={<TrendingUp size={16} />} value={`${kpis.passRate}%`} label="Pass Rate" color="accent" highlight />
-      </div>
-
       {/* ═══════════════════════ TABLE ════════════════════════════════ */}
       <div className="rpt-table-card">
         {filteredRows.length === 0 ? (
@@ -619,7 +644,7 @@ export default function AdminReport() {
             )}
           </div>
         ) : (
-          <div className="rpt-table-scroll" style={{ flex: 1, overflowY: 'auto' }}>
+          <div className="rpt-table-scroll" ref={tableScrollRef}>
             <table className="rpt-table">
               <thead>
                 <tr>

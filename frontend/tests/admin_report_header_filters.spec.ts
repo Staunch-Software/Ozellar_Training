@@ -152,41 +152,110 @@ test.describe('Admin Course Management Report - Premium Header & Filters UI', ()
     expect(courseRect!.y).toBeGreaterThan(searchRect!.y);
     expect(statusRect!.y).toBeGreaterThan(courseRect!.y);
   });
-  test('header has no harsh bottom line and KPI cards are fully visible without scrolling underneath', async ({ page }) => {
-    await page.setViewportSize({ width: 1280, height: 720 });
+    test('at initial scroll (top: 0), top 4 course management cards and all 5 KPI cards are fully visible', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
     await page.waitForTimeout(300);
 
-    const header = page.locator('.rpt-header-container');
-    await expect(header).toBeVisible();
+    // Verify cm-header is visible
+    const cmHeader = page.locator('.cm-header');
+    await expect(cmHeader).toBeVisible();
 
-    // Verify border-bottom is none / 0px (line under filter is removed)
-    const borderBottomWidth = await header.evaluate((el) => getComputedStyle(el).borderBottomWidth);
-    const borderBottomStyle = await header.evaluate((el) => getComputedStyle(el).borderBottomStyle);
-    expect(borderBottomStyle === 'none' || borderBottomWidth === '0px').toBe(true);
+    // Verify top 4 cards are visible
+    const cmCards = page.locator('.cm-card');
+    await expect(cmCards).toHaveCount(4);
 
-    // Verify all 5 KPI cards are visible and not clipped
+    // Verify all 5 KPI cards are visible
     const kpiCards = page.locator('.rpt-kpi');
     await expect(kpiCards).toHaveCount(5);
 
-    const headerRect = (await header.boundingBox())!;
-    const firstKpiRect = (await kpiCards.first().boundingBox())!;
+    // Verify filter header is visible
+    const headerContainer = page.locator('.rpt-header-container');
+    await expect(headerContainer).toBeVisible();
 
-    // KPI top must be strictly below header bottom (never overlapping or scrolled underneath)
-    expect(firstKpiRect.y).toBeGreaterThanOrEqual(headerRect.y + headerRect.height - 2);
+    // Verify positions: cm-header at top, cmCards below, KPI strip below cmCards, filter header below KPI strip
+    const cmHeaderRect = (await cmHeader.boundingBox())!;
+    const cmCardsRect = (await page.locator('.cm-cards').boundingBox())!;
+    const kpiStripRect = (await page.locator('.rpt-kpi-strip').boundingBox())!;
+    const headerContainerRect = (await headerContainer.boundingBox())!;
 
-    // Verify KPI card has full height (>= 45px)
-    expect(firstKpiRect.height).toBeGreaterThanOrEqual(45);
+    expect(cmCardsRect.y).toBeGreaterThanOrEqual(cmHeaderRect.y + cmHeaderRect.height - 2);
+    expect(kpiStripRect.y).toBeGreaterThanOrEqual(cmCardsRect.y + cmCardsRect.height - 2);
+    expect(headerContainerRect.y).toBeGreaterThanOrEqual(kpiStripRect.y + kpiStripRect.height - 2);
+  });
 
-    // Verify no outer page scrollbar is forced on desktop
-    const overflowInfo = await page.evaluate(() => {
-      const cmWrapper = document.querySelector('.cm-wrapper');
-      const cmContent = document.querySelector('.cm-content');
-      return {
-        wrapperOverflow: cmWrapper ? cmWrapper.scrollHeight - cmWrapper.clientHeight : 0,
-        contentOverflow: cmContent ? cmContent.scrollHeight - cmContent.clientHeight : 0,
-      };
+  test('scrolling down hides top 4 cards and KPI cards while fixing filter header directly under cm-header', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForTimeout(300);
+
+    const cmWrapper = page.locator('.cm-wrapper');
+    const cmHeader = page.locator('.cm-header');
+    const cmCards = page.locator('.cm-cards');
+    const kpiStrip = page.locator('.rpt-kpi-strip');
+    const headerContainer = page.locator('.rpt-header-container');
+
+    // Scroll down cm-wrapper by 200px
+    await page.evaluate(() => {
+      document.querySelector('.cm-wrapper')!.scrollTop = 200;
     });
-    expect(overflowInfo.wrapperOverflow).toBeLessThanOrEqual(2);
-    expect(overflowInfo.contentOverflow).toBeLessThanOrEqual(2);
+    await page.waitForTimeout(300);
+
+    const cmHeaderRect = (await cmHeader.boundingBox())!;
+    const cmCardsRect = (await cmCards.boundingBox())!;
+    const kpiStripRect = (await kpiStrip.boundingBox())!;
+    const headerContainerRect = (await headerContainer.boundingBox())!;
+
+    // 1. Both top 4 cards and KPI cards are hidden behind cm-header
+    expect(cmCardsRect.y + cmCardsRect.height).toBeLessThanOrEqual(cmHeaderRect.y + cmHeaderRect.height + 2);
+    expect(kpiStripRect.y + kpiStripRect.height).toBeLessThanOrEqual(cmHeaderRect.y + cmHeaderRect.height + 2);
+
+    // 2. Filter header is pinned directly under cm-header
+    expect(Math.abs(headerContainerRect.y - (cmHeaderRect.y + cmHeaderRect.height))).toBeLessThanOrEqual(2);
+
+    // 3. Table has full vertical space and table rows scroll smoothly
+    const tableScroll = page.locator('.rpt-table-scroll');
+    await expect(tableScroll).toBeVisible();
+    await page.evaluate(() => {
+      document.querySelector('.rpt-table-scroll')!.scrollTop = 300;
+    });
+    await page.waitForTimeout(200);
+    const tableScrollTop = await page.evaluate(() => document.querySelector('.rpt-table-scroll')!.scrollTop);
+    expect(tableScrollTop).toBeGreaterThanOrEqual(250);
+
+    // 4. Scrolling cm-wrapper back to top restores cards and KPI strip
+    await page.evaluate(() => {
+      document.querySelector('.cm-wrapper')!.scrollTop = 0;
+    });
+    await page.waitForTimeout(300);
+
+    const restoredCardsRect = (await cmCards.boundingBox())!;
+    const restoredKpiRect = (await kpiStrip.boundingBox())!;
+    expect(restoredCardsRect.y).toBeGreaterThan(cmHeaderRect.y + cmHeaderRect.height - 2);
+    expect(restoredKpiRect.y).toBeGreaterThan(restoredCardsRect.y);
+  });
+
+  test('mouse wheel on table seamlessly drives outer cm-wrapper scroll until filter pins', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    await page.waitForTimeout(400);
+
+    const wheelResult = await page.evaluate(() => {
+      const cmWrapper = document.querySelector('.cm-wrapper')!;
+      const tableScroll = document.querySelector('.rpt-table-scroll')!;
+
+      cmWrapper.scrollTop = 0;
+      tableScroll.scrollTop = 0;
+
+      // Dispatch wheel down 250px on table
+      tableScroll.dispatchEvent(new WheelEvent('wheel', { deltaY: 250, cancelable: true }));
+      const afterDown = cmWrapper.scrollTop;
+
+      // Dispatch wheel up 250px on table
+      tableScroll.dispatchEvent(new WheelEvent('wheel', { deltaY: -250, cancelable: true }));
+      const afterUp = cmWrapper.scrollTop;
+
+      return { afterDown, afterUp };
+    });
+
+    expect(wheelResult.afterDown).toBeGreaterThanOrEqual(180);
+    expect(wheelResult.afterUp).toBe(0);
   });
 });

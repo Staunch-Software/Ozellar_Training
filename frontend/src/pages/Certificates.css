@@ -1797,7 +1797,7 @@
   padding: 0 32px;
   position: sticky;
   top: 0;
-  z-index: 20;
+  z-index: 50;
   overflow: hidden;
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
 }
@@ -2012,19 +2012,17 @@
 .cm-wrapper--flush,
 .cm-wrapper:has(.rpt-root),
 .cm-wrapper:has(.cm-content--flush) {
-  display: flex;
-  flex-direction: column;
   height: 100%;
-  overflow: hidden;
+  overflow-y: auto;
+  margin: 0;
 }
 
 .cm-content--flush,
 .cm-content:has(.rpt-root) {
   padding: 0 !important;
   height: auto !important;
-  flex: 1 !important;
   min-height: 0 !important;
-  overflow: hidden !important;
+  overflow: visible !important;
 }
 
 
