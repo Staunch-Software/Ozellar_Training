@@ -53,6 +53,9 @@ def admin_course_summary(course):
         "subtitle": course.subtitle, "passMark": course.pass_mark,
         "maxAttempts": course.max_attempts,
         "chapterCount": len(course.chapters), "questionCount": len(course.questions),
+        "durationLabel": course.duration_label,
+        "targetRanks": course.target_ranks or [],
+        "targetUsers": course.target_users or [],
     }
 
 

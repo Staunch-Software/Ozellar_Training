@@ -59,10 +59,10 @@ export default function AdminCourseManagement() {
 
   const isActive = (path) => location.pathname === path
 
-  const isReport = location.pathname.includes('/report')
+  const isFlush = location.pathname.includes('/report') || location.pathname.includes('/courses')
 
   return (
-    <div className={`cm-wrapper${isReport ? ' cm-wrapper--flush' : ''}`}>
+    <div className={`cm-wrapper${isFlush ? ' cm-wrapper--flush' : ''}`}>
 
       {/* ── Compact Header Bar ── */}
       <div className="cm-header">
@@ -118,7 +118,7 @@ export default function AdminCourseManagement() {
       </div>
 
       {/* ── Content ── */}
-      <div className={`cm-content${location.pathname.includes('/report') ? ' cm-content--flush' : ''}`}>
+      <div className={`cm-content${isFlush ? ' cm-content--flush' : ''}`}>
         <Outlet />
       </div>
     </div>

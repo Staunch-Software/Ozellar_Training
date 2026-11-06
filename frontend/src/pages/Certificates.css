@@ -2011,6 +2011,7 @@
 
 .cm-wrapper--flush,
 .cm-wrapper:has(.rpt-root),
+.cm-wrapper:has(.crs-root),
 .cm-wrapper:has(.cm-content--flush) {
   height: 100%;
   overflow-y: auto;
@@ -2018,7 +2019,8 @@
 }
 
 .cm-content--flush,
-.cm-content:has(.rpt-root) {
+.cm-content:has(.rpt-root),
+.cm-content:has(.crs-root) {
   padding: 0 !important;
   height: auto !important;
   min-height: 0 !important;
