@@ -1,11 +1,14 @@
+import './AdminAssignments.css'
 import { useEffect, useState, useRef, useMemo } from 'react'
 import {
   Check, Award, Clock, Search, X, ChevronDown, Grid3x3, Phone, BookOpen,
   ClipboardList, AlertTriangle, Loader2, CheckSquare, Square, CheckCircle2,
-  Circle, Hourglass, Calendar, Target, RotateCcw, MessageSquare, Eye, EyeOff, ExternalLink, Download,
+  Circle, Hourglass, Calendar, Target, RotateCcw, MessageSquare, Eye, EyeOff,
+  ExternalLink, Download, Users, RefreshCw
 } from 'lucide-react'
 import { adminReport, adminSetEnrollments, adminFetchCertificatePdfUrl, adminReassignCourse } from '../../api.js'
 import Pagination from '../../components/Pagination.jsx'
+import CardSelect from '../../components/CardSelect.jsx'
 
 const ACCENT = '#E07820'
 const ACCENT_GRADIENT = 'linear-gradient(135deg, #E07820, #F58220)'
@@ -303,78 +306,83 @@ function ManageCoursesModal({ row, courses, onClose, onSaved }) {
     })
   }
 
-  const filteredCourses = courses.filter((c) =>
-    !courseSearch || c.title.toLowerCase().includes(courseSearch.toLowerCase())
-  )
+  const filteredCourses = useMemo(() => {
+    const q = courseSearch.trim().toLowerCase()
+    if (!q) return courses
+    return courses.filter((c) => c.title.toLowerCase().includes(q))
+  }, [courses, courseSearch])
 
-  const selectAllFiltered = () => setSelected((s) => {
-    const n = new Set(s); filteredCourses.forEach((c) => n.add(c.id)); return n
-  })
-  const clearAllFiltered = () => setSelected((s) => {
-    const n = new Set(s); filteredCourses.forEach((c) => n.delete(c.id)); return n
-  })
-
-  // removing a course the learner already has progress on hides it (record is kept) — confirm first
-  const riskyRemovals = [...originalIds]
-    .filter((id) => !selected.has(id))
-    .map((id) => ({ id, cell: row.cells[id], course: courses.find((c) => c.id === id) }))
-    .filter((r) => r.cell && (r.cell.status === 'passed' || r.cell.status === 'in-progress'))
-
-  const addedCount = [...selected].filter((id) => !originalIds.has(id)).length
-  const removedCount = [...originalIds].filter((id) => !selected.has(id)).length
-  const dirty = addedCount > 0 || removedCount > 0
+  const selectAllFiltered = () => {
+    setSelected((s) => {
+      const n = new Set(s)
+      filteredCourses.forEach((c) => n.add(c.id))
+      return n
+    })
+  }
+  const clearAllFiltered = () => {
+    setSelected((s) => {
+      const n = new Set(s)
+      filteredCourses.forEach((c) => n.delete(c.id))
+      return n
+    })
+  }
 
   const save = async () => {
-    if (riskyRemovals.length > 0) {
-      const names = riskyRemovals.map((r) => r.course?.title || r.id).join(', ')
-      const ok = window.confirm(
-        `${riskyRemovals.length} course(s) you're removing already have progress or a passed result ` +
-        `for ${row.name} (${names}). Unassigning hides the course but keeps their record. Continue?`
-      )
-      if (!ok) return
-    }
-    setBusy(true); setError('')
+    setBusy(true)
+    setError('')
     try {
-      await adminSetEnrollments(row.learnerId, [...selected])
+      await adminSetEnrollments(row.learnerId, Array.from(selected))
       onSaved()
       onClose()
     } catch (err) {
-      setError(err.message || 'Could not save assignment changes')
-    } finally {
+      setError(err.message || 'Could not save assignments')
       setBusy(false)
     }
   }
 
+  const addedCount = Array.from(selected).filter((id) => !originalIds.has(id)).length
+  const removedCount = Array.from(originalIds).filter((id) => !selected.has(id)).length
+  const isDirty = addedCount > 0 || removedCount > 0
+
   return (
     <ModalShell
-      icon={<BookOpen size={17} />}
-      title="Manage Courses"
+      icon={<BookOpen size={18} />}
+      title="Manage Course Assignments"
       subtitle={`${row.name} · ${row.crewId}${row.rank ? ` · ${row.rank}` : ''}`}
       busy={busy}
       onClose={onClose}
       footer={(
         <>
-          {error && <div className="form-error" style={{ marginBottom: 10 }}><AlertTriangle size={14} /> {error}</div>}
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div className="mut" style={{ fontSize: 12, flex: 1 }}>
-              {selected.size} course{selected.size === 1 ? '' : 's'} selected
-              {dirty && (
-                <span style={{ marginLeft: 6 }}>
-                  ({addedCount > 0 ? `+${addedCount} new` : ''}{addedCount > 0 && removedCount > 0 ? ', ' : ''}{removedCount > 0 ? `−${removedCount} removed` : ''})
+          {error && <div className="form-error" style={{ marginBottom: 12 }}><AlertTriangle size={14} /> {error}</div>}
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
+            <span className="mut" style={{ fontSize: 12 }}>
+              {isDirty ? (
+                <span>
+                  {addedCount > 0 && <span style={{ color: '#16a34a', fontWeight: 600 }}>+{addedCount} to enroll </span>}
+                  {removedCount > 0 && <span style={{ color: '#ef4444', fontWeight: 600 }}>-{removedCount} to remove</span>}
                 </span>
+              ) : (
+                `${selected.size} of ${courses.length} courses enrolled`
               )}
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button type="button" className="btn" onClick={onClose} disabled={busy}>Cancel</button>
+              <button
+                type="button"
+                className="btn primary"
+                onClick={save}
+                disabled={busy || !isDirty}
+                style={{ background: ACCENT_GRADIENT, borderColor: 'transparent' }}
+              >
+                {busy ? <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Check size={14} />}
+                {busy ? 'Saving…' : 'Save Assignment'}
+              </button>
             </div>
-            <button type="button" className="btn" onClick={onClose} disabled={busy}>Cancel</button>
-            <button type="button" className="btn primary" onClick={save} disabled={busy || !dirty}
-              style={{ background: ACCENT_GRADIENT, borderColor: 'transparent' }}>
-              {busy ? <Loader2 size={14} style={{ animation: 'spin 0.8s linear infinite' }} /> : <Check size={14} />}
-              {busy ? 'Saving…' : 'Save Assignment'}
-            </button>
           </div>
         </>
       )}
     >
-            <div style={{ padding: '14px 22px 10px', flexShrink: 0, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <div style={{ padding: '14px 22px 10px', flexShrink: 0, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <div className="rpt-search-wrap" style={{ flex: '1 1 180px', margin: 0, minWidth: 0 }}>
           <Search size={14} className="rpt-field-icon" />
           <input type="text" placeholder="Search courses…" className="rpt-field"
@@ -436,16 +444,21 @@ function ManageCoursesModal({ row, courses, onClose, onSaved }) {
 
 export default function AdminAssignments() {
   const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [search, setSearch] = useState('')
-  const [rankFilter, setRankFilter] = useState('')
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false)
+  const [rankFilter, setRankFilter] = useState('all')
   const [manageRow, setManageRow] = useState(null)
   const [progressView, setProgressView] = useState(null)   // { row, course, cell }
   const [expanded, setExpanded] = useState(() => new Set()) // learnerIds showing all chips
-  const dropdownRef = useRef(null)
 
-  const load = () => adminReport().then(setData)
+  const load = () => {
+    setLoading(true)
+    adminReport()
+      .then(setData)
+      .finally(() => setLoading(false))
+  }
+
   useEffect(() => { load() }, [])
   useEffect(() => { setCurrentPage(1) }, [search, rankFilter])
 
@@ -459,15 +472,24 @@ export default function AdminAssignments() {
     }
   }
 
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [])
+  // Rank Filter Options for CardSelect
+  const rankOptions = useMemo(() => {
+    if (!data?.rows) return [{ value: 'all', label: 'All Ranks' }]
+    const counts = {}
+    data.rows.forEach(r => {
+      const rank = (r.rank || '').trim().toUpperCase()
+      if (rank) counts[rank] = (counts[rank] || 0) + 1
+    })
+    const sorted = Object.keys(counts).sort()
+    return [
+      { value: 'all', label: 'All Ranks' },
+      ...sorted.map(r => ({
+        value: r,
+        label: r,
+        description: `${counts[r]} seafarer${counts[r] === 1 ? '' : 's'}`
+      }))
+    ]
+  }, [data])
 
   if (!data) return <div className="spinner">Loading assignments…</div>
 
@@ -475,18 +497,17 @@ export default function AdminAssignments() {
     const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n
   })
 
-  const uniqueRanks = [...new Set(data.rows.map(r => (r.rank || '').trim().toUpperCase()).filter(Boolean))].sort()
-
+  // Filtered rows
   const filteredRows = data.rows.filter(row => {
     let matchSearch = true
-    if (search) {
-      const term = search.toLowerCase()
+    if (search.trim()) {
+      const term = search.trim().toLowerCase()
       matchSearch = (row.name || '').toLowerCase().includes(term) ||
              (row.crewId || '').toLowerCase().includes(term) ||
              (row.rank || '').toLowerCase().includes(term)
     }
     let matchRank = true
-    if (rankFilter) {
+    if (rankFilter && rankFilter !== 'all') {
       matchRank = (row.rank || '').trim().toUpperCase() === rankFilter
     }
     return matchSearch && matchRank
@@ -499,87 +520,208 @@ export default function AdminAssignments() {
   const totalAssignments = data.rows.reduce((sum, row) => sum + Object.keys(row.cells || {}).length, 0)
   const totalCourses = data.courses.length
   const avgPerCrew = data.rows.length ? (totalAssignments / data.rows.length) : 0
+  const completedAssignments = data.rows.reduce((sum, row) => {
+    return sum + Object.values(row.cells || {}).filter(c => c && c.status === 'passed').length
+  }, 0)
+
+  const hasFilters = search.trim() !== '' || (rankFilter !== 'all' && rankFilter !== '')
+  const clearFilters = () => {
+    setSearch('')
+    setRankFilter('all')
+  }
 
   return (
-    // Bounded height like the Reporting page: the table card fills the space
-    // and scrolls internally. Its minHeight keeps >= 5 rows visible on short
-    // screens (the page scrolls instead of squeezing the table).
-    <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
-            <div className="asg-header">
-        <div className="asg-header-brand">
-          <div style={{ width: '4px', height: '36px', background: 'linear-gradient(180deg, #E07820, #F58220)', borderRadius: '0 4px 4px 0', flexShrink: 0 }}></div>
-          <div style={{ width: '36px', height: '36px', borderRadius: '10px', background: 'rgba(224,120,32,0.1)', color: ACCENT, display: 'grid', placeItems: 'center' }}>
-            <Grid3x3 size={18} />
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', textTransform: 'uppercase', color: ACCENT, opacity: 0.8 }}>Fleet Training · Enrollments</span>
-            <h1 style={{ fontSize: '17px', fontWeight: 700, color: 'var(--text)', letterSpacing: '-0.02em', margin: '1px 0 0' }}>Assignments</h1>
-          </div>
-        </div>
+    <div className="asg-root">
 
-        <div className="asg-header-actions">
-          <div className="rpt-search-wrap asg-header-search" style={{ margin: 0 }}>
-            <Search size={14} className="rpt-field-icon" />
-            <input type="text" placeholder="Search by name, Seafarer ID, or rank..." className="rpt-field"
-              value={search} onChange={e => setSearch(e.target.value)} />
-            {search && (
-              <button className="rpt-x-btn" onClick={() => setSearch('')}><X size={12} /></button>
-            )}
-          </div>
-
-          <div className="asg-header-rank" style={{ position: 'relative' }} ref={dropdownRef}>
-                        <div className="rpt-field"
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-              <span style={{ flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontSize: '13px' }}>
-                {rankFilter || 'All Ranks'}
-              </span>
-              <ChevronDown size={14} className="mut"
-                style={{ transform: isDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s ease' }} />
+      {/* ═══════════════════════ STICKY HEADER & CONTROLS BAR ═══════════════════════ */}
+      <div className="asg-header-container">
+        <div className="asg-header">
+          {/* Left: Brand Identity */}
+          <div className="asg-header-brand">
+            <div className="asg-header-accent-bar" />
+            <div className="asg-header-icon">
+              <Grid3x3 size={17} />
             </div>
-
-            {isDropdownOpen && (
-              <div style={{
-                position: 'absolute', top: '100%', left: 0, right: 0, marginTop: '4px',
-                background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px',
-                boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)', zIndex: 50,
-                maxHeight: '240px', overflowY: 'auto',
-              }}>
-                <div className={`premium-select-option ${!rankFilter ? 'selected' : ''}`}
-                  onClick={() => { setRankFilter(''); setIsDropdownOpen(false) }}>All Ranks</div>
-                {uniqueRanks.map(r => (
-                  <div key={r} className={`premium-select-option ${rankFilter === r ? 'selected' : ''}`}
-                    onClick={() => { setRankFilter(r); setIsDropdownOpen(false) }}>{r}</div>
-                ))}
+            <div className="asg-header-title-wrap">
+              <div className="asg-header-eyebrow">Fleet Training · Enrollments</div>
+              <div className="asg-header-title-row">
+                <h1 className="asg-header-title">Assignments</h1>
+                <div className="asg-header-stat-pill">
+                  <span className="asg-header-stat-count">{filteredRows.length}</span>
+                  <span className="asg-header-stat-label">
+                    {hasFilters ? 'Filtered' : 'Seafarers'}
+                  </span>
+                </div>
               </div>
+            </div>
+          </div>
+
+          {/* Right: Search, CardSelect Rank Dropdown, and Refresh */}
+          <div className="asg-header-controls">
+            {/* Search Input */}
+            <div className="asg-search-wrap">
+              <Search size={13} className="asg-search-icon" />
+              <input
+                id="asg-search-input"
+                type="text"
+                className="asg-search-input"
+                placeholder="Search seafarers, ID, rank..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+              {search && (
+                <button
+                  type="button"
+                  className="asg-search-clear"
+                  onClick={() => setSearch('')}
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
+                  <X size={11} />
+                </button>
+              )}
+            </div>
+
+            {/* CardSelect Rank Filter */}
+            <div className="asg-select-wrap">
+              <CardSelect
+                id="asg-rank-filter"
+                value={rankFilter}
+                onChange={setRankFilter}
+                options={rankOptions}
+                placeholder="All Ranks"
+                searchable={true}
+                placement="bottom"
+                className="asg-cardselect"
+              />
+            </div>
+
+            {/* Refresh Button */}
+            <button
+              type="button"
+              id="asg-refresh-btn"
+              className="asg-btn-refresh"
+              onClick={load}
+              disabled={loading}
+              title="Refresh assignments"
+              aria-label="Refresh list"
+            >
+              <RefreshCw size={14} className={loading ? 'asg-spin' : ''} />
+            </button>
+          </div>
+        </div>
+
+        {/* Active Filter Chips Strip */}
+        {hasFilters && (
+          <div className="asg-chips-bar">
+            <span className="asg-chips-label">Active Filters:</span>
+
+            {search.trim() && (
+              <span className="asg-chip">
+                Search: <strong>"{search.trim()}"</strong>
+                <button
+                  type="button"
+                  className="asg-chip-remove"
+                  onClick={() => setSearch('')}
+                  title="Clear search"
+                  aria-label="Clear search"
+                >
+                  <X size={12} />
+                </button>
+              </span>
             )}
+
+            {rankFilter !== 'all' && rankFilter !== '' && (
+              <span className="asg-chip">
+                Rank: <strong>{rankFilter}</strong>
+                <button
+                  type="button"
+                  className="asg-chip-remove"
+                  onClick={() => setRankFilter('all')}
+                  title="Clear rank filter"
+                  aria-label="Clear rank filter"
+                >
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+
+            <button
+              type="button"
+              className="asg-chip-clear-all"
+              onClick={clearFilters}
+            >
+              Clear all
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ═══════════════════════ UNIQUE LIGHT-THEMED COMPACT KPI CARDS (~58px) ═══════════════════════ */}
+      <div className="asg-kpi-strip">
+        {/* Card 1: Total Seafarers (Warm Amber / Marine Gold) */}
+        <div className="asg-kpi-card asg-kpi-card--amber">
+          <span className="asg-kpi-badge">Crew</span>
+          <div className="asg-kpi-icon-wrap">
+            <Users size={17} />
+          </div>
+          <div className="asg-kpi-body">
+            <span className="asg-kpi-val">{data.rows.length}</span>
+            <span className="asg-kpi-lbl">Total Seafarers</span>
+          </div>
+        </div>
+
+        {/* Card 2: Active Courses (Royal Indigo) */}
+        <div className="asg-kpi-card asg-kpi-card--indigo">
+          <span className="asg-kpi-badge">Curriculum</span>
+          <div className="asg-kpi-icon-wrap">
+            <BookOpen size={17} />
+          </div>
+          <div className="asg-kpi-body">
+            <span className="asg-kpi-val">{totalCourses}</span>
+            <span className="asg-kpi-lbl">Active Courses</span>
+          </div>
+        </div>
+
+        {/* Card 3: Assigned Slots (Emerald Teal) */}
+        <div className="asg-kpi-card asg-kpi-card--emerald">
+          <span className="asg-kpi-badge">Enrollments</span>
+          <div className="asg-kpi-icon-wrap">
+            <Grid3x3 size={17} />
+          </div>
+          <div className="asg-kpi-body">
+            <span className="asg-kpi-val">{totalAssignments.toLocaleString()}</span>
+            <span className="asg-kpi-lbl">Assigned Slots</span>
+          </div>
+        </div>
+
+        {/* Card 4: Avg per Seafarer (Violet Purple) */}
+        <div className="asg-kpi-card asg-kpi-card--purple">
+          <span className="asg-kpi-badge">Ratio</span>
+          <div className="asg-kpi-icon-wrap">
+            <Award size={17} />
+          </div>
+          <div className="asg-kpi-body">
+            <span className="asg-kpi-val">{avgPerCrew.toFixed(1)}</span>
+            <span className="asg-kpi-lbl">Avg / Seafarer</span>
+          </div>
+        </div>
+
+        {/* Card 5: Completed Courses (Ocean Sky) */}
+        <div className="asg-kpi-card asg-kpi-card--sky">
+          <span className="asg-kpi-badge">Completed</span>
+          <div className="asg-kpi-icon-wrap">
+            <CheckCircle2 size={17} />
+          </div>
+          <div className="asg-kpi-body">
+            <span className="asg-kpi-val">{completedAssignments.toLocaleString()}</span>
+            <span className="asg-kpi-lbl">Completed Courses</span>
           </div>
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: 12, marginTop: 16, marginBottom: 12, flexWrap: 'wrap' }}>
-        {[
-          { label: 'Seafarers', value: data.rows.length, Icon: ClipboardList },
-          { label: 'Courses', value: totalCourses, Icon: BookOpen },
-          { label: 'Total Assignments', value: totalAssignments, Icon: Grid3x3 },
-          { label: 'Avg / Seafarer', value: avgPerCrew.toFixed(1), Icon: Award },
-        ].map(({ label, value, Icon }) => (
-          <div key={label} className="admin-card" style={{
-            padding: '9px 14px', display: 'flex', alignItems: 'center', gap: 10, flex: '1 1 160px', minWidth: 150,
-          }}>
-            <div style={{ width: 30, height: 30, borderRadius: 8, background: 'rgba(224,120,32,0.1)', color: ACCENT, display: 'grid', placeItems: 'center', flexShrink: 0 }}>
-              <Icon size={15} />
-            </div>
-            <div>
-              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)', lineHeight: 1.1 }}>{value}</div>
-              <div className="mut" style={{ fontSize: 11 }}>{label}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* minHeight keeps >= 5 rows visible (header + 5 rows + pagination) */}
-      <div className="admin-card" style={{ padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 470 }}>
+      {/* ═══════════════════════ TABLE CARD ═══════════════════════ */}
+      <div className="asg-table-card admin-card" style={{ padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 470 }}>
         <div className="admin-table-wrap" style={{ flex: 1, minHeight: 0 }}>
           <table className="admin-table">
             <thead>

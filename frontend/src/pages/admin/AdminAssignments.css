@@ -1,0 +1,695 @@
+/* ================================================================
+   Admin Course Management — Assignments Page (AdminAssignments.css)
+   Executive UI · Modern Sticky Header · Compact Light-Themed KPI Cards
+   ================================================================ */
+
+/* ── Root Page Container ── */
+.asg-root {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: 0;
+  gap: 0;
+  background: var(--bg);
+  overflow: visible;
+}
+
+/* ── Keyframes ── */
+@keyframes asgFadeUp {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes asgSpin {
+  to { transform: rotate(360deg); }
+}
+
+.asg-spin {
+  animation: asgSpin 0.8s linear infinite;
+}
+
+/* ================================================================
+   PAGE HEADER & CONTROLS BAR (Sticky at top: 56px)
+   ================================================================ */
+.asg-header-container {
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 56px;
+  z-index: 40;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.08);
+  animation: asgFadeUp .2s ease-out;
+  margin: 0;
+  padding: 0;
+}
+
+.asg-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 24px;
+  background: var(--surface);
+  flex-wrap: nowrap;
+}
+
+/* Left: Brand Identity */
+.asg-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.asg-header-accent-bar {
+  width: 3.5px;
+  height: 32px;
+  background: linear-gradient(180deg, #E07820 0%, #F58220 100%);
+  border-radius: 0 4px 4px 0;
+  flex-shrink: 0;
+}
+
+.asg-header-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: linear-gradient(135deg, rgba(224, 120, 32, 0.14) 0%, rgba(245, 130, 32, 0.08) 100%);
+  border: 1px solid rgba(224, 120, 32, 0.25);
+  color: #E07820;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(224, 120, 32, 0.1);
+}
+
+.asg-header-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.asg-header-eyebrow {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #E07820;
+  line-height: 1;
+}
+
+.asg-header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.2;
+}
+
+.asg-header-title {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+  letter-spacing: -0.015em;
+  white-space: nowrap;
+}
+
+.asg-header-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1.5px 7px;
+  border-radius: 99px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.asg-header-stat-count {
+  font-weight: 700;
+  color: #E07820;
+}
+
+.asg-header-stat-label {
+  color: var(--text-mut);
+  font-weight: 500;
+}
+
+/* Right: Header Controls */
+.asg-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  flex-shrink: 1;
+  min-width: 0;
+}
+
+/* Search Box */
+.asg-search-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1 1 240px;
+  min-width: 170px;
+  max-width: 320px;
+}
+
+.asg-search-icon {
+  position: absolute;
+  left: 10px;
+  color: var(--text-mut);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.asg-search-input {
+  width: 100%;
+  height: 35px;
+  padding: 0 28px 0 32px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12.5px;
+  font-family: inherit;
+  outline: none;
+  transition: all .15s ease;
+}
+
+.asg-search-input:focus {
+  background: var(--surface);
+  border-color: #E07820;
+  box-shadow: 0 0 0 3px rgba(224, 120, 32, 0.14);
+}
+
+.asg-search-clear {
+  position: absolute;
+  right: 8px;
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: none;
+  background: var(--surface-3);
+  color: var(--text-mut);
+  cursor: pointer;
+  padding: 0;
+}
+
+.asg-search-clear:hover {
+  background: var(--border-strong);
+  color: var(--text);
+}
+
+/* CardSelect Dropdown for Ranks */
+.asg-select-wrap {
+  position: relative;
+  flex: 0 0 auto;
+  width: 220px;
+  min-width: 165px;
+}
+
+.asg-cardselect .cardselect-trigger {
+  height: 35px;
+  padding: 0 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  font-size: 12.5px;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.asg-cardselect .cardselect-trigger:hover:not(:disabled) {
+  background: var(--surface);
+  border-color: var(--border-strong);
+}
+
+.asg-cardselect .cardselect-trigger--open,
+.asg-cardselect .cardselect-trigger:focus-visible {
+  border-color: #E07820;
+  box-shadow: 0 0 0 3px rgba(224, 120, 32, 0.16);
+  background: var(--surface);
+}
+
+.asg-cardselect .cardselect-panel {
+  min-width: 260px;
+  border-radius: 12px;
+  border-color: var(--border);
+  box-shadow: 0 16px 36px -8px rgba(15, 23, 42, 0.22);
+}
+
+/* Refresh Button */
+.asg-btn-refresh {
+  width: 35px;
+  height: 35px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-mut);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all .15s ease;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.asg-btn-refresh:hover:not(:disabled) {
+  background: var(--surface-3);
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+/* Active Filter Chips Strip */
+.asg-chips-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 24px;
+  background: var(--surface-2);
+  border-top: 1px solid var(--border);
+  font-size: 11.5px;
+  flex-wrap: wrap;
+}
+
+.asg-chips-label {
+  color: var(--text-mut);
+  font-weight: 600;
+  font-size: 11px;
+}
+
+.asg-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-size: 11px;
+}
+
+.asg-chip strong {
+  color: #E07820;
+}
+
+.asg-chip-remove {
+  background: none;
+  border: none;
+  color: var(--text-mut);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  margin-left: 2px;
+}
+
+.asg-chip-remove:hover {
+  color: var(--text);
+}
+
+.asg-chip-clear-all {
+  background: none;
+  border: none;
+  color: #E07820;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 2px 4px;
+  margin-left: 2px;
+}
+
+.asg-chip-clear-all:hover {
+  text-decoration: underline;
+}
+
+/* ================================================================
+   UNIQUE LIGHT-THEMED COMPACT KPI CARDS (~58px Height)
+   ================================================================ */
+.asg-kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+  padding: 10px 24px 8px;
+  background: transparent;
+  z-index: 10;
+  position: relative;
+}
+
+/* Base Light KPI Card - Compact Horizontal Layout */
+.asg-kpi-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  height: 58px;
+  box-sizing: border-box;
+  border-radius: 11px;
+  background: #ffffff;
+  border: 1px solid var(--border);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  transition: transform .18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .18s cubic-bezier(0.16, 1, 0.3, 1), border-color .18s ease;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.asg-kpi-card:hover {
+  transform: translateY(-2px);
+}
+
+.asg-kpi-icon-wrap {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: transform .15s ease;
+}
+
+.asg-kpi-card:hover .asg-kpi-icon-wrap {
+  transform: scale(1.06);
+}
+
+.asg-kpi-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  min-width: 0;
+  gap: 1px;
+}
+
+.asg-kpi-val {
+  font-size: 19px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.asg-kpi-lbl {
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--text-mut);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+/* Modern Category Badge (Top Right) */
+.asg-kpi-badge {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 1.5px 6px;
+  border-radius: 99px;
+  border: 1px solid transparent;
+  line-height: 1.2;
+}
+
+/* ── 5 Unique Light-Themed Color Styles ── */
+
+/* Card 1: Seafarers (Warm Amber / Marine Gold) */
+.asg-kpi-card--amber {
+  background: linear-gradient(135deg, #ffffff 0%, rgba(254, 243, 199, 0.85) 100%);
+  border-color: rgba(224, 120, 32, 0.24);
+}
+.asg-kpi-card--amber:hover {
+  box-shadow: 0 6px 20px -3px rgba(224, 120, 32, 0.18);
+  border-color: rgba(224, 120, 32, 0.45);
+}
+.asg-kpi-card--amber .asg-kpi-icon-wrap {
+  background: linear-gradient(135deg, #E07820 0%, #f59e0b 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(224, 120, 32, 0.28);
+}
+.asg-kpi-card--amber .asg-kpi-badge {
+  background: rgba(224, 120, 32, 0.12);
+  color: #c25e10;
+  border-color: rgba(224, 120, 32, 0.22);
+}
+.asg-kpi-card--amber .asg-kpi-val {
+  color: #9a4208;
+}
+
+/* Card 2: Active Courses (Royal Indigo) */
+.asg-kpi-card--indigo {
+  background: linear-gradient(135deg, #ffffff 0%, rgba(238, 242, 255, 0.88) 100%);
+  border-color: rgba(79, 70, 229, 0.22);
+}
+.asg-kpi-card--indigo:hover {
+  box-shadow: 0 6px 20px -3px rgba(79, 70, 229, 0.16);
+  border-color: rgba(79, 70, 229, 0.45);
+}
+.asg-kpi-card--indigo .asg-kpi-icon-wrap {
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(79, 70, 229, 0.28);
+}
+.asg-kpi-card--indigo .asg-kpi-badge {
+  background: rgba(79, 70, 229, 0.1);
+  color: #4338ca;
+  border-color: rgba(79, 70, 229, 0.2);
+}
+.asg-kpi-card--indigo .asg-kpi-val {
+  color: #312e81;
+}
+
+/* Card 3: Assigned Slots (Emerald Teal) */
+.asg-kpi-card--emerald {
+  background: linear-gradient(135deg, #ffffff 0%, rgba(236, 253, 245, 0.88) 100%);
+  border-color: rgba(16, 185, 129, 0.24);
+}
+.asg-kpi-card--emerald:hover {
+  box-shadow: 0 6px 20px -3px rgba(16, 185, 129, 0.16);
+  border-color: rgba(16, 185, 129, 0.45);
+}
+.asg-kpi-card--emerald .asg-kpi-icon-wrap {
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(16, 185, 129, 0.28);
+}
+.asg-kpi-card--emerald .asg-kpi-badge {
+  background: rgba(16, 185, 129, 0.1);
+  color: #047857;
+  border-color: rgba(16, 185, 129, 0.2);
+}
+.asg-kpi-card--emerald .asg-kpi-val {
+  color: #064e3b;
+}
+
+/* Card 4: Avg per Seafarer (Violet Purple) */
+.asg-kpi-card--purple {
+  background: linear-gradient(135deg, #ffffff 0%, rgba(250, 245, 255, 0.88) 100%);
+  border-color: rgba(168, 85, 247, 0.22);
+}
+.asg-kpi-card--purple:hover {
+  box-shadow: 0 6px 20px -3px rgba(168, 85, 247, 0.16);
+  border-color: rgba(168, 85, 247, 0.45);
+}
+.asg-kpi-card--purple .asg-kpi-icon-wrap {
+  background: linear-gradient(135deg, #9333ea 0%, #a855f7 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(168, 85, 247, 0.28);
+}
+.asg-kpi-card--purple .asg-kpi-badge {
+  background: rgba(168, 85, 247, 0.1);
+  color: #6b21a8;
+  border-color: rgba(168, 85, 247, 0.2);
+}
+.asg-kpi-card--purple .asg-kpi-val {
+  color: #581c87;
+}
+
+/* Card 5: Completed Courses (Ocean Sky) */
+.asg-kpi-card--sky {
+  background: linear-gradient(135deg, #ffffff 0%, rgba(240, 249, 255, 0.92) 100%);
+  border-color: rgba(2, 132, 199, 0.26);
+}
+.asg-kpi-card--sky:hover {
+  box-shadow: 0 6px 20px -3px rgba(2, 132, 199, 0.16);
+  border-color: rgba(2, 132, 199, 0.45);
+}
+.asg-kpi-card--sky .asg-kpi-icon-wrap {
+  background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(2, 132, 199, 0.28);
+}
+.asg-kpi-card--sky .asg-kpi-badge {
+  background: rgba(2, 132, 199, 0.1);
+  color: #0369a1;
+  border-color: rgba(2, 132, 199, 0.22);
+}
+.asg-kpi-card--sky .asg-kpi-val {
+  color: #075985;
+}
+
+/* Dark Mode Overrides for KPI Cards */
+[data-theme="dark"] .asg-kpi-card {
+  background: #181d28;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+[data-theme="dark"] .asg-kpi-card--amber {
+  background: linear-gradient(135deg, #181d28 0%, rgba(224, 120, 32, 0.12) 100%);
+  border-color: rgba(224, 120, 32, 0.35);
+}
+[data-theme="dark"] .asg-kpi-card--amber .asg-kpi-val { color: #fdba74; }
+
+[data-theme="dark"] .asg-kpi-card--indigo {
+  background: linear-gradient(135deg, #181d28 0%, rgba(79, 70, 229, 0.14) 100%);
+  border-color: rgba(79, 70, 229, 0.35);
+}
+[data-theme="dark"] .asg-kpi-card--indigo .asg-kpi-val { color: #c7d2fe; }
+
+[data-theme="dark"] .asg-kpi-card--emerald {
+  background: linear-gradient(135deg, #181d28 0%, rgba(16, 185, 129, 0.14) 100%);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+[data-theme="dark"] .asg-kpi-card--emerald .asg-kpi-val { color: #a7f3d0; }
+
+[data-theme="dark"] .asg-kpi-card--purple {
+  background: linear-gradient(135deg, #181d28 0%, rgba(168, 85, 247, 0.14) 100%);
+  border-color: rgba(168, 85, 247, 0.35);
+}
+[data-theme="dark"] .asg-kpi-card--purple .asg-kpi-val { color: #e9d5ff; }
+
+[data-theme="dark"] .asg-kpi-card--sky {
+  background: linear-gradient(135deg, #181d28 0%, rgba(2, 132, 199, 0.14) 100%);
+  border-color: rgba(2, 132, 199, 0.35);
+}
+[data-theme="dark"] .asg-kpi-card--sky .asg-kpi-val { color: #bae6fd; }
+
+/* ================================================================
+   TABLE CARD STYLING & FLUSH INTEGRATION
+   ================================================================ */
+.asg-table-card {
+  margin: 0 24px 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: var(--shadow-sm, 0 2px 8px rgba(0, 0, 0, 0.05));
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+  z-index: 15;
+}
+
+/* ================================================================
+   RESPONSIVE MEDIA QUERIES
+   ================================================================ */
+
+/* Standard Laptop / Compact Desktop (<= 1200px) */
+@media (max-width: 1200px) {
+  .asg-header {
+    flex-wrap: wrap;
+    padding: 10px 20px;
+    gap: 10px;
+  }
+  .asg-header-controls {
+    flex-wrap: wrap;
+    width: 100%;
+    margin-top: 2px;
+    gap: 8px;
+  }
+  .asg-search-wrap {
+    flex: 1 1 200px;
+    max-width: 320px;
+  }
+  .asg-select-wrap {
+    flex: 1 1 200px;
+  }
+  .asg-kpi-strip {
+    grid-template-columns: repeat(3, 1fr);
+    padding: 10px 20px 6px;
+    gap: 8px;
+  }
+  .asg-table-card {
+    margin: 0 20px 18px;
+  }
+}
+
+/* Tablets Landscape (<= 992px) */
+@media (max-width: 992px) {
+  .asg-search-wrap {
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+  .asg-select-wrap {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .asg-kpi-strip {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 10px 16px 6px;
+    gap: 8px;
+  }
+  .asg-table-card {
+    margin: 0 16px 16px;
+  }
+}
+
+/* Tablets Portrait (<= 768px) */
+@media (max-width: 768px) {
+  .asg-header {
+    padding: 8px 14px;
+  }
+  .asg-header-title {
+    font-size: 15px;
+  }
+  .asg-kpi-strip {
+    grid-template-columns: repeat(2, 1fr);
+    padding: 8px 14px 6px;
+    gap: 6px;
+  }
+  .asg-table-card {
+    margin: 0 14px 14px;
+    border-radius: 10px;
+  }
+}
+
+/* Mobile Devices (<= 540px) */
+@media (max-width: 540px) {
+  .asg-header {
+    padding: 8px 12px;
+  }
+  .asg-header-brand {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .asg-header-controls {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  .asg-search-wrap,
+  .asg-select-wrap {
+    width: 100%;
+    max-width: 100%;
+    flex: 1 1 100%;
+  }
+  .asg-kpi-strip {
+    grid-template-columns: 1fr;
+    padding: 8px 10px 6px;
+    gap: 6px;
+  }
+  .asg-table-card {
+    margin: 0 10px 12px;
+    border-radius: 8px;
+  }
+}
