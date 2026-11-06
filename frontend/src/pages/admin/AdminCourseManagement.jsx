@@ -59,7 +59,7 @@ export default function AdminCourseManagement() {
 
   const isActive = (path) => location.pathname === path
 
-  const isFlush = location.pathname.includes('/report') || location.pathname.includes('/courses')
+  const isFlush = location.pathname.includes('/report') || location.pathname.includes('/courses') || location.pathname.includes('/users')
 
   return (
     <div className={`cm-wrapper${isFlush ? ' cm-wrapper--flush' : ''}`}>
