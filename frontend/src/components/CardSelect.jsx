@@ -9,17 +9,19 @@ import './CardSelect.css'
  * options: [{ value, label, description?, icon?: Component }]
  * placement: 'auto' | 'top' | 'bottom'
  * searchable: boolean (adds instant search bar inside the panel)
+ * multi: boolean (enables multi-selection of items)
  */
 export default function CardSelect({
   value,
   onChange,
-  options,
+  options = [],
   placeholder = 'Select...',
   disabled = false,
   className = '',
   id,
   placement = 'auto',
   searchable = false,
+  multi = false,
 }) {
   const [open, setOpen] = useState(false)
   const [dropUp, setDropUp] = useState(placement === 'top')
@@ -103,8 +105,48 @@ export default function CardSelect({
     }
   }, [open, updatePlacement])
 
-  const current = options.find((o) => String(o.value ?? '') === String(value ?? ''))
+  const isSelected = (val) => {
+    if (multi) {
+      return Array.isArray(value) && value.some((v) => String(v) === String(val))
+    }
+    return String(val ?? '') === String(value ?? '')
+  }
+
+  const current = useMemo(() => {
+    if (multi) return null
+    return options.find((o) => String(o.value ?? '') === String(value ?? ''))
+  }, [multi, options, value])
+
   const CurrentIcon = current?.icon
+
+  const triggerLabel = useMemo(() => {
+    if (multi) {
+      if (!Array.isArray(value) || value.length === 0) return placeholder
+      if (value.length === 1) {
+        const found = options.find((o) => String(o.value ?? '') === String(value[0]))
+        return found ? found.label : '1 Selected'
+      }
+      return `${value.length} Selected`
+    }
+    return current ? current.label : placeholder
+  }, [multi, value, options, placeholder, current])
+
+  const handleOptionClick = (val) => {
+    if (multi) {
+      const arr = Array.isArray(value) ? [...value] : []
+      const strVal = String(val)
+      const idx = arr.findIndex((v) => String(v) === strVal)
+      if (idx >= 0) {
+        arr.splice(idx, 1)
+      } else {
+        arr.push(val)
+      }
+      onChange(arr)
+    } else {
+      onChange(val)
+      setOpen(false)
+    }
+  }
 
   const filteredOptions = useMemo(() => {
     if (!searchable || !filterText.trim()) return options
@@ -123,6 +165,8 @@ export default function CardSelect({
     className,
   ].filter(Boolean).join(' ')
 
+  const hasSelection = multi ? (Array.isArray(value) && value.length > 0) : Boolean(current)
+
   return (
     <div className={rootClasses} ref={ref}>
       <button
@@ -130,15 +174,18 @@ export default function CardSelect({
         id={id}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`cardselect-trigger${open ? ' cardselect-trigger--open' : ''}`}
+        className={`cardselect-trigger${open ? ' cardselect-trigger--open' : ''}${hasSelection ? ' cardselect-trigger--has-val' : ''}`}
         onClick={toggleOpen}
         disabled={disabled}
       >
         <span className="cardselect-trigger-content">
           {CurrentIcon && <CurrentIcon size={15} className="cardselect-trigger-icon" />}
-          <span className={current ? 'cardselect-label-text' : 'cardselect-placeholder'}>
-            {current ? current.label : placeholder}
+          <span className={hasSelection ? 'cardselect-label-text' : 'cardselect-placeholder'}>
+            {triggerLabel}
           </span>
+          {multi && Array.isArray(value) && value.length > 1 && (
+            <span className="cardselect-count-badge">{value.length}</span>
+          )}
         </span>
         <ChevronDown size={14} className="cardselect-chevron" />
       </button>
@@ -169,13 +216,34 @@ export default function CardSelect({
             </div>
           )}
 
+          {multi && (
+            <div className="cardselect-multi-actions" onClick={(e) => e.stopPropagation()}>
+              <button
+                type="button"
+                className="cardselect-multi-btn"
+                onClick={() => onChange(filteredOptions.map((o) => o.value))}
+              >
+                Select All ({filteredOptions.length})
+              </button>
+              {Array.isArray(value) && value.length > 0 && (
+                <button
+                  type="button"
+                  className="cardselect-multi-btn cardselect-multi-btn--clear"
+                  onClick={() => onChange([])}
+                >
+                  Clear Selection
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="cardselect-options-list">
             {filteredOptions.length === 0 ? (
               <div className="cardselect-empty">No matching options found</div>
             ) : (
               filteredOptions.map((o) => {
                 const Icon = o.icon
-                const active = String(o.value ?? '') === String(value ?? '')
+                const active = isSelected(o.value)
                 return (
                   <button
                     type="button"
@@ -183,14 +251,14 @@ export default function CardSelect({
                     role="option"
                     aria-selected={active}
                     className={`cardselect-option${active ? ' cardselect-option--active' : ''}`}
-                    onClick={() => { onChange(o.value); setOpen(false) }}
+                    onClick={() => handleOptionClick(o.value)}
                   >
                     {Icon && <span className="cardselect-option-icon"><Icon size={14} /></span>}
                     <span className="cardselect-option-text">
                       <span className="cardselect-option-label">{o.label}</span>
                       {o.description && <span className="cardselect-option-desc">{o.description}</span>}
                     </span>
-                    {active && <Check size={14} className="cardselect-option-check" />}
+                    {active && <Check size={14} className="cardselect-option-check" strokeWidth={2.5} />}
                   </button>
                 )
               })

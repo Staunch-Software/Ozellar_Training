@@ -3,10 +3,10 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   BookOpen, Plus, AlertCircle, X, ChevronRight, ChevronLeft, Search,
-  GraduationCap, Copy, Check, Layers, Award, Users, RefreshCw, Clock,
-  ArrowUpDown, Filter, HelpCircle
+  GraduationCap, Copy, Check, Layers, Award, Users, RefreshCw, Clock
 } from 'lucide-react'
 import { adminListCourses, adminCreateCourse, adminListUsers, adminDuplicateCourse } from '../../api.js'
+import CardSelect from '../../components/CardSelect.jsx'
 
 const EMPTY = { title: '', subtitle: '', durationLabel: '', passMark: 80, maxAttempts: '' }
 const ROWS_PER_PAGE = 50
@@ -19,9 +19,8 @@ export default function AdminCourses() {
 
   // Filters & Search
   const [search, setSearch] = useState('')
+  const [selectedCourses, setSelectedCourses] = useState([]) // Multi-select array of course IDs
   const [assessmentFilter, setAssessmentFilter] = useState('all') // 'all', 'has-assessment', 'no-assessment'
-  const [moduleFilter, setModuleFilter] = useState('all') // 'all', 'has-modules', 'no-modules'
-  const [sortBy, setSortBy] = useState('default') // 'default', 'title-asc', 'title-desc', 'modules-desc', 'pass-desc'
   const [page, setPage] = useState(1)
 
   // New Course Modal
@@ -60,7 +59,7 @@ export default function AdminCourses() {
   // Reset pagination on filter/search change
   useEffect(() => {
     setPage(1)
-  }, [search, assessmentFilter, moduleFilter, sortBy])
+  }, [search, selectedCourses, assessmentFilter])
 
   // Seamless wheel scrolling coordinator
   useEffect(() => {
@@ -154,7 +153,25 @@ export default function AdminCourses() {
     }
   }
 
-  // Filtered & Sorted Courses
+  // Course Options for CardSelect
+  const courseOptions = useMemo(() => {
+    if (!courses) return []
+    return courses.map(c => ({
+      value: c.id,
+      label: c.title,
+      description: `${c.chapterCount} modules${c.questionCount > 0 ? ` · Exam (${c.passMark}%)` : ''}`,
+      icon: BookOpen,
+    }))
+  }, [courses])
+
+  // Assessment Options for CardSelect
+  const assessmentOptions = useMemo(() => [
+    { value: 'all', label: 'All Assessments' },
+    { value: 'has-assessment', label: 'With Assessment', description: 'Courses with exams' },
+    { value: 'no-assessment', label: 'No Assessment', description: 'Reading only' },
+  ], [])
+
+  // Filtered Courses
   const filteredCourses = useMemo(() => {
     if (!courses) return []
     let list = [...courses]
@@ -170,6 +187,11 @@ export default function AdminCourses() {
       )
     }
 
+    // Course Multi-Select Filter
+    if (selectedCourses.length > 0) {
+      list = list.filter(c => selectedCourses.includes(c.id))
+    }
+
     // Assessment Filter
     if (assessmentFilter === 'has-assessment') {
       list = list.filter(c => (c.questionCount || 0) > 0)
@@ -177,26 +199,8 @@ export default function AdminCourses() {
       list = list.filter(c => (c.questionCount || 0) === 0)
     }
 
-    // Module Filter
-    if (moduleFilter === 'has-modules') {
-      list = list.filter(c => (c.chapterCount || 0) > 0)
-    } else if (moduleFilter === 'no-modules') {
-      list = list.filter(c => (c.chapterCount || 0) === 0)
-    }
-
-    // Sort
-    if (sortBy === 'title-asc') {
-      list.sort((a, b) => (a.title || '').localeCompare(b.title || ''))
-    } else if (sortBy === 'title-desc') {
-      list.sort((a, b) => (b.title || '').localeCompare(a.title || ''))
-    } else if (sortBy === 'modules-desc') {
-      list.sort((a, b) => (b.chapterCount || 0) - (a.chapterCount || 0))
-    } else if (sortBy === 'pass-desc') {
-      list.sort((a, b) => (b.passMark || 0) - (a.passMark || 0))
-    }
-
     return list
-  }, [courses, search, assessmentFilter, moduleFilter, sortBy])
+  }, [courses, search, selectedCourses, assessmentFilter])
 
   // KPIs
   const kpis = useMemo(() => {
@@ -274,12 +278,11 @@ export default function AdminCourses() {
     }
   }
 
-  const hasFilters = search.trim() !== '' || assessmentFilter !== 'all' || moduleFilter !== 'all' || sortBy !== 'default'
+  const hasFilters = search.trim() !== '' || selectedCourses.length > 0 || assessmentFilter !== 'all'
   const clearFilters = () => {
     setSearch('')
+    setSelectedCourses([])
     setAssessmentFilter('all')
-    setModuleFilter('all')
-    setSortBy('default')
   }
 
   if (!courses) {
@@ -391,7 +394,7 @@ export default function AdminCourses() {
             </div>
           </div>
 
-          {/* Right: Search, Filter, Sort & New Course in Single Row */}
+          {/* Right: Search, Course Multi-Select, Assessment Filter & New Course in Single Row */}
           <div className="crs-header-controls">
             {/* Search Box */}
             <div className="crs-search-wrap">
@@ -417,38 +420,32 @@ export default function AdminCourses() {
               )}
             </div>
 
-            {/* Assessment Filter */}
-            <div className="crs-select-wrap">
-              <GraduationCap size={13} className="crs-select-icon" />
-              <select
-                id="crs-assessment-filter"
-                className="crs-select"
-                value={assessmentFilter}
-                onChange={(e) => setAssessmentFilter(e.target.value)}
-                title="Filter by assessment type"
-              >
-                <option value="all">All Assessments</option>
-                <option value="has-assessment">With Assessment</option>
-                <option value="no-assessment">No Assessment</option>
-              </select>
+            {/* Course Filter Dropdown with CardSelect (Multi-select enabled!) */}
+            <div className="crs-select-wrap crs-select-course">
+              <CardSelect
+                id="crs-course-filter"
+                value={selectedCourses}
+                onChange={setSelectedCourses}
+                options={courseOptions}
+                placeholder="All Courses"
+                searchable={true}
+                multi={true}
+                placement="bottom"
+                className="crs-cardselect crs-cardselect--course"
+              />
             </div>
 
-            {/* Sort Dropdown */}
-            <div className="crs-select-wrap">
-              <ArrowUpDown size={13} className="crs-select-icon" />
-              <select
-                id="crs-sort-select"
-                className="crs-select"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                title="Sort courses"
-              >
-                <option value="default">Sort: Default</option>
-                <option value="title-asc">Title (A–Z)</option>
-                <option value="title-desc">Title (Z–A)</option>
-                <option value="modules-desc">Most Modules</option>
-                <option value="pass-desc">Pass Mark (High–Low)</option>
-              </select>
+            {/* Assessment Filter Dropdown with CardSelect */}
+            <div className="crs-select-wrap crs-select-assessment">
+              <CardSelect
+                id="crs-assessment-filter"
+                value={assessmentFilter}
+                onChange={setAssessmentFilter}
+                options={assessmentOptions}
+                placeholder="All Assessments"
+                placement="bottom"
+                className="crs-cardselect crs-cardselect--assessment"
+              />
             </div>
 
             {/* Refresh Button */}
@@ -489,20 +486,24 @@ export default function AdminCourses() {
                 </button>
               </span>
             )}
+            {selectedCourses.length > 0 && (
+              <span className="crs-chip">
+                <BookOpen size={11} className="crs-chip-icon" />
+                <span>
+                  {selectedCourses.length === 1
+                    ? `Course: ${courses.find(c => c.id === selectedCourses[0])?.title || selectedCourses[0]}`
+                    : `Courses: ${selectedCourses.length} selected`}
+                </span>
+                <button type="button" className="crs-chip-remove" onClick={() => setSelectedCourses([])}>
+                  <X size={11} />
+                </button>
+              </span>
+            )}
             {assessmentFilter !== 'all' && (
               <span className="crs-chip">
                 <GraduationCap size={11} className="crs-chip-icon" />
                 <span>Assessment: {assessmentFilter === 'has-assessment' ? 'With Assessment' : 'No Assessment'}</span>
                 <button type="button" className="crs-chip-remove" onClick={() => setAssessmentFilter('all')}>
-                  <X size={11} />
-                </button>
-              </span>
-            )}
-            {sortBy !== 'default' && (
-              <span className="crs-chip">
-                <ArrowUpDown size={11} className="crs-chip-icon" />
-                <span>Sorted</span>
-                <button type="button" className="crs-chip-remove" onClick={() => setSortBy('default')}>
                   <X size={11} />
                 </button>
               </span>
@@ -520,56 +521,66 @@ export default function AdminCourses() {
         </div>
       )}
 
-      {/* ═══════════════════════ KPI METRIC STRIP ═══════════════════════ */}
+      {/* ═══════════════════════ UNIQUE LIGHT-THEMED KPI METRIC STRIP ═══════════════════════ */}
       <div className="crs-kpi-strip">
-        <div className="crs-kpi-card">
-          <div className="crs-kpi-icon-wrap crs-kpi-icon-wrap--accent">
-            <BookOpen size={17} />
+        {/* Card 1: Total Courses */}
+        <div className="crs-kpi-card crs-kpi-card--indigo">
+          <div className="crs-kpi-icon-wrap">
+            <BookOpen size={17} strokeWidth={2.3} />
           </div>
           <div className="crs-kpi-body">
             <span className="crs-kpi-val">{kpis.totalCourses}</span>
             <span className="crs-kpi-lbl">Total Courses</span>
           </div>
+          <span className="crs-kpi-badge">Curriculum</span>
         </div>
 
-        <div className="crs-kpi-card">
-          <div className="crs-kpi-icon-wrap crs-kpi-icon-wrap--success">
-            <Layers size={17} />
+        {/* Card 2: Total Modules */}
+        <div className="crs-kpi-card crs-kpi-card--emerald">
+          <div className="crs-kpi-icon-wrap">
+            <Layers size={17} strokeWidth={2.3} />
           </div>
           <div className="crs-kpi-body">
             <span className="crs-kpi-val">{kpis.totalModules}</span>
             <span className="crs-kpi-lbl">Total Modules</span>
           </div>
+          <span className="crs-kpi-badge">Modules</span>
         </div>
 
-        <div className="crs-kpi-card">
-          <div className="crs-kpi-icon-wrap crs-kpi-icon-wrap--purple">
-            <GraduationCap size={17} />
+        {/* Card 3: With Assessment */}
+        <div className="crs-kpi-card crs-kpi-card--purple">
+          <div className="crs-kpi-icon-wrap">
+            <GraduationCap size={17} strokeWidth={2.3} />
           </div>
           <div className="crs-kpi-body">
             <span className="crs-kpi-val">{kpis.assessments}</span>
             <span className="crs-kpi-lbl">With Assessment</span>
           </div>
+          <span className="crs-kpi-badge">Assessment</span>
         </div>
 
-        <div className="crs-kpi-card">
-          <div className="crs-kpi-icon-wrap crs-kpi-icon-wrap--warn">
-            <Award size={17} />
+        {/* Card 4: Avg Pass Criteria */}
+        <div className="crs-kpi-card crs-kpi-card--amber">
+          <div className="crs-kpi-icon-wrap">
+            <Award size={17} strokeWidth={2.3} />
           </div>
           <div className="crs-kpi-body">
             <span className="crs-kpi-val">{kpis.avgPass}%</span>
             <span className="crs-kpi-lbl">Avg Pass Criteria</span>
           </div>
+          <span className="crs-kpi-badge">Benchmark</span>
         </div>
 
-        <div className="crs-kpi-card crs-kpi-card--highlight">
-          <div className="crs-kpi-icon-wrap crs-kpi-icon-wrap--cyan">
-            <Users size={17} />
+        {/* Card 5: Covered Ranks */}
+        <div className="crs-kpi-card crs-kpi-card--sky">
+          <div className="crs-kpi-icon-wrap">
+            <Users size={17} strokeWidth={2.3} />
           </div>
           <div className="crs-kpi-body">
             <span className="crs-kpi-val">{kpis.targetedRanks}</span>
             <span className="crs-kpi-lbl">Covered Ranks</span>
           </div>
+          <span className="crs-kpi-badge">Fleet Reach</span>
         </div>
       </div>
 
