@@ -332,72 +332,67 @@
 }
 
 /* ================================================================
-   UNIQUE LIGHT-THEMED COMPACT KPI CARDS (~58px Height)
+   UNIQUE WHITE EXECUTIVE KPI METRIC TILES (~64px Height)
+   Clean, light, vertical hierarchy, top label with accent dot,
+   top-right pastel icon, bottom bold value & micro pill badge.
    ================================================================ */
 .asg-kpi-strip {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 10px;
-  padding: 10px 24px 8px;
+  gap: 12px;
+  padding: 12px 24px 10px;
   background: transparent;
   z-index: 10;
   position: relative;
 }
 
-/* Base Light KPI Card - Compact Horizontal Layout */
+/* Base White Metric Tile - Clean, Crisp White */
 .asg-kpi-card {
   position: relative;
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  height: 58px;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 10px 14px 9px;
+  height: 64px;
   box-sizing: border-box;
-  border-radius: 11px;
+  border-radius: 12px;
   background: #ffffff;
   border: 1px solid var(--border);
-  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 2px 6px -1px rgba(0, 0, 0, 0.02);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04), 0 1px 2px rgba(15, 23, 42, 0.02);
   transition: transform .18s cubic-bezier(0.16, 1, 0.3, 1), box-shadow .18s cubic-bezier(0.16, 1, 0.3, 1), border-color .18s ease;
   min-width: 0;
-  overflow: hidden;
 }
 
 .asg-kpi-card:hover {
   transform: translateY(-2px);
+  box-shadow: 0 6px 18px -3px rgba(15, 23, 42, 0.08);
 }
 
-.asg-kpi-icon-wrap {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  transition: transform .15s ease;
-}
-
-.asg-kpi-card:hover .asg-kpi-icon-wrap {
-  transform: scale(1.06);
-}
-
-.asg-kpi-body {
+/* Top Row: Label with glowing dot + micro icon */
+.asg-kpi-top {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
   min-width: 0;
-  gap: 1px;
 }
 
-.asg-kpi-val {
-  font-size: 19px;
-  font-weight: 700;
-  line-height: 1.1;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -0.02em;
+.asg-kpi-lbl-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.asg-kpi-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .asg-kpi-lbl {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-mut);
   white-space: nowrap;
@@ -406,172 +401,162 @@
   letter-spacing: -0.01em;
 }
 
-/* Modern Category Badge (Top Right) */
-.asg-kpi-badge {
-  position: absolute;
-  top: 6px;
-  right: 8px;
-  font-size: 9px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  padding: 1.5px 6px;
-  border-radius: 99px;
+/* Micro-Icon in soft pastel squircle (top-right) */
+.asg-kpi-icon-wrap {
+  width: 26px;
+  height: 26px;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  transition: transform .15s ease;
   border: 1px solid transparent;
-  line-height: 1.2;
 }
 
-/* ── 5 Unique Light-Themed Color Styles ── */
+.asg-kpi-card:hover .asg-kpi-icon-wrap {
+  transform: scale(1.08);
+}
 
-/* Card 1: Seafarers (Warm Amber / Marine Gold) */
-.asg-kpi-card--amber {
-  background: linear-gradient(135deg, #ffffff 0%, rgba(254, 243, 199, 0.85) 100%);
-  border-color: rgba(224, 120, 32, 0.24);
+/* Bottom Row: Large Value + Pill Badge */
+.asg-kpi-bottom {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+
+.asg-kpi-val {
+  font-size: 21px;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.025em;
+}
+
+/* Subtle Micro Badge Pill */
+.asg-kpi-badge {
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 1.5px 7px;
+  border-radius: 99px;
+  line-height: 1.2;
+  white-space: nowrap;
+  flex-shrink: 0;
+  border: 1px solid transparent;
+}
+
+/* ── 5 Color Variants (Pure White Card with Little Colour Accents) ── */
+
+/* Card 1: Amber */
+.asg-kpi-card--amber .asg-kpi-dot {
+  background: #E07820;
+  box-shadow: 0 0 6px rgba(224, 120, 32, 0.4);
 }
 .asg-kpi-card--amber:hover {
-  box-shadow: 0 6px 20px -3px rgba(224, 120, 32, 0.18);
-  border-color: rgba(224, 120, 32, 0.45);
-}
-.asg-kpi-card--amber .asg-kpi-icon-wrap {
-  background: linear-gradient(135deg, #E07820 0%, #f59e0b 100%);
-  color: #ffffff;
-  box-shadow: 0 3px 8px rgba(224, 120, 32, 0.28);
-}
-.asg-kpi-card--amber .asg-kpi-badge {
-  background: rgba(224, 120, 32, 0.12);
-  color: #c25e10;
-  border-color: rgba(224, 120, 32, 0.22);
-}
-.asg-kpi-card--amber .asg-kpi-val {
-  color: #9a4208;
-}
-
-/* Card 2: Active Courses (Royal Indigo) */
-.asg-kpi-card--indigo {
-  background: linear-gradient(135deg, #ffffff 0%, rgba(238, 242, 255, 0.88) 100%);
-  border-color: rgba(79, 70, 229, 0.22);
-}
-.asg-kpi-card--indigo:hover {
-  box-shadow: 0 6px 20px -3px rgba(79, 70, 229, 0.16);
-  border-color: rgba(79, 70, 229, 0.45);
-}
-.asg-kpi-card--indigo .asg-kpi-icon-wrap {
-  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-  color: #ffffff;
-  box-shadow: 0 3px 8px rgba(79, 70, 229, 0.28);
-}
-.asg-kpi-card--indigo .asg-kpi-badge {
-  background: rgba(79, 70, 229, 0.1);
-  color: #4338ca;
-  border-color: rgba(79, 70, 229, 0.2);
-}
-.asg-kpi-card--indigo .asg-kpi-val {
-  color: #312e81;
-}
-
-/* Card 3: Assigned Slots (Emerald Teal) */
-.asg-kpi-card--emerald {
-  background: linear-gradient(135deg, #ffffff 0%, rgba(236, 253, 245, 0.88) 100%);
-  border-color: rgba(16, 185, 129, 0.24);
-}
-.asg-kpi-card--emerald:hover {
-  box-shadow: 0 6px 20px -3px rgba(16, 185, 129, 0.16);
-  border-color: rgba(16, 185, 129, 0.45);
-}
-.asg-kpi-card--emerald .asg-kpi-icon-wrap {
-  background: linear-gradient(135deg, #059669 0%, #10b981 100%);
-  color: #ffffff;
-  box-shadow: 0 3px 8px rgba(16, 185, 129, 0.28);
-}
-.asg-kpi-card--emerald .asg-kpi-badge {
-  background: rgba(16, 185, 129, 0.1);
-  color: #047857;
-  border-color: rgba(16, 185, 129, 0.2);
-}
-.asg-kpi-card--emerald .asg-kpi-val {
-  color: #064e3b;
-}
-
-/* Card 4: Avg per Seafarer (Violet Purple) */
-.asg-kpi-card--purple {
-  background: linear-gradient(135deg, #ffffff 0%, rgba(250, 245, 255, 0.88) 100%);
-  border-color: rgba(168, 85, 247, 0.22);
-}
-.asg-kpi-card--purple:hover {
-  box-shadow: 0 6px 20px -3px rgba(168, 85, 247, 0.16);
-  border-color: rgba(168, 85, 247, 0.45);
-}
-.asg-kpi-card--purple .asg-kpi-icon-wrap {
-  background: linear-gradient(135deg, #9333ea 0%, #a855f7 100%);
-  color: #ffffff;
-  box-shadow: 0 3px 8px rgba(168, 85, 247, 0.28);
-}
-.asg-kpi-card--purple .asg-kpi-badge {
-  background: rgba(168, 85, 247, 0.1);
-  color: #6b21a8;
-  border-color: rgba(168, 85, 247, 0.2);
-}
-.asg-kpi-card--purple .asg-kpi-val {
-  color: #581c87;
-}
-
-/* Card 5: Completed Courses (Ocean Sky) */
-.asg-kpi-card--sky {
-  background: linear-gradient(135deg, #ffffff 0%, rgba(240, 249, 255, 0.92) 100%);
-  border-color: rgba(2, 132, 199, 0.26);
-}
-.asg-kpi-card--sky:hover {
-  box-shadow: 0 6px 20px -3px rgba(2, 132, 199, 0.16);
-  border-color: rgba(2, 132, 199, 0.45);
-}
-.asg-kpi-card--sky .asg-kpi-icon-wrap {
-  background: linear-gradient(135deg, #0284c7 0%, #38bdf8 100%);
-  color: #ffffff;
-  box-shadow: 0 3px 8px rgba(2, 132, 199, 0.28);
-}
-.asg-kpi-card--sky .asg-kpi-badge {
-  background: rgba(2, 132, 199, 0.1);
-  color: #0369a1;
-  border-color: rgba(2, 132, 199, 0.22);
-}
-.asg-kpi-card--sky .asg-kpi-val {
-  color: #075985;
-}
-
-/* Dark Mode Overrides for KPI Cards */
-[data-theme="dark"] .asg-kpi-card {
-  background: #181d28;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-[data-theme="dark"] .asg-kpi-card--amber {
-  background: linear-gradient(135deg, #181d28 0%, rgba(224, 120, 32, 0.12) 100%);
   border-color: rgba(224, 120, 32, 0.35);
 }
-[data-theme="dark"] .asg-kpi-card--amber .asg-kpi-val { color: #fdba74; }
+.asg-kpi-card--amber .asg-kpi-icon-wrap {
+  background: rgba(224, 120, 32, 0.08);
+  color: #d97706;
+  border-color: rgba(224, 120, 32, 0.18);
+}
+.asg-kpi-card--amber .asg-kpi-badge {
+  background: rgba(224, 120, 32, 0.08);
+  color: #b45309;
+  border-color: rgba(224, 120, 32, 0.18);
+}
 
-[data-theme="dark"] .asg-kpi-card--indigo {
-  background: linear-gradient(135deg, #181d28 0%, rgba(79, 70, 229, 0.14) 100%);
+/* Card 2: Indigo */
+.asg-kpi-card--indigo .asg-kpi-dot {
+  background: #4f46e5;
+  box-shadow: 0 0 6px rgba(79, 70, 229, 0.4);
+}
+.asg-kpi-card--indigo:hover {
   border-color: rgba(79, 70, 229, 0.35);
 }
-[data-theme="dark"] .asg-kpi-card--indigo .asg-kpi-val { color: #c7d2fe; }
-
-[data-theme="dark"] .asg-kpi-card--emerald {
-  background: linear-gradient(135deg, #181d28 0%, rgba(16, 185, 129, 0.14) 100%);
-  border-color: rgba(16, 185, 129, 0.35);
+.asg-kpi-card--indigo .asg-kpi-icon-wrap {
+  background: rgba(79, 70, 229, 0.08);
+  color: #4f46e5;
+  border-color: rgba(79, 70, 229, 0.18);
 }
-[data-theme="dark"] .asg-kpi-card--emerald .asg-kpi-val { color: #a7f3d0; }
-
-[data-theme="dark"] .asg-kpi-card--purple {
-  background: linear-gradient(135deg, #181d28 0%, rgba(168, 85, 247, 0.14) 100%);
-  border-color: rgba(168, 85, 247, 0.35);
+.asg-kpi-card--indigo .asg-kpi-badge {
+  background: rgba(79, 70, 229, 0.08);
+  color: #4338ca;
+  border-color: rgba(79, 70, 229, 0.18);
 }
-[data-theme="dark"] .asg-kpi-card--purple .asg-kpi-val { color: #e9d5ff; }
 
-[data-theme="dark"] .asg-kpi-card--sky {
-  background: linear-gradient(135deg, #181d28 0%, rgba(2, 132, 199, 0.14) 100%);
+/* Card 3: Emerald */
+.asg-kpi-card--emerald .asg-kpi-dot {
+  background: #059669;
+  box-shadow: 0 0 6px rgba(5, 150, 105, 0.4);
+}
+.asg-kpi-card--emerald:hover {
+  border-color: rgba(5, 150, 105, 0.35);
+}
+.asg-kpi-card--emerald .asg-kpi-icon-wrap {
+  background: rgba(5, 150, 105, 0.08);
+  color: #059669;
+  border-color: rgba(5, 150, 105, 0.18);
+}
+.asg-kpi-card--emerald .asg-kpi-badge {
+  background: rgba(5, 150, 105, 0.08);
+  color: #047857;
+  border-color: rgba(5, 150, 105, 0.18);
+}
+
+/* Card 4: Purple */
+.asg-kpi-card--purple .asg-kpi-dot {
+  background: #9333ea;
+  box-shadow: 0 0 6px rgba(147, 51, 234, 0.4);
+}
+.asg-kpi-card--purple:hover {
+  border-color: rgba(147, 51, 234, 0.35);
+}
+.asg-kpi-card--purple .asg-kpi-icon-wrap {
+  background: rgba(147, 51, 234, 0.08);
+  color: #9333ea;
+  border-color: rgba(147, 51, 234, 0.18);
+}
+.asg-kpi-card--purple .asg-kpi-badge {
+  background: rgba(147, 51, 234, 0.08);
+  color: #7e22ce;
+  border-color: rgba(147, 51, 234, 0.18);
+}
+
+/* Card 5: Sky */
+.asg-kpi-card--sky .asg-kpi-dot {
+  background: #0284c7;
+  box-shadow: 0 0 6px rgba(2, 132, 199, 0.4);
+}
+.asg-kpi-card--sky:hover {
   border-color: rgba(2, 132, 199, 0.35);
 }
-[data-theme="dark"] .asg-kpi-card--sky .asg-kpi-val { color: #bae6fd; }
+.asg-kpi-card--sky .asg-kpi-icon-wrap {
+  background: rgba(2, 132, 199, 0.08);
+  color: #0284c7;
+  border-color: rgba(2, 132, 199, 0.18);
+}
+.asg-kpi-card--sky .asg-kpi-badge {
+  background: rgba(2, 132, 199, 0.08);
+  color: #0369a1;
+  border-color: rgba(2, 132, 199, 0.18);
+}
+
+/* Dark Mode Support */
+[data-theme="dark"] .asg-kpi-card {
+  background: var(--surface, #181d28);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+[data-theme="dark"] .asg-kpi-card:hover {
+  box-shadow: 0 6px 18px -3px rgba(0, 0, 0, 0.35);
+}
+[data-theme="dark"] .asg-kpi-val {
+  color: var(--text, #f1f5f9);
+}
 
 /* ================================================================
    TABLE CARD STYLING & FLUSH INTEGRATION

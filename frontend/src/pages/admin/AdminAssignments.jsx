@@ -659,63 +659,88 @@ export default function AdminAssignments() {
 
       {/* ═══════════════════════ UNIQUE LIGHT-THEMED COMPACT KPI CARDS (~58px) ═══════════════════════ */}
       <div className="asg-kpi-strip">
-        {/* Card 1: Total Seafarers (Warm Amber / Marine Gold) */}
+        {/* Card 1: Total Seafarers (Warm Amber Accent) */}
         <div className="asg-kpi-card asg-kpi-card--amber">
-          <span className="asg-kpi-badge">Crew</span>
-          <div className="asg-kpi-icon-wrap">
-            <Users size={17} />
+          <div className="asg-kpi-top">
+            <div className="asg-kpi-lbl-wrap">
+              <span className="asg-kpi-dot" />
+              <span className="asg-kpi-lbl">Total Seafarers</span>
+            </div>
+            <div className="asg-kpi-icon-wrap">
+              <Users size={14} strokeWidth={2} />
+            </div>
           </div>
-          <div className="asg-kpi-body">
+          <div className="asg-kpi-bottom">
             <span className="asg-kpi-val">{data.rows.length}</span>
-            <span className="asg-kpi-lbl">Total Seafarers</span>
+            <span className="asg-kpi-badge">Crew</span>
           </div>
         </div>
 
-        {/* Card 2: Active Courses (Royal Indigo) */}
+        {/* Card 2: Active Courses (Royal Indigo Accent) */}
         <div className="asg-kpi-card asg-kpi-card--indigo">
-          <span className="asg-kpi-badge">Curriculum</span>
-          <div className="asg-kpi-icon-wrap">
-            <BookOpen size={17} />
+          <div className="asg-kpi-top">
+            <div className="asg-kpi-lbl-wrap">
+              <span className="asg-kpi-dot" />
+              <span className="asg-kpi-lbl">Active Courses</span>
+            </div>
+            <div className="asg-kpi-icon-wrap">
+              <BookOpen size={14} strokeWidth={2} />
+            </div>
           </div>
-          <div className="asg-kpi-body">
+          <div className="asg-kpi-bottom">
             <span className="asg-kpi-val">{totalCourses}</span>
-            <span className="asg-kpi-lbl">Active Courses</span>
+            <span className="asg-kpi-badge">Curriculum</span>
           </div>
         </div>
 
-        {/* Card 3: Assigned Slots (Emerald Teal) */}
+        {/* Card 3: Assigned Slots (Emerald Accent) */}
         <div className="asg-kpi-card asg-kpi-card--emerald">
-          <span className="asg-kpi-badge">Enrollments</span>
-          <div className="asg-kpi-icon-wrap">
-            <Grid3x3 size={17} />
+          <div className="asg-kpi-top">
+            <div className="asg-kpi-lbl-wrap">
+              <span className="asg-kpi-dot" />
+              <span className="asg-kpi-lbl">Assigned Slots</span>
+            </div>
+            <div className="asg-kpi-icon-wrap">
+              <Grid3x3 size={14} strokeWidth={2} />
+            </div>
           </div>
-          <div className="asg-kpi-body">
+          <div className="asg-kpi-bottom">
             <span className="asg-kpi-val">{totalAssignments.toLocaleString()}</span>
-            <span className="asg-kpi-lbl">Assigned Slots</span>
+            <span className="asg-kpi-badge">Enrollments</span>
           </div>
         </div>
 
-        {/* Card 4: Avg per Seafarer (Violet Purple) */}
+        {/* Card 4: Avg per Seafarer (Violet Purple Accent) */}
         <div className="asg-kpi-card asg-kpi-card--purple">
-          <span className="asg-kpi-badge">Ratio</span>
-          <div className="asg-kpi-icon-wrap">
-            <Award size={17} />
+          <div className="asg-kpi-top">
+            <div className="asg-kpi-lbl-wrap">
+              <span className="asg-kpi-dot" />
+              <span className="asg-kpi-lbl">Avg / Seafarer</span>
+            </div>
+            <div className="asg-kpi-icon-wrap">
+              <Award size={14} strokeWidth={2} />
+            </div>
           </div>
-          <div className="asg-kpi-body">
+          <div className="asg-kpi-bottom">
             <span className="asg-kpi-val">{avgPerCrew.toFixed(1)}</span>
-            <span className="asg-kpi-lbl">Avg / Seafarer</span>
+            <span className="asg-kpi-badge">Ratio</span>
           </div>
         </div>
 
-        {/* Card 5: Completed Courses (Ocean Sky) */}
+        {/* Card 5: Completed Courses (Ocean Sky Accent) */}
         <div className="asg-kpi-card asg-kpi-card--sky">
-          <span className="asg-kpi-badge">Completed</span>
-          <div className="asg-kpi-icon-wrap">
-            <CheckCircle2 size={17} />
+          <div className="asg-kpi-top">
+            <div className="asg-kpi-lbl-wrap">
+              <span className="asg-kpi-dot" />
+              <span className="asg-kpi-lbl">Completed Courses</span>
+            </div>
+            <div className="asg-kpi-icon-wrap">
+              <CheckCircle2 size={14} strokeWidth={2} />
+            </div>
           </div>
-          <div className="asg-kpi-body">
+          <div className="asg-kpi-bottom">
             <span className="asg-kpi-val">{completedAssignments.toLocaleString()}</span>
-            <span className="asg-kpi-lbl">Completed Courses</span>
+            <span className="asg-kpi-badge">Completed</span>
           </div>
         </div>
       </div>
