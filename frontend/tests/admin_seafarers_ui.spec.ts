@@ -116,7 +116,7 @@ test.describe('Admin Course Management - Modern Seafarers Page UI', () => {
     await expect(statusFilter).toContainText('All Statuses');
   });
 
-  test('table renders sticky headers, seafarer avatars, progress bars, and compact pagination', async ({ page }) => {
+  test('table renders sticky headers, seafarer avatars, progress bars, and compact pinned pagination', async ({ page }) => {
     const table = page.locator('.usr-table');
     await expect(table).toBeVisible();
 
@@ -131,19 +131,24 @@ test.describe('Admin Course Management - Modern Seafarers Page UI', () => {
     await expect(page.locator('thead th.usr-col-status')).toContainText('Status');
     await expect(page.locator('thead th.usr-col-actions')).toContainText('Actions');
 
+    // Sticky header check
+    const th = page.locator('.usr-table thead th').first();
+    const thPosition = await th.evaluate(el => window.getComputedStyle(el).position);
+    expect(thPosition).toBe('sticky');
+
     // Rows have avatar initials
     await expect(page.locator('.usr-avatar').first()).toBeVisible();
 
     // Progress bar
     await expect(page.locator('.usr-progress-bar').first()).toBeVisible();
 
-    // Pagination bar
+    // Pagination bar attached at bottom
     const pagination = page.locator('.usr-pagination');
     await expect(pagination).toBeVisible();
     await expect(pagination.locator('.usr-page-info')).toContainText(/Showing \d+ to \d+ of \d+ entries/);
   });
 
-  test('add seafarer modal dialog opens, toggles role, and closes cleanly', async ({ page }) => {
+  test('add seafarer modal is learner-only without admin creation, modern UI, and closes cleanly', async ({ page }) => {
     const addBtn = page.locator('#usr-new-btn');
     await addBtn.click();
 
@@ -151,23 +156,34 @@ test.describe('Admin Course Management - Modern Seafarers Page UI', () => {
     const modal = page.locator('.usr-modal-dialog');
     await expect(modal).toBeVisible();
     await expect(page.locator('.usr-modal-title')).toHaveText('Add New Seafarer');
+    await expect(page.locator('.usr-modal-sub')).toContainText('Register a crew member');
 
-    // Role switcher
-    await expect(page.getByRole('button', { name: 'Seafarer (Learner)' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Administrator' })).toBeVisible();
+    // VERIFY: Administrator creation is COMPLETELY REMOVED from this page
+    await expect(page.getByRole('button', { name: 'Administrator' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Seafarer (Learner)' })).toHaveCount(0);
+    await expect(page.locator('#usr-form-email')).toHaveCount(0);
+    await expect(page.locator('#usr-form-password')).toHaveCount(0);
 
-    // Switch to Administrator
-    await page.getByRole('button', { name: 'Administrator' }).click();
-    await expect(page.locator('#usr-form-email')).toBeVisible();
-    await expect(page.locator('#usr-form-password')).toBeVisible();
+    // VERIFY: Crew authentication notice is present
+    await expect(page.locator('.usr-modal-notice')).toBeVisible();
+    await expect(page.locator('.usr-modal-notice')).toContainText('Seafarer ID');
+    await expect(page.locator('.usr-modal-notice')).toContainText('Date of Birth');
 
-    // Switch back to Learner
-    await page.getByRole('button', { name: 'Seafarer (Learner)' }).click();
+    // VERIFY: Seafarer input fields are cleanly rendered
+    await expect(page.locator('#usr-form-name')).toBeVisible();
+    await expect(page.locator('#usr-form-rank')).toBeVisible();
     await expect(page.locator('#usr-form-crewid')).toBeVisible();
     await expect(page.locator('#usr-form-dob')).toBeVisible();
+    await expect(page.locator('#usr-form-ppno')).toBeVisible();
+    await expect(page.locator('#usr-form-mobile')).toBeVisible();
+
+    // VERIFY: Submit button is "Register Seafarer"
+    const submitBtn = page.locator('#usr-form-submit');
+    await expect(submitBtn).toBeVisible();
+    await expect(submitBtn).toContainText('Register Seafarer');
 
     // Close via Cancel button
-    await page.getByRole('button', { name: 'Cancel' }).click();
+    await page.locator('.usr-btn-cancel').click();
     await expect(modal).not.toBeVisible();
   });
 

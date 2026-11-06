@@ -2,21 +2,19 @@ import './AdminUsers.css'
 import { useEffect, useState, useMemo, useRef } from 'react'
 import {
   Users, UserPlus, Check, Ban, AlertCircle, X, Search,
-  RefreshCw, ChevronLeft, ChevronRight, Phone, Shield
+  RefreshCw, ChevronLeft, ChevronRight, Phone, Shield,
+  User, Award, Hash, Calendar, FileText, Info
 } from 'lucide-react'
 import { adminListUsers, adminCreateUser, adminUpdateUser } from '../../api.js'
 import CardSelect from '../../components/CardSelect.jsx'
 
 const EMPTY = {
-  role: 'learner',
   fullName: '',
   crewId: '',
   dob: '',
   rank: '',
   ppNo: '',
-  mobileNo: '',
-  email: '',
-  password: ''
+  mobileNo: ''
 }
 
 const ROWS_PER_PAGE = 50
@@ -71,7 +69,7 @@ export default function AdminUsers() {
     setPage(1)
   }, [search, rankFilter, statusFilter])
 
-  // Wheel scrolling coordinator between table and outer wrapper
+  // Seamless wheel scrolling coordinator between outer wrapper and table scroll
   useEffect(() => {
     const el = tableScrollRef.current
     if (!el) return
@@ -82,7 +80,7 @@ export default function AdminUsers() {
       if (!wrapper || !card || !header) return
 
       const wrapperTop = wrapper.getBoundingClientRect().top
-      const targetCardTop = wrapperTop + 56 + header.offsetHeight + 10
+      const targetCardTop = wrapperTop + 56 + header.offsetHeight + 8
       const distanceRemaining = card.getBoundingClientRect().top - targetCardTop
 
       if (e.deltaY > 0) {
@@ -198,7 +196,7 @@ export default function AdminUsers() {
   // Form Field Setter
   const setFormField = (k, v) => setForm(f => ({ ...f, [k]: v }))
 
-  // Create User Handler
+  // Create Seafarer Handler (strictly learner crew accounts)
   const create = async (e) => {
     e.preventDefault()
     setError('')
@@ -206,36 +204,34 @@ export default function AdminUsers() {
       setError('Full name is required')
       return
     }
-    if (form.role === 'learner') {
-      if (!form.crewId.trim()) {
-        setError('Seafarer ID is required')
-        return
-      }
-      if (!form.dob || form.dob.replace(/\D/g, '').length !== 8) {
-        setError('Date of birth must be 8 digits (DDMMYYYY)')
-        return
-      }
-    } else {
-      if (!form.email?.trim()) {
-        setError('Email address is required for administrator accounts')
-        return
-      }
-      if (!form.password) {
-        setError('Password is required for administrator accounts')
-        return
-      }
+    if (!form.crewId.trim()) {
+      setError('Seafarer ID / Crew ID is required')
+      return
+    }
+    const cleanDob = (form.dob || '').replace(/\D/g, '')
+    if (cleanDob.length !== 8) {
+      setError('Date of birth must be 8 digits (DDMMYYYY)')
+      return
     }
 
     setBusy(true)
     try {
-      await adminCreateUser(form)
+      await adminCreateUser({
+        role: 'learner',
+        fullName: form.fullName.trim(),
+        crewId: form.crewId.trim(),
+        dob: cleanDob,
+        rank: form.rank.trim() || undefined,
+        ppNo: form.ppNo.trim() || undefined,
+        mobileNo: form.mobileNo.trim() || undefined
+      })
       setForm(EMPTY)
       setShowModal(false)
-      setToast(`Created user account for "${form.fullName}"`)
+      setToast(`Registered seafarer "${form.fullName.trim()}"`)
       setTimeout(() => setToast(''), 4000)
       load()
     } catch (err) {
-      setError(err.message || 'Could not create user')
+      setError(err.message || 'Could not register seafarer')
     } finally {
       setBusy(false)
     }
@@ -457,7 +453,7 @@ export default function AdminUsers() {
         </div>
       )}
 
-      {/* ═══════════════════════ SEAFARERS TABLE CARD (No KPI Card as requested) ═══════════════════════ */}
+      {/* ═══════════════════════ SEAFARERS TABLE CARD (Sticky Header & Pinned Pagination) ═══════════════════════ */}
       <div className="usr-table-card">
         {filteredUsers.length === 0 ? (
           <div className="usr-empty">
@@ -468,7 +464,7 @@ export default function AdminUsers() {
             <p className="usr-empty-sub">
               {hasFilters
                 ? 'No crew members match your active filters. Try adjusting your search query or reset the filters.'
-                : 'No seafarer accounts found in the database. Use "+ Add Seafarer" to create one.'}
+                : 'No seafarer accounts found in the database. Use "+ Add Seafarer" to register one.'}
             </p>
             {hasFilters && (
               <button
@@ -630,7 +626,7 @@ export default function AdminUsers() {
           </div>
         )}
 
-        {/* Attached Compact Pagination */}
+        {/* Attached Compact Pagination (Pinned down at bottom) */}
         {filteredUsers.length > 0 && (
           <div className="usr-pagination">
             <div className="usr-page-info">
@@ -678,7 +674,7 @@ export default function AdminUsers() {
         )}
       </div>
 
-      {/* ═══════════════════════ ADD SEAFARER MODAL DIALOG ═══════════════════════ */}
+      {/* ═══════════════════════ ADD SEAFARER MODAL DIALOG (Learner Crew Only) ═══════════════════════ */}
       {showModal && (
         <div
           className="usr-modal-backdrop"
@@ -687,15 +683,19 @@ export default function AdminUsers() {
           <div
             className="usr-modal-dialog"
             onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="usr-modal-title"
           >
+            {/* Modal Header */}
             <div className="usr-modal-header">
               <div className="usr-modal-header-left">
                 <div className="usr-modal-icon">
                   <UserPlus size={19} />
                 </div>
                 <div>
-                  <div className="usr-modal-title">Add New Seafarer</div>
-                  <div className="usr-modal-sub">Create a new crew member or administrator account</div>
+                  <div id="usr-modal-title" className="usr-modal-title">Add New Seafarer</div>
+                  <div className="usr-modal-sub">Register a crew member for fleet training and certification</div>
                 </div>
               </div>
               <button
@@ -708,7 +708,8 @@ export default function AdminUsers() {
               </button>
             </div>
 
-            <form onSubmit={create} style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+            {/* Modal Form */}
+            <form onSubmit={create} className="usr-modal-form">
               <div className="usr-modal-body">
                 {error && (
                   <div className="form-error">
@@ -716,139 +717,141 @@ export default function AdminUsers() {
                   </div>
                 )}
 
-                {/* Role Switcher */}
-                <div style={{ display: 'flex', gap: 10, background: 'var(--surface-2)', padding: 4, borderRadius: 8 }}>
-                  <button
-                    type="button"
-                    className={`btn sm ${form.role === 'learner' ? 'primary' : ''}`}
-                    style={{
-                      flex: 1,
-                      background: form.role === 'learner' ? '#0284c7' : 'transparent',
-                      color: form.role === 'learner' ? '#fff' : 'var(--text)',
-                      border: 'none',
-                      fontWeight: 600
-                    }}
-                    onClick={() => setFormField('role', 'learner')}
-                  >
-                    Seafarer (Learner)
-                  </button>
-                  <button
-                    type="button"
-                    className={`btn sm ${form.role === 'admin' ? 'primary' : ''}`}
-                    style={{
-                      flex: 1,
-                      background: form.role === 'admin' ? '#0284c7' : 'transparent',
-                      color: form.role === 'admin' ? '#fff' : 'var(--text)',
-                      border: 'none',
-                      fontWeight: 600
-                    }}
-                    onClick={() => setFormField('role', 'admin')}
-                  >
-                    Administrator
-                  </button>
-                </div>
-
-                {/* Common Fields */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-                  <Field label="Full Name" required>
-                    <input
-                      id="usr-form-name"
-                      value={form.fullName}
-                      onChange={(e) => setFormField('fullName', e.target.value)}
-                      placeholder="e.g. Aadarsh Bhasurendrababu"
-                      required
-                      autoFocus
-                    />
-                  </Field>
-
-                  <Field label="Rank / Title">
-                    <input
-                      id="usr-form-rank"
-                      value={form.rank}
-                      onChange={(e) => setFormField('rank', e.target.value)}
-                      placeholder="e.g. Fourth Engineer"
-                    />
-                  </Field>
-                </div>
-
-                {form.role === 'learner' ? (
-                  <>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-                      <Field label="Seafarer ID / Crew ID" required>
-                        <input
-                          id="usr-form-crewid"
-                          value={form.crewId}
-                          onChange={(e) => setFormField('crewId', e.target.value)}
-                          placeholder="e.g. OZ00876"
-                          required
-                        />
-                      </Field>
-
-                      <Field label="Date of Birth (DDMMYYYY)" required>
-                        <input
-                          id="usr-form-dob"
-                          value={form.dob}
-                          inputMode="numeric"
-                          maxLength={8}
-                          onChange={(e) => setFormField('dob', e.target.value.replace(/\D/g, ''))}
-                          placeholder="e.g. 25032004"
-                          required
-                        />
-                      </Field>
-                    </div>
-
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-                      <Field label="Passport No.">
-                        <input
-                          id="usr-form-ppno"
-                          value={form.ppNo}
-                          onChange={(e) => setFormField('ppNo', e.target.value)}
-                          placeholder="e.g. PP-6120"
-                        />
-                      </Field>
-
-                      <Field label="Mobile Number">
-                        <input
-                          id="usr-form-mobile"
-                          value={form.mobileNo}
-                          onChange={(e) => setFormField('mobileNo', e.target.value)}
-                          placeholder="e.g. 9876543210"
-                        />
-                      </Field>
-                    </div>
-                  </>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 14 }}>
-                    <Field label="Email Address" required>
-                      <input
-                        id="usr-form-email"
-                        type="email"
-                        value={form.email}
-                        onChange={(e) => setFormField('email', e.target.value)}
-                        placeholder="admin@company.com"
-                        required
-                      />
-                    </Field>
-
-                    <Field label="Password" required>
-                      <input
-                        id="usr-form-password"
-                        type="password"
-                        value={form.password}
-                        onChange={(e) => setFormField('password', e.target.value)}
-                        placeholder="••••••••"
-                        required
-                      />
-                    </Field>
+                {/* Info Callout Banner */}
+                <div className="usr-modal-notice">
+                  <div className="usr-modal-notice-icon">
+                    <Info size={15} />
                   </div>
-                )}
+                  <div className="usr-modal-notice-text">
+                    <strong>Crew Authentication:</strong> Seafarers authenticate with their <strong>Seafarer ID</strong> and <strong>Date of Birth (DDMMYYYY)</strong>.
+                  </div>
+                </div>
+
+                {/* Form Fields Grid */}
+                <div className="usr-form-grid">
+                  {/* Full Name */}
+                  <div className="usr-field-group usr-field--full">
+                    <label htmlFor="usr-form-name" className="usr-label">
+                      Full Name <span className="usr-req">*</span>
+                    </label>
+                    <div className="usr-input-wrap">
+                      <User size={15} className="usr-input-icon" />
+                      <input
+                        id="usr-form-name"
+                        type="text"
+                        className="usr-input"
+                        value={form.fullName}
+                        onChange={(e) => setFormField('fullName', e.target.value)}
+                        placeholder="e.g. Aadarsh Bhasurendrababu"
+                        required
+                        autoFocus
+                      />
+                    </div>
+                  </div>
+
+                  {/* Rank / Designation */}
+                  <div className="usr-field-group">
+                    <label htmlFor="usr-form-rank" className="usr-label">
+                      Rank / Title
+                    </label>
+                    <div className="usr-input-wrap">
+                      <Award size={15} className="usr-input-icon" />
+                      <input
+                        id="usr-form-rank"
+                        type="text"
+                        className="usr-input"
+                        value={form.rank}
+                        onChange={(e) => setFormField('rank', e.target.value)}
+                        placeholder="e.g. Master, Chief Engineer"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Seafarer ID */}
+                  <div className="usr-field-group">
+                    <label htmlFor="usr-form-crewid" className="usr-label">
+                      Seafarer ID / Crew ID <span className="usr-req">*</span>
+                    </label>
+                    <div className="usr-input-wrap">
+                      <Hash size={15} className="usr-input-icon" />
+                      <input
+                        id="usr-form-crewid"
+                        type="text"
+                        className="usr-input"
+                        value={form.crewId}
+                        onChange={(e) => setFormField('crewId', e.target.value)}
+                        placeholder="e.g. OZ00876"
+                        required
+                      />
+                    </div>
+                    <span className="usr-field-hint">Unique official crew identifier</span>
+                  </div>
+
+                  {/* Date of Birth */}
+                  <div className="usr-field-group">
+                    <label htmlFor="usr-form-dob" className="usr-label">
+                      Date of Birth (DDMMYYYY) <span className="usr-req">*</span>
+                    </label>
+                    <div className="usr-input-wrap">
+                      <Calendar size={15} className="usr-input-icon" />
+                      <input
+                        id="usr-form-dob"
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={8}
+                        className="usr-input"
+                        value={form.dob}
+                        onChange={(e) => setFormField('dob', e.target.value.replace(/\D/g, ''))}
+                        placeholder="e.g. 25031998"
+                        required
+                      />
+                    </div>
+                    <span className="usr-field-hint">8 digits · Default seafarer password</span>
+                  </div>
+
+                  {/* Passport No */}
+                  <div className="usr-field-group">
+                    <label htmlFor="usr-form-ppno" className="usr-label">
+                      Passport Number
+                    </label>
+                    <div className="usr-input-wrap">
+                      <FileText size={15} className="usr-input-icon" />
+                      <input
+                        id="usr-form-ppno"
+                        type="text"
+                        className="usr-input"
+                        value={form.ppNo}
+                        onChange={(e) => setFormField('ppNo', e.target.value)}
+                        placeholder="e.g. P1234567"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Mobile Number */}
+                  <div className="usr-field-group">
+                    <label htmlFor="usr-form-mobile" className="usr-label">
+                      Mobile Number
+                    </label>
+                    <div className="usr-input-wrap">
+                      <Phone size={15} className="usr-input-icon" />
+                      <input
+                        id="usr-form-mobile"
+                        type="tel"
+                        className="usr-input"
+                        value={form.mobileNo}
+                        onChange={(e) => setFormField('mobileNo', e.target.value)}
+                        placeholder="e.g. 98765 43210"
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Modal Footer */}
               <div className="usr-modal-footer">
                 <button
                   type="button"
-                  className="btn"
+                  className="usr-btn-cancel"
                   disabled={busy}
                   onClick={() => setShowModal(false)}
                 >
@@ -857,11 +860,11 @@ export default function AdminUsers() {
                 <button
                   type="submit"
                   id="usr-form-submit"
-                  className="btn primary"
+                  className="usr-btn-submit"
                   disabled={busy}
-                  style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)' }}
                 >
-                  {busy ? 'Creating…' : 'Create Seafarer'}
+                  <UserPlus size={15} />
+                  <span>{busy ? 'Registering…' : 'Register Seafarer'}</span>
                 </button>
               </div>
             </form>
@@ -870,16 +873,5 @@ export default function AdminUsers() {
       )}
 
     </div>
-  )
-}
-
-function Field({ label, required, children }) {
-  return (
-    <label className="admin-field" style={{ margin: 0 }}>
-      <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)' }}>
-        {label}{required && <i className="req" style={{ color: '#ef4444', marginLeft: 3 }}>*</i>}
-      </span>
-      {children}
-    </label>
   )
 }

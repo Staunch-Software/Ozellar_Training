@@ -1,10 +1,9 @@
 /* ================================================================
-   Admin Seafarers Page — AdminUsers.css
-   Modern, Premium UI Redesign matching Course Management & Reporting
-   Sticky header bar, CardSelect filters, attached pagination & modal
+   Admin Course Management — Seafarers Page (AdminUsers.css)
+   Sleek Executive UI · Flush Alignment · Sticky Headers · Pinned Pagination
    ================================================================ */
 
-/* ── Root wrapper ── */
+/* ── Root Page Container ── */
 .usr-root {
   display: flex;
   flex-direction: column;
@@ -13,17 +12,16 @@
   gap: 0;
   background: var(--bg);
   overflow: visible;
-  position: relative;
 }
 
 /* ── Keyframes ── */
 @keyframes usrFadeUp {
-  from { opacity: 0; transform: translateY(8px); }
+  from { opacity: 0; transform: translateY(6px); }
   to   { opacity: 1; transform: translateY(0); }
 }
 
 @keyframes usrModalIn {
-  from { opacity: 0; transform: scale(0.96) translateY(10px); }
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
   to   { opacity: 1; transform: scale(1) translateY(0); }
 }
 
@@ -31,8 +29,12 @@
   to { transform: rotate(360deg); }
 }
 
+.usr-spin {
+  animation: usrSpin 0.8s linear infinite;
+}
+
 /* ================================================================
-   STICKY HEADER & CONTROLS BAR (Pinned at top: 56px)
+   PAGE HEADER & CONTROLS BAR (Sticky at top: 56px)
    ================================================================ */
 .usr-header-container {
   display: flex;
@@ -43,7 +45,7 @@
   background: var(--surface);
   border-bottom: 1px solid var(--border);
   box-shadow: 0 2px 10px -2px rgba(15, 23, 42, 0.08);
-  animation: usrFadeUp .22s ease-out;
+  animation: usrFadeUp .2s ease-out;
   margin: 0;
   padding: 0;
 }
@@ -58,7 +60,7 @@
   flex-wrap: nowrap;
 }
 
-/* ── Brand Identity (Left) ── */
+/* Left: Brand Identity */
 .usr-header-brand {
   display: flex;
   align-items: center;
@@ -70,7 +72,7 @@
 .usr-header-accent-bar {
   width: 3.5px;
   height: 32px;
-  background: linear-gradient(180deg, #0284c7 0%, #38bdf8 100%);
+  background: linear-gradient(180deg, #0284c7 0%, #0369a1 100%);
   border-radius: 0 4px 4px 0;
   flex-shrink: 0;
 }
@@ -80,12 +82,12 @@
   height: 34px;
   border-radius: 9px;
   background: linear-gradient(135deg, rgba(2, 132, 199, 0.14) 0%, rgba(56, 189, 248, 0.08) 100%);
-  border: 1px solid rgba(2, 132, 199, 0.25);
+  border: 1px solid rgba(2, 132, 199, 0.22);
   color: #0284c7;
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.12);
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.1);
 }
 
 .usr-header-title-wrap {
@@ -98,10 +100,9 @@
 .usr-header-eyebrow {
   font-size: 9.5px;
   font-weight: 700;
-  letter-spacing: 0.07em;
   text-transform: uppercase;
+  letter-spacing: 0.08em;
   color: #0284c7;
-  opacity: 0.95;
   line-height: 1;
 }
 
@@ -109,42 +110,41 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  line-height: 1.2;
 }
 
 .usr-header-title {
-  margin: 0;
-  font-size: 16.5px;
+  font-size: 17px;
   font-weight: 700;
   color: var(--text);
-  letter-spacing: -0.02em;
-  line-height: 1.2;
+  margin: 0;
+  letter-spacing: -0.015em;
   white-space: nowrap;
 }
 
 .usr-header-stat-pill {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 2px 7px;
+  gap: 4px;
+  padding: 1.5px 7px;
   border-radius: 99px;
   background: var(--surface-2);
   border: 1px solid var(--border);
   font-size: 11px;
-  color: var(--text-mut);
-  font-weight: 500;
-  white-space: nowrap;
+  line-height: 1.3;
 }
 
 .usr-header-stat-count {
   font-weight: 700;
-  color: var(--text);
+  color: #0284c7;
 }
 
 .usr-header-stat-label {
   color: var(--text-mut);
+  font-weight: 500;
 }
 
-/* ── Right Controls in One Row ── */
+/* Right: Header Controls */
 .usr-header-controls {
   display: flex;
   align-items: center;
@@ -228,7 +228,6 @@
   min-width: 130px;
 }
 
-/* Compact trigger styling for CardSelect inside Seafarers header bar */
 .usr-cardselect .cardselect-trigger {
   height: 35px;
   padding: 0 11px;
@@ -301,24 +300,16 @@
   cursor: pointer;
   transition: all .15s ease;
   flex-shrink: 0;
+  padding: 0;
 }
 
 .usr-btn-refresh:hover:not(:disabled) {
-  background: var(--surface);
+  background: var(--surface-3);
+  color: var(--text);
   border-color: var(--border-strong);
-  color: #0284c7;
 }
 
-.usr-btn-refresh:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
-.usr-spin {
-  animation: usrSpin .7s linear infinite;
-}
-
-/* ── Active Filter Chips Row ── */
+/* Active Filter Chips Strip */
 .usr-chips-bar {
   display: flex;
   align-items: center;
@@ -326,30 +317,30 @@
   padding: 6px 24px;
   background: var(--surface-2);
   border-top: 1px solid var(--border);
+  font-size: 11.5px;
   flex-wrap: wrap;
-  font-size: 12px;
 }
 
 .usr-chips-label {
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
   color: var(--text-mut);
+  font-weight: 600;
+  font-size: 11px;
 }
 
 .usr-chip {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 2.5px 8px;
+  gap: 6px;
+  padding: 2px 8px;
   border-radius: 6px;
   background: var(--surface);
   border: 1px solid var(--border);
   color: var(--text);
-  font-size: 11.5px;
-  font-weight: 500;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  font-size: 11px;
+}
+
+.usr-chip strong {
+  color: #0284c7;
 }
 
 .usr-chip-remove {
@@ -357,9 +348,10 @@
   border: none;
   color: var(--text-mut);
   cursor: pointer;
-  padding: 0;
   display: grid;
   place-items: center;
+  padding: 0;
+  margin-left: 2px;
 }
 
 .usr-chip-remove:hover {
@@ -382,25 +374,29 @@
 }
 
 /* ================================================================
-   TABLE CARD & STICKY TABLE (Starts immediately below header)
+   TABLE CARD & STICKY TABLE (Sticky Header Top, Pinned Pagination Bottom)
    ================================================================ */
 .usr-table-card {
-  margin: 16px 24px 20px;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 4px 16px -4px rgba(0, 0, 0, 0.06);
   display: flex;
   flex-direction: column;
+  height: calc(100vh - 128px);
+  min-height: 420px;
+  margin: 8px 24px 10px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
   overflow: hidden;
+  box-shadow: var(--shadow-sm, 0 2px 10px rgba(0, 0, 0, 0.05));
   position: relative;
   z-index: 15;
 }
 
 .usr-table-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
   overflow-x: auto;
-  max-height: calc(100vh - 200px);
-  min-height: 280px;
+  -webkit-overflow-scrolling: touch;
   position: relative;
 }
 
@@ -412,7 +408,13 @@
   color: var(--text);
 }
 
-/* ── Sticky Table Headers ── */
+/* ── Sticky Table Headers (Sticks at top: 0 inside scroll container) ── */
+.usr-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+}
+
 .usr-table thead th {
   position: sticky;
   top: 0;
@@ -521,28 +523,31 @@
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  letter-spacing: 0.02em;
+  letter-spacing: 0.03em;
 }
 
 .usr-details {
   display: flex;
   flex-direction: column;
+  gap: 2px;
   min-width: 0;
 }
 
 .usr-name {
-  font-size: 13.5px;
   font-weight: 600;
   color: var(--text);
+  font-size: 13px;
+  white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .usr-meta {
   font-size: 11px;
   color: var(--text-mut);
-  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Role Pills */
@@ -556,42 +561,43 @@
   white-space: nowrap;
 }
 
-.usr-role-pill--super {
-  background: rgba(168, 85, 247, 0.12);
-  color: #7e22ce;
-  border: 1px solid rgba(168, 85, 247, 0.24);
+.usr-role-pill--learner {
+  background: rgba(2, 132, 199, 0.1);
+  color: #0284c7;
+  border: 1px solid rgba(2, 132, 199, 0.22);
 }
 
 .usr-role-pill--admin {
-  background: rgba(79, 70, 229, 0.12);
-  color: #4338ca;
-  border: 1px solid rgba(79, 70, 229, 0.24);
+  background: rgba(99, 102, 241, 0.1);
+  color: #6366f1;
+  border: 1px solid rgba(99, 102, 241, 0.22);
 }
 
-.usr-role-pill--learner {
-  background: rgba(2, 132, 199, 0.1);
-  color: #0369a1;
-  border: 1px solid rgba(2, 132, 199, 0.2);
+.usr-role-pill--super {
+  background: rgba(224, 120, 32, 0.1);
+  color: #e07820;
+  border: 1px solid rgba(224, 120, 32, 0.25);
 }
 
-/* Seafarer ID Badge */
+/* Seafarer ID Tag */
 .usr-id-tag {
-  font-family: var(--font-mono, monospace);
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-mut);
-  background: var(--surface-2);
+  display: inline-block;
   padding: 2px 7px;
   border-radius: 5px;
+  background: var(--surface-2);
   border: 1px solid var(--border);
-  letter-spacing: 0.03em;
-  display: inline-block;
+  font-family: var(--font-mono, monospace);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: 0.04em;
 }
 
-/* Rank Badge */
+/* Rank Tag */
 .usr-rank-tag {
-  font-weight: 600;
+  display: inline-block;
   font-size: 12px;
+  font-weight: 600;
   color: var(--text);
   letter-spacing: 0.02em;
 }
@@ -749,24 +755,30 @@
   font-size: 12.5px;
   color: var(--text-mut);
   margin: 0;
+  max-width: 460px;
 }
 
 /* ================================================================
-   COMPACT ATTACHED PAGINATION (Matching Courses & Reporting)
+   PINNED COMPACT PAGINATION (Attached directly at bottom of table card)
    ================================================================ */
 .usr-pagination {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 18px;
+  gap: 12px;
+  padding: 5px 18px;
+  min-height: 38px;
+  max-height: 38px;
   border-top: 1px solid var(--border);
-  background: var(--surface-2);
-  height: 44px;
+  background: var(--surface);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 20;
   box-sizing: border-box;
 }
 
 .usr-page-info {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--text-mut);
 }
 
@@ -782,8 +794,8 @@
 }
 
 .usr-page-btn {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 6px;
   border: 1px solid var(--border);
   background: var(--surface);
@@ -796,7 +808,7 @@
 }
 
 .usr-page-btn:hover:not(:disabled) {
-  background: var(--surface-3);
+  background: var(--surface-2);
   border-color: var(--border-strong);
 }
 
@@ -829,7 +841,7 @@
 }
 
 .usr-page-num:hover:not(:disabled):not(.active) {
-  background: var(--surface-3);
+  background: var(--surface-2);
   color: var(--text);
 }
 
@@ -847,13 +859,13 @@
 }
 
 /* ================================================================
-   MODAL DIALOG (Add New Seafarer)
+   MODAL DIALOG (Add New Seafarer — Modern Executive Crew Register)
    ================================================================ */
 .usr-modal-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(5px);
   display: grid;
   place-items: center;
   z-index: 1000;
@@ -862,15 +874,15 @@
 }
 
 .usr-modal-dialog {
-  width: min(560px, 94vw);
+  width: min(580px, 94vw);
   background: var(--surface, #fff);
   border-radius: 16px;
   border: 1px solid var(--border);
-  box-shadow: 0 24px 60px -8px rgba(15, 23, 42, 0.35);
+  box-shadow: 0 24px 60px -10px rgba(15, 23, 42, 0.38);
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  max-height: 90vh;
+  max-height: 92vh;
   animation: usrModalIn .2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -878,7 +890,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: 16px 22px;
   border-bottom: 1px solid var(--border);
   background: var(--surface);
 }
@@ -890,21 +902,23 @@
 }
 
 .usr-modal-icon {
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  background: linear-gradient(135deg, rgba(2, 132, 199, 0.14) 0%, rgba(56, 189, 248, 0.08) 100%);
-  border: 1px solid rgba(2, 132, 199, 0.25);
+  width: 40px;
+  height: 40px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, rgba(2, 132, 199, 0.15) 0%, rgba(56, 189, 248, 0.08) 100%);
+  border: 1px solid rgba(2, 132, 199, 0.28);
   color: #0284c7;
   display: grid;
   place-items: center;
+  flex-shrink: 0;
 }
 
 .usr-modal-title {
   font-size: 16px;
   font-weight: 700;
   color: var(--text);
-  line-height: 1.2;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 
 .usr-modal-sub {
@@ -931,22 +945,181 @@
   color: var(--text);
 }
 
+.usr-modal-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .usr-modal-body {
-  padding: 20px;
+  padding: 22px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 16px;
 }
 
+/* Modal Info Callout Banner */
+.usr-modal-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 14px;
+  background: rgba(2, 132, 199, 0.08);
+  border: 1px solid rgba(2, 132, 199, 0.2);
+  border-radius: 10px;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.usr-modal-notice-icon {
+  color: #0284c7;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.usr-modal-notice-text strong {
+  color: #0284c7;
+}
+
+/* Modal Form Grid */
+.usr-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px 16px;
+}
+
+.usr-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.usr-field--full {
+  grid-column: 1 / -1;
+}
+
+.usr-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.usr-req {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+.usr-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.usr-input-icon {
+  position: absolute;
+  left: 12px;
+  color: var(--text-mut);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.usr-input {
+  width: 100%;
+  height: 38px;
+  padding: 0 12px 0 36px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 13px;
+  font-family: inherit;
+  outline: none;
+  transition: all .15s ease;
+  box-sizing: border-box;
+}
+
+.usr-input:focus {
+  background: var(--surface);
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15);
+}
+
+.usr-input::placeholder {
+  color: var(--text-mut);
+  opacity: 0.75;
+}
+
+.usr-field-hint {
+  font-size: 11px;
+  color: var(--text-mut);
+  line-height: 1.2;
+}
+
+/* Modal Footer */
 .usr-modal-footer {
   display: flex;
   align-items: center;
   justify-content: flex-end;
   gap: 10px;
-  padding: 14px 20px;
+  padding: 14px 22px;
   border-top: 1px solid var(--border);
   background: var(--surface-2);
+}
+
+.usr-btn-cancel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.usr-btn-cancel:hover:not(:disabled) {
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+}
+
+.usr-btn-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 36px;
+  padding: 0 18px;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%);
+  color: #fff;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all .15s ease;
+  box-shadow: 0 2px 6px rgba(2, 132, 199, 0.28);
+}
+
+.usr-btn-submit:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.38);
+  filter: brightness(1.06);
+}
+
+.usr-btn-submit:disabled,
+.usr-btn-cancel:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* ================================================================
@@ -974,7 +1147,8 @@
     flex: 1 1 200px;
   }
   .usr-table-card {
-    margin: 14px 20px 18px;
+    height: calc(100vh - 145px);
+    margin: 8px 20px 10px;
   }
 }
 
@@ -991,7 +1165,8 @@
     flex: 1 1 calc(45% - 4px);
   }
   .usr-table-card {
-    margin: 14px 16px 16px;
+    height: calc(100vh - 165px);
+    margin: 8px 16px 10px;
   }
 }
 
@@ -1004,8 +1179,12 @@
     font-size: 15px;
   }
   .usr-table-card {
-    margin: 12px 14px 14px;
+    height: calc(100vh - 175px);
+    margin: 8px 14px 10px;
     border-radius: 10px;
+  }
+  .usr-form-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -1036,14 +1215,17 @@
     justify-content: center;
   }
   .usr-table-card {
-    margin: 10px 10px 12px;
+    height: calc(100vh - 220px);
+    margin: 6px 10px 10px;
     border-radius: 8px;
   }
   .usr-pagination {
     flex-direction: column;
     gap: 8px;
     align-items: center;
-    padding: 10px 12px;
+    padding: 8px 12px;
     height: auto;
+    max-height: none;
+    min-height: auto;
   }
 }
