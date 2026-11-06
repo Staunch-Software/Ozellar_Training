@@ -560,6 +560,7 @@
 
 /* ================================================================
    TABLE CARD STYLING & FLUSH INTEGRATION
+   Sticky Table Header at Top & Pinned Sticky Pagination at Bottom
    ================================================================ */
 .asg-table-card {
   margin: 0 24px 20px;
@@ -572,6 +573,124 @@
   overflow: hidden;
   position: relative;
   z-index: 15;
+}
+
+/* Scrollable Container for Table Content */
+.asg-table-scroll {
+  flex: 1;
+  overflow: auto;
+  position: relative;
+  max-height: calc(100vh - 215px);
+  min-height: 380px;
+}
+
+/* Table */
+.asg-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  color: var(--text);
+}
+
+/* ── Sticky Table Headers (Pinned at top: 0 inside scroll container) ── */
+.asg-table thead {
+  position: sticky;
+  top: 0;
+  z-index: 25;
+}
+
+.asg-table thead th {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  background: var(--surface-2);
+  border-bottom: 1px solid var(--border);
+  padding: 10px 14px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-mut);
+  white-space: nowrap;
+  text-align: left;
+}
+
+[data-theme="dark"] .asg-table thead th {
+  background: #181d28;
+}
+
+/* ── Pinned Sticky Pagination Bar (Pinned down at bottom of table card) ── */
+.asg-pagination-wrap {
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 20;
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  box-sizing: border-box;
+}
+
+.asg-pagination-wrap .pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 18px;
+  min-height: 40px;
+  border-top: none;
+  background: var(--surface);
+  border-radius: 0 0 13px 13px;
+  margin: 0;
+}
+
+.asg-pagination-wrap .pagination-info {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-mut);
+}
+
+.asg-pagination-wrap .pagination-info strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.asg-pagination-wrap .pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.asg-pagination-wrap .page-btn {
+  min-width: 28px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all .12s ease;
+}
+
+.asg-pagination-wrap .page-btn:hover:not(:disabled) {
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+}
+
+.asg-pagination-wrap .page-btn.active {
+  background: #E07820;
+  color: #fff;
+  border-color: #E07820;
+}
+
+.asg-pagination-wrap .page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* ================================================================
@@ -606,6 +725,9 @@
   .asg-table-card {
     margin: 0 20px 18px;
   }
+  .asg-table-scroll {
+    max-height: calc(100vh - 190px);
+  }
 }
 
 /* Tablets Landscape (<= 992px) */
@@ -626,6 +748,9 @@
   .asg-table-card {
     margin: 0 16px 16px;
   }
+  .asg-table-scroll {
+    max-height: calc(100vh - 200px);
+  }
 }
 
 /* Tablets Portrait (<= 768px) */
@@ -644,6 +769,9 @@
   .asg-table-card {
     margin: 0 14px 14px;
     border-radius: 10px;
+  }
+  .asg-table-scroll {
+    max-height: calc(100vh - 210px);
   }
 }
 
@@ -676,5 +804,15 @@
   .asg-table-card {
     margin: 0 10px 12px;
     border-radius: 8px;
+  }
+  .asg-table-scroll {
+    max-height: calc(100vh - 230px);
+  }
+  .asg-pagination-wrap .pagination {
+    flex-direction: column;
+    gap: 8px;
+    align-items: center;
+    padding: 8px 12px;
+    min-height: auto;
   }
 }

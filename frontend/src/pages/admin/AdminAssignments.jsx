@@ -451,6 +451,51 @@ export default function AdminAssignments() {
   const [manageRow, setManageRow] = useState(null)
   const [progressView, setProgressView] = useState(null)   // { row, course, cell }
   const [expanded, setExpanded] = useState(() => new Set()) // learnerIds showing all chips
+  const tableScrollRef = useRef(null)
+
+  // Seamless wheel scrolling coordinator between outer wrapper and table scroll
+  useEffect(() => {
+    const el = tableScrollRef.current
+    if (!el) return
+    const onWheel = (e) => {
+      const wrapper = el.closest('.cm-wrapper')
+      const card = el.closest('.asg-table-card')
+      const header = wrapper?.querySelector('.asg-header-container')
+      if (!wrapper || !card || !header) return
+
+      const wrapperTop = wrapper.getBoundingClientRect().top
+      const targetCardTop = wrapperTop + 56 + header.offsetHeight + 10
+      const distanceRemaining = card.getBoundingClientRect().top - targetCardTop
+
+      if (e.deltaY > 0) {
+        if (distanceRemaining > 0.5) {
+          const step = Math.min(distanceRemaining, e.deltaY)
+          wrapper.scrollTop += step
+          const remainingDelta = e.deltaY - step
+          if (remainingDelta > 0) {
+            el.scrollTop += remainingDelta
+          }
+        } else {
+          el.scrollTop += e.deltaY
+        }
+        e.preventDefault()
+      } else if (e.deltaY < 0) {
+        if (el.scrollTop > 0) {
+          const step = Math.min(el.scrollTop, -e.deltaY)
+          el.scrollTop -= step
+          const remainingDelta = -e.deltaY - step
+          if (remainingDelta > 0 && wrapper.scrollTop > 0) {
+            wrapper.scrollTop = Math.max(0, wrapper.scrollTop - remainingDelta)
+          }
+        } else if (wrapper.scrollTop > 0) {
+          wrapper.scrollTop = Math.max(0, wrapper.scrollTop + e.deltaY)
+        }
+        e.preventDefault()
+      }
+    }
+    el.addEventListener('wheel', onWheel, { passive: false })
+    return () => el.removeEventListener('wheel', onWheel)
+  }, [loading, data])
 
   const load = () => {
     setLoading(true)
@@ -746,9 +791,9 @@ export default function AdminAssignments() {
       </div>
 
       {/* ═══════════════════════ TABLE CARD ═══════════════════════ */}
-      <div className="asg-table-card admin-card" style={{ padding: 0, display: 'flex', flexDirection: 'column', flex: 1, minHeight: 470 }}>
-        <div className="admin-table-wrap" style={{ flex: 1, minHeight: 0 }}>
-          <table className="admin-table">
+      <div className="asg-table-card">
+        <div className="asg-table-scroll" ref={tableScrollRef}>
+          <table className="asg-table admin-table">
             <thead>
               <tr>
                 <th style={{ width: 48 }}>#</th>
@@ -822,8 +867,10 @@ export default function AdminAssignments() {
             </tbody>
           </table>
         </div>
-        <Pagination currentPage={currentPage} totalPages={totalPages}
-          totalItems={filteredRows.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
+        <div className="asg-pagination-wrap">
+          <Pagination currentPage={currentPage} totalPages={totalPages}
+            totalItems={filteredRows.length} itemsPerPage={itemsPerPage} onPageChange={setCurrentPage} />
+        </div>
       </div>
 
       {progressView && (

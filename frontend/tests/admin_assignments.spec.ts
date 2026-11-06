@@ -81,6 +81,35 @@ test.describe('Admin Course Management - Assignments Page UI', () => {
     await expect(card5.locator('.asg-kpi-lbl')).toHaveText('Completed Courses');
   });
 
+  test('table header is sticky at top and pagination is sticky at bottom', async ({ page }) => {
+    // 1. Table Card container and scroll container exist
+    const tableCard = page.locator('.asg-table-card');
+    await expect(tableCard).toBeVisible();
+
+    const scrollContainer = page.locator('.asg-table-scroll');
+    await expect(scrollContainer).toBeVisible();
+
+    // 2. Table Header has sticky positioning
+    const theadTh = page.locator('.asg-table thead th').first();
+    await expect(theadTh).toBeVisible();
+    const position = await theadTh.evaluate((el) => window.getComputedStyle(el).position);
+    expect(position).toBe('sticky');
+
+    // 3. Pagination is pinned at the bottom of the table card
+    const paginationWrap = page.locator('.asg-pagination-wrap');
+    await expect(paginationWrap).toBeVisible();
+    const pagPosition = await paginationWrap.evaluate((el) => window.getComputedStyle(el).position);
+    expect(pagPosition).toBe('sticky');
+
+    // 4. Scroll inside the table and verify header remains visible
+    await scrollContainer.evaluate((el) => { el.scrollTop = 300; });
+    await page.waitForTimeout(200);
+
+    // Header th is still visible in viewport inside the card
+    await expect(theadTh).toBeVisible();
+    await expect(paginationWrap).toBeVisible();
+  });
+
   test('search and rank dropdown filters assignments using modern CardSelect', async ({ page }) => {
     // 1. Search
     const searchInput = page.locator('#asg-search-input');
