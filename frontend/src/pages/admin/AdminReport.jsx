@@ -4,7 +4,7 @@ import {
   Award, Clock, Circle, FileSpreadsheet, FileText,
   Users, CheckCircle, AlertCircle, Search, X, SlidersHorizontal,
   TrendingUp, Download, RefreshCw, ChevronDown, ChevronLeft, ChevronRight, Eye, BarChart3,
-  MessageSquare, Lock, Phone, BookOpen, RotateCcw, Layers
+  MessageSquare, Lock, Phone, BookOpen, RotateCcw, Layers, Calendar, Ship, Check
 } from 'lucide-react'
 import CardSelect from '../../components/CardSelect.jsx'
 import { adminReport, adminDownloadReportCsv, adminDownloadReportXlsx, adminApproveCertificate } from '../../api.js'
@@ -159,6 +159,298 @@ function formatMobile(mobileNo) {
 }
 
 /* ------------------------------------------------------------------ */
+/*  Date helpers & Popover                                              */
+/* ------------------------------------------------------------------ */
+function getPresetDates(preset) {
+  const now = new Date()
+  const pad = (n) => String(n).padStart(2, '0')
+  const toIso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+
+  if (preset === 'this_month') {
+    const start = new Date(now.getFullYear(), now.getMonth(), 1)
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+    return { from: toIso(start), to: toIso(end) }
+  }
+  if (preset === 'last_month') {
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    const end = new Date(now.getFullYear(), now.getMonth(), 0)
+    return { from: toIso(start), to: toIso(end) }
+  }
+  if (preset === 'last_30_days') {
+    const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000)
+    return { from: toIso(start), to: toIso(now) }
+  }
+  if (preset === 'this_year') {
+    const start = new Date(now.getFullYear(), 0, 1)
+    const end = new Date(now.getFullYear(), 11, 31)
+    return { from: toIso(start), to: toIso(end) }
+  }
+  return { from: '', to: '' }
+}
+
+function DateFilterPopover({
+  open,
+  onClose,
+  fromDate,
+  toDate,
+  dateType,
+  onApply,
+  onClear,
+}) {
+  const [localFrom, setLocalFrom] = useState(fromDate || '')
+  const [localTo, setLocalTo] = useState(toDate || '')
+  const [localType, setLocalType] = useState(dateType || 'completed')
+  const popoverRef = useRef(null)
+
+  useEffect(() => {
+    setLocalFrom(fromDate || '')
+    setLocalTo(toDate || '')
+    setLocalType(dateType || 'completed')
+  }, [fromDate, toDate, dateType, open])
+
+  // Prevent background scroll when popover opens as a mobile bottom sheet
+  useEffect(() => {
+    if (!open) return
+    const isMobile = typeof window !== 'undefined' && window.innerWidth <= 640
+    if (isMobile) {
+      const prevOverflow = document.body.style.overflow
+      document.body.style.overflow = 'hidden'
+      return () => {
+        document.body.style.overflow = prevOverflow
+      }
+    }
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const handleClickOutside = (e) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target)) {
+        const triggerBtn = document.getElementById('rpt-date-filter-btn')
+        if (triggerBtn && triggerBtn.contains(e.target)) return
+        onClose()
+      }
+    }
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [open, onClose])
+
+  const activePresetKey = useMemo(() => {
+    if (!localFrom || !localTo) return null
+    for (const key of ['this_month', 'last_month', 'last_30_days', 'this_year']) {
+      const p = getPresetDates(key)
+      if (p.from === localFrom && p.to === localTo) return key
+    }
+    return null
+  }, [localFrom, localTo])
+
+  const rangeSummary = useMemo(() => {
+    if (!localFrom && !localTo) return null
+    const formatD = (str) => {
+      if (!str) return '…'
+      const parts = str.split('-')
+      if (parts.length !== 3) return str
+      const d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]))
+      if (isNaN(d.getTime())) return str
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })
+    }
+    if (localFrom && localTo) {
+      if (localFrom > localTo) {
+        return { text: 'Start date must be before or equal to end date', isError: true }
+      }
+      const d1 = new Date(localFrom)
+      const d2 = new Date(localTo)
+      const diffDays = Math.round(Math.abs((d2 - d1) / (24 * 60 * 60 * 1000))) + 1
+      return {
+        text: `${formatD(localFrom)} – ${formatD(localTo)} (${diffDays} day${diffDays === 1 ? '' : 's'})`,
+        isError: false,
+      }
+    }
+    if (localFrom) return { text: `From ${formatD(localFrom)} onwards`, isError: false }
+    return { text: `Up to ${formatD(localTo)}`, isError: false }
+  }, [localFrom, localTo])
+
+  if (!open) return null
+
+  const applyPreset = (presetKey) => {
+    const { from, to } = getPresetDates(presetKey)
+    setLocalFrom(from)
+    setLocalTo(to)
+  }
+
+  const handleApply = () => {
+    if (rangeSummary?.isError) return
+    onApply({ fromDate: localFrom, toDate: localTo, dateType: localType })
+    onClose()
+  }
+
+  const handleClear = () => {
+    setLocalFrom('')
+    setLocalTo('')
+    setLocalType('completed')
+    onClear()
+    onClose()
+  }
+
+  const PRESETS = [
+    { key: 'this_month',   label: 'This Month' },
+    { key: 'last_month',   label: 'Last Month' },
+    { key: 'last_30_days', label: 'Last 30 Days' },
+    { key: 'this_year',    label: 'This Year' },
+  ]
+
+  const DATE_TYPES = [
+    { value: 'completed', label: 'Completion Date', icon: CheckCircle },
+    { value: 'started',   label: 'Enrollment Date', icon: Clock },
+    { value: 'onboard',   label: 'Onboard Date',    icon: Ship },
+  ]
+
+  return (
+    <>
+      <div
+        className="rpt-date-popover-backdrop"
+        onClick={onClose}
+        aria-hidden="true"
+      />
+      <div
+        className="rpt-date-popover"
+        ref={popoverRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Filter by Date"
+      >
+        <div className="rpt-date-popover-drag-handle" />
+
+        <div className="rpt-date-popover-header">
+          <div className="rpt-date-popover-title">
+            <span className="rpt-date-title-icon-badge">
+              <Calendar size={14} />
+            </span>
+            <div className="rpt-date-title-col">
+              <div className="rpt-date-title-text">Date Filter</div>
+              <div className="rpt-date-subtitle-text">Filter reports by activity period</div>
+            </div>
+          </div>
+          <button
+            type="button"
+            className="rpt-date-popover-close"
+            onClick={onClose}
+            aria-label="Close date filter"
+          >
+            <X size={15} />
+          </button>
+        </div>
+
+        <div className="rpt-date-popover-body">
+          {/* Quick presets */}
+          <div className="rpt-date-section-label">Quick Presets</div>
+          <div className="rpt-date-presets">
+            {PRESETS.map((p) => {
+              const isSelected = activePresetKey === p.key
+              return (
+                <button
+                  key={p.key}
+                  type="button"
+                  className={`rpt-preset-btn${isSelected ? ' active' : ''}`}
+                  onClick={() => applyPreset(p.key)}
+                >
+                  {isSelected && <span className="rpt-preset-check-dot" />}
+                  <span>{p.label}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Date Field Target */}
+          <div className="rpt-date-section-label" style={{ marginTop: 14 }}>
+            Filter By Date Type
+          </div>
+          <div className="rpt-date-type-group" role="radiogroup" aria-label="Filter by date type">
+            {DATE_TYPES.map((dt) => {
+              const isSelected = localType === dt.value
+              const Icon = dt.icon
+              return (
+                <label
+                  key={dt.value}
+                  className={`rpt-date-type-pill${isSelected ? ' active' : ''}`}
+                >
+                  <input
+                    type="radio"
+                    name="rpt-date-type"
+                    value={dt.value}
+                    checked={isSelected}
+                    onChange={() => setLocalType(dt.value)}
+                  />
+                  <Icon size={13} className="rpt-date-type-icon" />
+                  <span className="rpt-date-type-label">{dt.label}</span>
+                </label>
+              )
+            })}
+          </div>
+
+          {/* Date Range Inputs */}
+          <div className="rpt-date-section-label" style={{ marginTop: 14 }}>
+            Custom Range
+          </div>
+          <div className="rpt-date-inputs">
+            <div className="rpt-date-field">
+              <label htmlFor="rpt-date-from" className="rpt-date-sublabel">From</label>
+              <input
+                type="date"
+                id="rpt-date-from"
+                className="rpt-date-input"
+                value={localFrom}
+                onChange={(e) => setLocalFrom(e.target.value)}
+              />
+            </div>
+            <div className="rpt-date-field">
+              <label htmlFor="rpt-date-to" className="rpt-date-sublabel">To</label>
+              <input
+                type="date"
+                id="rpt-date-to"
+                className="rpt-date-input"
+                value={localTo}
+                onChange={(e) => setLocalTo(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Range summary preview badge */}
+          {rangeSummary && (
+            <div className={`rpt-date-summary-badge${rangeSummary.isError ? ' is-error' : ''}`}>
+              {rangeSummary.isError ? <AlertCircle size={12} /> : <Clock size={12} />}
+              <span>{rangeSummary.text}</span>
+            </div>
+          )}
+        </div>
+
+        <div className="rpt-date-popover-footer">
+          <button type="button" className="rpt-date-clear-btn" onClick={handleClear}>
+            <RotateCcw size={11} />
+            <span>Clear</span>
+          </button>
+          <button
+            type="button"
+            className="btn primary sm rpt-date-apply-btn"
+            onClick={handleApply}
+            disabled={rangeSummary?.isError}
+          >
+            <Check size={13} />
+            <span>Apply Filter</span>
+          </button>
+        </div>
+      </div>
+    </>
+  )
+}
+
+/* ------------------------------------------------------------------ */
 /*  Main component                                                      */
 /* ------------------------------------------------------------------ */
 export default function AdminReport() {
@@ -168,22 +460,29 @@ export default function AdminReport() {
   const isSuperAdmin = user?.role === 'super_admin'
 
   // Extract individual values — these are stable string primitives React can diff correctly
-  const paramCrew   = searchParams.get('crew')   || ''
-  const paramCourse = searchParams.get('course') || 'all'
-  const paramStatus = searchParams.get('status') || 'all'
+  const paramCrew     = searchParams.get('crew')      || ''
+  const paramCourse   = searchParams.get('course')    || 'all'
+  const paramStatus   = searchParams.get('status')    || 'all'
+  const paramFromDate = searchParams.get('from_date') || ''
+  const paramToDate   = searchParams.get('to_date')   || ''
+  const paramDateType = searchParams.get('date_type') || 'completed'
 
-  const [data,           setData]          = useState(null)
-  const [crewSearch,     setCrewSearch]    = useState(paramCrew)
-  const [selectedCourse, setSelectedCourse]= useState(paramCourse)
-  const [selectedStatus, setSelectedStatus]= useState(paramStatus)
-  const [dlXlsx,         setDlXlsx]        = useState(false)
-  const [dlCsv,          setDlCsv]         = useState(false)
-  const [error,          setError]         = useState(null)
-  const [loading,        setLoading]       = useState(true)
-  const [page,           setPage]          = useState(1)
-  const [approvingCell,  setApprovingCell] = useState(null) // 'learnerId-courseId'
-  const [approveTarget,  setApproveTarget] = useState(null) // { learnerId, courseId, learnerName, courseName }
-  const [hoverRemark,    setHoverRemark]   = useState(null) // { x, y, learnerName, courseName, remark }
+  const [data,             setData]            = useState(null)
+  const [crewSearch,       setCrewSearch]      = useState(paramCrew)
+  const [selectedCourse,   setSelectedCourse]  = useState(paramCourse)
+  const [selectedStatus,   setSelectedStatus]  = useState(paramStatus)
+  const [fromDate,         setFromDate]        = useState(paramFromDate)
+  const [toDate,           setToDate]          = useState(paramToDate)
+  const [dateType,         setDateType]        = useState(paramDateType)
+  const [datePopoverOpen,  setDatePopoverOpen] = useState(false)
+  const [dlXlsx,           setDlXlsx]          = useState(false)
+  const [dlCsv,            setDlCsv]           = useState(false)
+  const [error,            setError]           = useState(null)
+  const [loading,          setLoading]         = useState(true)
+  const [page,             setPage]            = useState(1)
+  const [approvingCell,    setApprovingCell]   = useState(null) // 'learnerId-courseId'
+  const [approveTarget,    setApproveTarget]   = useState(null) // { learnerId, courseId, learnerName, courseName }
+  const [hoverRemark,      setHoverRemark]     = useState(null) // { x, y, learnerName, courseName, remark }
   const ROWS_PER_PAGE = 50
 
   const tableScrollRef = useRef(null)
@@ -241,8 +540,11 @@ export default function AdminReport() {
     setCrewSearch(paramCrew)
     setSelectedCourse(paramCourse)
     setSelectedStatus(paramStatus)
+    setFromDate(paramFromDate)
+    setToDate(paramToDate)
+    setDateType(paramDateType)
     setPage(1)
-  }, [paramCrew, paramCourse, paramStatus])
+  }, [paramCrew, paramCourse, paramStatus, paramFromDate, paramToDate, paramDateType])
 
   /* load */
   const load = () => {
@@ -265,6 +567,7 @@ export default function AdminReport() {
         (r.name || '').toLowerCase().includes(q) ||
         (r.crewId  || '').toLowerCase().includes(q) ||
         (r.rank    || '').toLowerCase().includes(q) ||
+        (r.currentVessel || r.vessel || '').toLowerCase().includes(q) ||
         (r.mobileNo || r.mobileNumber || '').toLowerCase().includes(q)
       )
     }
@@ -285,8 +588,33 @@ export default function AdminReport() {
         rows = rows.filter(r => Object.values(r.cells).some(c => c.status === selectedStatus))
       }
     }
+
+    if (fromDate || toDate) {
+      const matchDate = (d) => {
+        if (!d) return false
+        const s = String(d).slice(0, 10)
+        if (fromDate && s < fromDate) return false
+        if (toDate && s > toDate) return false
+        return true
+      }
+
+      if (dateType === 'onboard') {
+        rows = rows.filter(r => matchDate(r.signOnDate))
+      } else {
+        rows = rows.filter(r => {
+          const targetCells = selectedCourse === 'all'
+            ? Object.values(r.cells)
+            : [r.cells[selectedCourse]].filter(Boolean)
+          return targetCells.some(c => {
+            const d = dateType === 'completed' ? c.passedOn : c.startedOn
+            return matchDate(d)
+          })
+        })
+      }
+    }
+
     return rows
-  }, [data, crewSearch, selectedCourse, selectedStatus])
+  }, [data, crewSearch, selectedCourse, selectedStatus, fromDate, toDate, dateType])
 
   /* visible course columns */
   const visibleCourses = useMemo(() => {
@@ -299,11 +627,23 @@ export default function AdminReport() {
   /* dynamic KPIs */
   const kpis = useMemo(() => {
     let cells = 0, passed = 0, wip = 0, notStarted = 0
+    const matchDate = (d) => {
+      if (!d) return false
+      const s = String(d).slice(0, 10)
+      if (fromDate && s < fromDate) return false
+      if (toDate && s > toDate) return false
+      return true
+    }
+
     filteredRows.forEach(r => {
       const subset = selectedCourse === 'all'
         ? Object.values(r.cells)
         : [r.cells[selectedCourse]].filter(Boolean)
       subset.forEach(c => {
+        if (fromDate || toDate) {
+          if (dateType === 'completed' && !matchDate(c.passedOn)) return
+          if (dateType === 'started' && !matchDate(c.startedOn)) return
+        }
         cells++
         if      (c.status === 'passed')      passed++
         else if (c.status === 'in-progress') wip++
@@ -317,7 +657,7 @@ export default function AdminReport() {
       notStarted,
       passRate:   cells > 0 ? Math.round(passed / cells * 100) : 0,
     }
-  }, [filteredRows, selectedCourse])
+  }, [filteredRows, selectedCourse, fromDate, toDate, dateType])
 
   const courseOptions = useMemo(() => {
     const opts = [
@@ -374,11 +714,35 @@ export default function AdminReport() {
     },
   ], [])
 
-  const hasFilters = Boolean(crewSearch || selectedCourse !== 'all' || selectedStatus !== 'all')
-  const clearAll   = () => {
+  const hasDateFilter = Boolean(fromDate || toDate)
+  const hasFilters = Boolean(
+    crewSearch ||
+    selectedCourse !== 'all' ||
+    selectedStatus !== 'all' ||
+    hasDateFilter
+  )
+
+  const dateButtonLabel = useMemo(() => {
+    if (!fromDate && !toDate) return 'Date Filter'
+    const typeShort = dateType === 'completed' ? 'Done' : (dateType === 'started' ? 'Start' : 'Joined')
+    if (fromDate && toDate) {
+      if (fromDate.slice(0, 7) === toDate.slice(0, 7) && fromDate.endsWith('-01') && (toDate.endsWith('-30') || toDate.endsWith('-31') || toDate.endsWith('-28') || toDate.endsWith('-29'))) {
+        const d = new Date(fromDate)
+        return `${typeShort}: ${d.toLocaleString('default', { month: 'short', year: 'numeric' })}`
+      }
+      return `${typeShort}: ${fromDate} → ${toDate}`
+    }
+    if (fromDate) return `${typeShort} ≥ ${fromDate}`
+    return `${typeShort} ≤ ${toDate}`
+  }, [fromDate, toDate, dateType])
+
+  const clearAll = () => {
     setCrewSearch('')
     setSelectedCourse('all')
     setSelectedStatus('all')
+    setFromDate('')
+    setToDate('')
+    setDateType('completed')
     setPage(1)
     if (searchParams.toString()) {
       navigate('/admin/course-management/report', { replace: true })
@@ -386,7 +750,7 @@ export default function AdminReport() {
   }
 
   /* Reset page to 1 on filter change */
-  useEffect(() => { setPage(1) }, [crewSearch, selectedCourse, selectedStatus])
+  useEffect(() => { setPage(1) }, [crewSearch, selectedCourse, selectedStatus, fromDate, toDate, dateType])
 
   /* Pagination logic */
   const totalPages = Math.ceil(filteredRows.length / ROWS_PER_PAGE)
@@ -417,9 +781,12 @@ export default function AdminReport() {
     setDlXlsx(true); setError(null)
     try {
       await adminDownloadReportXlsx({
-        crewSearch:  crewSearch.trim()     || undefined,
-        courseId:    selectedCourse !== 'all' ? selectedCourse  : undefined,
-        status:      selectedStatus !== 'all' ? selectedStatus  : undefined,
+        crewSearch:  crewSearch.trim()         || undefined,
+        courseId:    selectedCourse !== 'all' ? selectedCourse : undefined,
+        status:      selectedStatus !== 'all' ? selectedStatus : undefined,
+        fromDate:    fromDate                 || undefined,
+        toDate:      toDate                   || undefined,
+        dateType:    dateType                 || undefined,
       })
     } catch (e) { setError(e.message) }
     finally { setDlXlsx(false) }
@@ -427,8 +794,16 @@ export default function AdminReport() {
 
   const downloadCsv = async () => {
     setDlCsv(true); setError(null)
-    try { await adminDownloadReportCsv() }
-    catch (e) { setError(e.message) }
+    try {
+      await adminDownloadReportCsv({
+        crewSearch:  crewSearch.trim()         || undefined,
+        courseId:    selectedCourse !== 'all' ? selectedCourse : undefined,
+        status:      selectedStatus !== 'all' ? selectedStatus : undefined,
+        fromDate:    fromDate                 || undefined,
+        toDate:      toDate                   || undefined,
+        dateType:    dateType                 || undefined,
+      })
+    } catch (e) { setError(e.message) }
     finally { setDlCsv(false) }
   }
 
@@ -450,7 +825,7 @@ export default function AdminReport() {
 
 
       {/* ═══════════════════════ PAGE HEADER & FILTERS (Single Unified Row down to 1200px) ═══════════════════════ */}
-      <div className="rpt-header-container">
+      <div className={`rpt-header-container${datePopoverOpen ? ' rpt-header--popover-open' : ''}`}>
         <div className="rpt-header">
           {/* Left: Brand Identity */}
           <div className="rpt-header-brand">
@@ -522,6 +897,53 @@ export default function AdminReport() {
                 placeholder="All Statuses"
                 placement="bottom"
                 className="rpt-cardselect rpt-cardselect--status"
+              />
+            </div>
+
+            {/* Date Filter Trigger Button with Popover */}
+            <div className="rpt-date-filter-wrap">
+              <button
+                type="button"
+                id="rpt-date-filter-btn"
+                className={`rpt-date-filter-btn${hasDateFilter ? ' active' : ''}`}
+                onClick={() => setDatePopoverOpen(o => !o)}
+                title="Filter by completion or onboard date"
+              >
+                <Calendar size={13} className="rpt-date-icon" />
+                <span className="rpt-date-label">{dateButtonLabel}</span>
+                {hasDateFilter ? (
+                  <span
+                    className="rpt-date-clear-pill"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setFromDate('')
+                      setToDate('')
+                    }}
+                    title="Clear date filter"
+                  >
+                    <X size={11} />
+                  </span>
+                ) : (
+                  <ChevronDown size={12} className="rpt-date-arrow" />
+                )}
+              </button>
+
+              <DateFilterPopover
+                open={datePopoverOpen}
+                onClose={() => setDatePopoverOpen(false)}
+                fromDate={fromDate}
+                toDate={toDate}
+                dateType={dateType}
+                onApply={({ fromDate: f, toDate: t, dateType: dt }) => {
+                  setFromDate(f)
+                  setToDate(t)
+                  setDateType(dt)
+                }}
+                onClear={() => {
+                  setFromDate('')
+                  setToDate('')
+                  setDateType('completed')
+                }}
               />
             </div>
 
@@ -627,6 +1049,23 @@ export default function AdminReport() {
                   onClick={() => setSelectedStatus('all')}
                   title="Remove status filter"
                   aria-label="Remove status filter"
+                >
+                  <X size={11} />
+                </button>
+              </span>
+            )}
+            {hasDateFilter && (
+              <span className="rpt-chip" id="chip-date">
+                <Calendar size={11} className="rpt-chip-icon" />
+                <span className="rpt-chip-text">
+                  {dateButtonLabel}
+                </span>
+                <button
+                  type="button"
+                  className="rpt-chip-remove"
+                  onClick={() => { setFromDate(''); setToDate('') }}
+                  title="Remove date filter"
+                  aria-label="Remove date filter"
                 >
                   <X size={11} />
                 </button>

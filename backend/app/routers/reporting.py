@@ -89,7 +89,11 @@ def _report(db):
         
         rows.append({
             "learnerId": lr.id, "name": lr.full_name, "crewId": lr.crew_id,
-            "rank": lr.rank, "mobileNo": lr.mobile_number, "mobileNumber": lr.mobile_number,
+            "rank": lr.rank,
+            "vessel": lr.current_vessel,
+            "currentVessel": lr.current_vessel,
+            "signOnDate": lr.sign_on_date.strftime("%Y-%m-%d") if lr.sign_on_date else None,
+            "mobileNo": lr.mobile_number, "mobileNumber": lr.mobile_number,
             "isActive": bool(lr.is_active), "cells": cells,
         })
     return courses, rows
@@ -259,23 +263,93 @@ def admin_dashboard_stats(admin: models.User = Depends(require_admin), db: Sessi
 
 
 @router.get("/api/admin/report.csv")
-def admin_report_csv(admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
+def admin_report_csv(
+    admin: models.User = Depends(require_module("courses")),
+    db: Session = Depends(get_db),
+    crew_search: Optional[str] = None,
+    course_id:   Optional[str] = None,
+    status:      Optional[str] = None,
+    vessel:      Optional[str] = None,
+    from_date:   Optional[str] = None,
+    to_date:     Optional[str] = None,
+    date_type:   Optional[str] = "completed",
+):
     courses, rows = _report(db)
+
+    if crew_search:
+        q = crew_search.strip().lower()
+        rows = [r for r in rows if
+                q in (r["name"] or "").lower() or
+                q in (r["crewId"] or "").lower() or
+                q in (r["rank"] or "").lower() or
+                q in (r.get("currentVessel") or "").lower() or
+                q in (r.get("mobileNo") or "").lower()]
+
+    if vessel and vessel != "all":
+        v_target = vessel.strip().lower()
+        rows = [r for r in rows if (r.get("currentVessel") or "").strip().lower() == v_target]
+
+    if course_id and course_id != "all":
+        rows = [r for r in rows if course_id in r["cells"]]
+        courses = [c for c in courses if c.id == course_id]
+
+    if status and status != "all":
+        if status == "pending":
+            if course_id and course_id != "all":
+                rows = [r for r in rows if r["cells"].get(course_id, {}).get("pendingApproval")]
+            else:
+                rows = [r for r in rows if any(cell.get("pendingApproval") for cell in r["cells"].values())]
+        elif course_id and course_id != "all":
+            rows = [r for r in rows if r["cells"].get(course_id, {}).get("status") == status]
+        else:
+            rows = [r for r in rows if any(cell["status"] == status for cell in r["cells"].values())]
+
+    if from_date or to_date:
+        d_type = (date_type or "completed").lower()
+        def match_date(d_val: Optional[str]) -> bool:
+            if not d_val:
+                return False
+            d = d_val[:10]
+            if from_date and d < from_date[:10]:
+                return False
+            if to_date and d > to_date[:10]:
+                return False
+            return True
+
+        new_rows = []
+        for r in rows:
+            if d_type == "onboard":
+                if match_date(r.get("signOnDate")):
+                    new_rows.append(r)
+            else:
+                matching_cells = {}
+                for cid, cell in r["cells"].items():
+                    target_d = cell.get("passedOn") if d_type == "completed" else cell.get("startedOn")
+                    if match_date(target_d):
+                        matching_cells[cid] = cell
+                if matching_cells:
+                    r_copy = dict(r)
+                    r_copy["cells"] = matching_cells
+                    new_rows.append(r_copy)
+        rows = new_rows
+
     buf = io.StringIO()
     w = csv.writer(buf)
-    w.writerow(["Crew ID", "Name", "Rank", "Mobile Number", "Active", "Course", "Status", "Score", "Completed On", "Approval Remark"])
+    w.writerow(["Crew ID", "Name", "Rank", "Vessel", "Onboard Date", "Mobile Number", "Active", "Course", "Status", "Score", "Completed On", "Approval Remark"])
     for r in rows:
         active = "yes" if r["isActive"] else "no"
         mobile = r.get("mobileNo") or ""
+        vessel_name = r.get("currentVessel") or ""
+        onboard_date = r.get("signOnDate") or ""
         if not r["cells"]:
-            w.writerow([r["crewId"], r["name"], r["rank"] or "", mobile, active,
+            w.writerow([r["crewId"], r["name"], r["rank"] or "", vessel_name, onboard_date, mobile, active,
                         "(no courses assigned)", "", "", "", ""])
             continue
         for c in courses:
             cell = r["cells"].get(c.id)
             if not cell:
                 continue
-            w.writerow([r["crewId"], r["name"], r["rank"] or "", mobile, active, c.title,
+            w.writerow([r["crewId"], r["name"], r["rank"] or "", vessel_name, onboard_date, mobile, active, c.title,
                         cell["status"], "" if cell["score"] is None else cell["score"],
                         cell["passedOn"] or "", cell.get("approvalRemark") or ""])
     return Response(content=buf.getvalue(), media_type="text/csv",
@@ -286,9 +360,13 @@ def admin_report_csv(admin: models.User = Depends(require_module("courses")), db
 def admin_report_xlsx(
     admin: models.User = Depends(require_module("courses")),
     db: Session = Depends(get_db),
-    crew_search: str = None,
-    course_id:   str = None,
-    status:      str = None,
+    crew_search: Optional[str] = None,
+    course_id:   Optional[str] = None,
+    status:      Optional[str] = None,
+    vessel:      Optional[str] = None,
+    from_date:   Optional[str] = None,
+    to_date:     Optional[str] = None,
+    date_type:   Optional[str] = "completed",
 ):
     """Download the compliance report as a styled Excel workbook."""
     import openpyxl
@@ -303,26 +381,73 @@ def admin_report_xlsx(
                 q in (r["name"] or "").lower() or
                 q in (r["crewId"] or "").lower() or
                 q in (r["rank"] or "").lower() or
+                q in (r.get("currentVessel") or "").lower() or
                 q in (r.get("mobileNo") or "").lower()]
 
-    if course_id:
+    if vessel and vessel != "all":
+        v_target = vessel.strip().lower()
+        rows = [r for r in rows if (r.get("currentVessel") or "").strip().lower() == v_target]
+
+    if course_id and course_id != "all":
         rows = [r for r in rows if course_id in r["cells"]]
         courses = [c for c in courses if c.id == course_id]
 
-    if status:
-        if course_id:
+    if status and status != "all":
+        if status == "pending":
+            if course_id and course_id != "all":
+                rows = [r for r in rows if r["cells"].get(course_id, {}).get("pendingApproval")]
+            else:
+                rows = [r for r in rows if any(cell.get("pendingApproval") for cell in r["cells"].values())]
+        elif course_id and course_id != "all":
             rows = [r for r in rows if r["cells"].get(course_id, {}).get("status") == status]
         else:
-            rows = [r for r in rows
-                    if any(cell["status"] == status for cell in r["cells"].values())]
+            rows = [r for r in rows if any(cell["status"] == status for cell in r["cells"].values())]
+
+    if from_date or to_date:
+        d_type = (date_type or "completed").lower()
+        def match_date(d_val: Optional[str]) -> bool:
+            if not d_val:
+                return False
+            d = d_val[:10]
+            if from_date and d < from_date[:10]:
+                return False
+            if to_date and d > to_date[:10]:
+                return False
+            return True
+
+        new_rows = []
+        for r in rows:
+            if d_type == "onboard":
+                if match_date(r.get("signOnDate")):
+                    new_rows.append(r)
+            else:
+                matching_cells = {}
+                for cid, cell in r["cells"].items():
+                    target_d = cell.get("passedOn") if d_type == "completed" else cell.get("startedOn")
+                    if match_date(target_d):
+                        matching_cells[cid] = cell
+                if matching_cells:
+                    r_copy = dict(r)
+                    r_copy["cells"] = matching_cells
+                    new_rows.append(r_copy)
+        rows = new_rows
 
     filter_note = []
     if crew_search: filter_note.append(f'Crew: "{crew_search}"')
-    if course_id:
+    if vessel and vessel != "all": filter_note.append(f"Vessel: {vessel}")
+    if course_id and course_id != "all":
         c_obj = next((c for c in courses if c.id == course_id), None)
         if c_obj: filter_note.append(f"Course: {c_obj.title}")
-    if status:
+    if status and status != "all":
         filter_note.append(f"Status: {status}")
+    if from_date or to_date:
+        d_type_label = "Completed" if (date_type or "completed").lower() == "completed" else ("Started" if date_type == "started" else "Onboard")
+        if from_date and to_date:
+            filter_note.append(f"{d_type_label}: {from_date} to {to_date}")
+        elif from_date:
+            filter_note.append(f"{d_type_label}: from {from_date}")
+        else:
+            filter_note.append(f"{d_type_label}: to {to_date}")
 
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -346,13 +471,13 @@ def admin_report_xlsx(
     title_text = "Ozellar Marine — Compliance Report"
     if filter_note:
         title_text += f"  |  Filters: {', '.join(filter_note)}"
-    ws.merge_cells("A1:L1")
+    ws.merge_cells("A1:N1")
     tc = ws.cell(row=1, column=1, value=title_text)
     tc.font = Font(bold=True, size=12, color="1E3A5F")
     tc.alignment = Alignment(horizontal="left", vertical="center")
     ws.row_dimensions[1].height = 22
 
-    ws.merge_cells("A2:L2")
+    ws.merge_cells("A2:N2")
     sc = ws.cell(row=2, column=1,
                  value=f"Generated: {datetime.now(IST).strftime('%d %b %Y %H:%M IST')}  ·  "
                        f"{len(rows)} crew member(s) shown")
@@ -360,7 +485,7 @@ def admin_report_xlsx(
     sc.alignment = Alignment(horizontal="left", vertical="center")
     ws.row_dimensions[2].height = 16
 
-    headers = ["Crew ID", "Name", "Rank", "Mobile Number", "Active",
+    headers = ["Crew ID", "Name", "Rank", "Vessel", "Onboard Date", "Mobile Number", "Active",
                "Course", "Status", "Score (%)", "Attempts", "Started On", "Completed On", "Approval Remark"]
     ws.append(headers)
     for ci, h in enumerate(headers, 1):
@@ -376,15 +501,17 @@ def admin_report_xlsx(
     for r in rows:
         active = "Yes" if r["isActive"] else "No"
         mobile = r.get("mobileNo") or ""
+        vessel_name = r.get("currentVessel") or r.get("vessel") or ""
+        onboard_date = r.get("signOnDate") or ""
         start_row = row_idx
         
         if not r["cells"]:
-            data = [r["crewId"], r["name"], r["rank"] or "", mobile, active,
+            data = [r["crewId"], r["name"], r["rank"] or "", vessel_name, onboard_date, mobile, active,
                     "(no courses assigned)", "", "", "", "", "", ""]
             ws.append(data)
-            for ci in range(1, 13):
+            for ci in range(1, 15):
                 c = ws.cell(row=row_idx, column=ci)
-                c.fill = ASGN_FILL if ci > 5 else WHITE_FILL
+                c.fill = ASGN_FILL if ci > 7 else WHITE_FILL
                 c.font = BODY_FONT
                 c.alignment = left; c.border = border
             row_idx += 1
@@ -404,25 +531,25 @@ def admin_report_xlsx(
             remark = cell_data.get("approvalRemark") or ""
 
             fill = PASS_FILL if status == "passed" else (WIP_FILL if status == "in-progress" else ASGN_FILL)
-            data = [r["crewId"], r["name"], r["rank"] or "", mobile, active,
+            data = [r["crewId"], r["name"], r["rank"] or "", vessel_name, onboard_date, mobile, active,
                     course.title, label, score, attempts, started_on, passed_on, remark]
             ws.append(data)
             for ci, val in enumerate(data, 1):
                 c = ws.cell(row=row_idx, column=ci)
-                c.fill = fill if ci > 5 else WHITE_FILL
+                c.fill = fill if ci > 7 else WHITE_FILL
                 c.font = BOLD_FONT if ci == 2 else BODY_FONT
                 c.alignment = left
                 c.border = border
             row_idx += 1
 
         if row_idx - 1 > start_row:
-            for ci in range(1, 6):
+            for ci in range(1, 8):
                 ws.merge_cells(start_row=start_row, start_column=ci, end_row=row_idx-1, end_column=ci)
 
-        for ci in range(1, 13):
+        for ci in range(1, 15):
             ws.cell(row=row_idx-1, column=ci).border = border_thick_bottom
 
-    col_widths = [14, 26, 18, 16, 8, 36, 14, 11, 10, 14, 14, 40]
+    col_widths = [14, 26, 18, 22, 14, 16, 8, 36, 14, 11, 10, 14, 14, 40]
     for ci, w in enumerate(col_widths, 1):
         ws.column_dimensions[get_column_letter(ci)].width = w
 

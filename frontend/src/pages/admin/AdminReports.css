@@ -48,6 +48,11 @@
   padding: 0;
 }
 
+.rpt-header-container.rpt-header--popover-open,
+.rpt-header-container:has(.rpt-date-popover) {
+  z-index: 1200;
+}
+
 .rpt-header {
   display: flex;
   align-items: center;
@@ -253,6 +258,499 @@
 
 .rpt-cardselect--status .cardselect-panel {
   min-width: 210px;
+}
+
+.rpt-cardselect--vessel .cardselect-panel {
+  min-width: 250px;
+}
+
+/* ── Date Filter Trigger & Popover ── */
+.rpt-date-filter-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.rpt-date-filter-btn {
+  height: 34px;
+  padding: 0 11px;
+  border-radius: 8px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12.5px;
+  font-family: inherit;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all .15s ease;
+  max-width: 220px;
+}
+
+.rpt-date-label {
+  display: inline-block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rpt-date-filter-btn:hover {
+  background: var(--surface);
+  border-color: #059669;
+}
+
+.rpt-date-filter-btn.active {
+  background: rgba(5, 150, 105, 0.08);
+  border-color: #059669;
+  color: #059669;
+  font-weight: 600;
+}
+
+.rpt-date-icon {
+  color: var(--text-mut);
+  flex-shrink: 0;
+  transition: color .15s;
+}
+
+.rpt-date-filter-btn.active .rpt-date-icon {
+  color: #059669;
+}
+
+.rpt-date-arrow {
+  color: var(--text-mut);
+  margin-left: 2px;
+  flex-shrink: 0;
+  transition: transform .15s ease;
+}
+
+.rpt-date-arrow.open {
+  transform: rotate(180deg);
+}
+
+.rpt-date-clear-pill {
+  display: inline-grid;
+  place-items: center;
+  padding: 2px;
+  border-radius: 50%;
+  margin-left: 2px;
+  color: #059669;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background .12s, transform .12s;
+}
+
+.rpt-date-clear-pill:hover {
+  background: rgba(5, 150, 105, 0.2);
+  transform: scale(1.1);
+}
+
+/* ── Mobile Backdrop (hidden on desktop) ── */
+.rpt-date-popover-backdrop {
+  display: none;
+}
+
+/* ── Date Popover Panel (Desktop Floating Card) ── */
+.rpt-date-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 360px;
+  max-width: calc(100vw - 24px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 16px 40px -10px rgba(15, 23, 42, 0.2), 0 0 1px 1px rgba(15, 23, 42, 0.06);
+  z-index: 120;
+  padding: 16px 18px 14px;
+  display: flex;
+  flex-direction: column;
+  animation: rptTipIn .15s ease-out;
+}
+
+[data-theme="dark"] .rpt-date-popover {
+  background: #182030;
+  border-color: #2b374e;
+  box-shadow: 0 20px 48px rgba(0, 0, 0, 0.55), 0 0 1px 1px rgba(255, 255, 255, 0.05);
+}
+
+.rpt-date-popover-drag-handle {
+  display: none;
+}
+
+.rpt-date-popover-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+}
+
+.rpt-date-popover-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rpt-date-title-icon-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: rgba(16, 185, 129, 0.12);
+  color: #059669;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .rpt-date-title-icon-badge {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.rpt-date-title-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.rpt-date-title-text {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+}
+
+.rpt-date-subtitle-text {
+  font-size: 10.5px;
+  color: var(--text-mut);
+  line-height: 1.2;
+}
+
+.rpt-date-popover-close {
+  background: none;
+  border: none;
+  color: var(--text-mut);
+  cursor: pointer;
+  padding: 5px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  transition: all .12s;
+}
+
+.rpt-date-popover-close:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+.rpt-date-section-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-mut);
+  margin-bottom: 6px;
+}
+
+/* Quick Presets Grid */
+.rpt-date-presets {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.rpt-preset-btn {
+  height: 30px;
+  padding: 0 10px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 11.5px;
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  cursor: pointer;
+  transition: all .12s ease;
+  user-select: none;
+  text-align: center;
+}
+
+.rpt-preset-btn:hover {
+  background: rgba(5, 150, 105, 0.08);
+  border-color: rgba(5, 150, 105, 0.35);
+  color: #059669;
+}
+
+.rpt-preset-btn.active {
+  background: rgba(5, 150, 105, 0.12);
+  border-color: #059669;
+  color: #059669;
+  font-weight: 700;
+  box-shadow: 0 1px 3px rgba(5, 150, 105, 0.12);
+}
+
+[data-theme="dark"] .rpt-preset-btn {
+  background: #1e2738;
+  border-color: #2b374e;
+}
+
+[data-theme="dark"] .rpt-preset-btn:hover {
+  background: rgba(16, 185, 129, 0.15);
+  border-color: rgba(16, 185, 129, 0.4);
+  color: #34d399;
+}
+
+[data-theme="dark"] .rpt-preset-btn.active {
+  background: rgba(16, 185, 129, 0.2);
+  border-color: #10b981;
+  color: #34d399;
+}
+
+.rpt-preset-check-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #059669;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .rpt-preset-check-dot {
+  background: #34d399;
+}
+
+/* Date Field Target Segmented Tabs */
+.rpt-date-type-group {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  background: var(--surface-2);
+  padding: 4px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+}
+
+[data-theme="dark"] .rpt-date-type-group {
+  background: #121824;
+  border-color: #263143;
+}
+
+.rpt-date-type-pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px 3px;
+  min-height: 44px;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--text-mut);
+  font-size: 10.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s ease;
+  user-select: none;
+  text-align: center;
+  line-height: 1.15;
+}
+
+.rpt-date-type-pill input {
+  display: none;
+}
+
+.rpt-date-type-icon {
+  flex-shrink: 0;
+  transition: transform .15s ease, color .15s ease;
+}
+
+.rpt-date-type-label {
+  display: block;
+  text-align: center;
+  font-size: 10.5px;
+}
+
+.rpt-date-type-pill:hover:not(.active) {
+  background: rgba(0, 0, 0, 0.04);
+  color: var(--text);
+}
+
+[data-theme="dark"] .rpt-date-type-pill:hover:not(.active) {
+  background: rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+}
+
+.rpt-date-type-pill.active {
+  background: var(--surface);
+  color: #059669;
+  border-color: rgba(5, 150, 105, 0.25);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  font-weight: 700;
+}
+
+.rpt-date-type-pill.active .rpt-date-type-icon {
+  color: #059669;
+  transform: scale(1.08);
+}
+
+[data-theme="dark"] .rpt-date-type-pill.active {
+  background: #1e283b;
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.35);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .rpt-date-type-pill.active .rpt-date-type-icon {
+  color: #34d399;
+}
+
+/* Custom Date Range Inputs */
+.rpt-date-inputs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.rpt-date-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rpt-date-sublabel {
+  font-size: 11px;
+  color: var(--text-mut);
+  font-weight: 600;
+}
+
+.rpt-date-input {
+  width: 100%;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 7px;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: 12px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+[data-theme="dark"] .rpt-date-input {
+  background: #141b27;
+  border-color: #2b374e;
+}
+
+.rpt-date-input:focus {
+  border-color: #059669;
+  box-shadow: 0 0 0 3px rgba(5, 150, 105, 0.18);
+}
+
+/* Range summary preview */
+.rpt-date-summary-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 6px 9px;
+  border-radius: 7px;
+  font-size: 11px;
+  background: rgba(5, 150, 105, 0.08);
+  border: 1px solid rgba(5, 150, 105, 0.2);
+  color: #047857;
+  font-weight: 500;
+}
+
+[data-theme="dark"] .rpt-date-summary-badge {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(52, 211, 153, 0.25);
+  color: #34d399;
+}
+
+.rpt-date-summary-badge.is-error {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.25);
+  color: #b91c1c;
+}
+
+[data-theme="dark"] .rpt-date-summary-badge.is-error {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #f87171;
+}
+
+/* Popover Footer */
+.rpt-date-popover-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.rpt-date-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 11px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
+  color: var(--text-mut);
+  font-size: 11.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s ease;
+}
+
+.rpt-date-clear-btn:hover {
+  background: var(--surface-3);
+  color: var(--text);
+  border-color: var(--text-faint);
+}
+
+.rpt-date-apply-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 32px;
+  padding: 0 14px;
+  border-radius: 7px;
+  border: none !important;
+  background: linear-gradient(135deg, #059669 0%, #10b981 100%) !important;
+  color: #fff !important;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(5, 150, 105, 0.25);
+  transition: all .15s ease;
+}
+
+.rpt-date-apply-btn:hover:not(:disabled) {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(5, 150, 105, 0.35);
+}
+
+.rpt-date-apply-btn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.rpt-date-apply-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  filter: grayscale(0.5);
 }
 
 /* ── Reset Pill Button ── */
@@ -633,6 +1131,51 @@
 
 .rpt-col-course {
   min-width: 160px;
+}
+
+.rpt-col-vessel {
+  min-width: 170px;
+}
+
+.rpt-vessel-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.rpt-vessel-name {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+}
+
+.rpt-vessel-icon {
+  color: #059669;
+  flex-shrink: 0;
+}
+
+.rpt-vessel-date {
+  font-size: 11px;
+  color: var(--text-mut);
+  white-space: nowrap;
+}
+
+.rpt-crew-vessel-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(5, 150, 105, 0.08);
+  color: #059669;
+  font-size: 11px;
+  font-weight: 500;
+  border: 1px solid rgba(5, 150, 105, 0.2);
+  white-space: nowrap;
 }
 
 /* Body cells z-index and backgrounds */
@@ -1493,10 +2036,13 @@ td.rpt-col-rank {
     flex: 1 1 200px;
   }
   .rpt-select-course {
-    flex: 1 1 180px;
+    flex: 1 1 200px;
   }
   .rpt-select-status {
-    flex: 1 1 145px;
+    flex: 1 1 150px;
+  }
+  .rpt-date-filter-wrap {
+    flex: 0 0 auto;
   }
   .rpt-kpi-strip {
     padding: 14px 20px;
@@ -1541,6 +2087,13 @@ td.rpt-col-rank {
     flex: 1 1 calc(45% - 4px);
     max-width: none;
   }
+  .rpt-date-filter-wrap {
+    flex: 1 1 100%;
+  }
+  .rpt-date-filter-btn {
+    width: 100%;
+    justify-content: space-between;
+  }
   .rpt-active-chips-strip {
     padding: 6px 18px 8px;
   }
@@ -1582,11 +2135,84 @@ td.rpt-col-rank {
   }
   .rpt-search-wrap,
   .rpt-select-course,
-  .rpt-select-status {
+  .rpt-select-status,
+  .rpt-date-filter-wrap,
+  .rpt-date-filter-btn {
     flex: 0 0 auto !important;
     width: 100% !important;
     max-width: none !important;
     min-width: 0 !important;
+  }
+  .rpt-date-popover-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(4px);
+    z-index: 998;
+    animation: rptFadeIn .2s ease-out;
+  }
+  .rpt-date-popover {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    top: auto;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 22px 22px 0 0;
+    border-bottom: none;
+    border-left: none;
+    border-right: none;
+    padding: 12px 18px calc(18px + env(safe-area-inset-bottom, 0px));
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    overscroll-behavior: contain;
+    z-index: 999;
+    box-shadow: 0 -12px 40px rgba(0, 0, 0, 0.35);
+    animation: rptSheetSlideUp .28s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .rpt-date-popover-drag-handle {
+    display: block;
+    width: 40px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--border-strong, #cbd5e1);
+    margin: 0 auto 12px;
+    flex-shrink: 0;
+  }
+  .rpt-date-popover-header {
+    flex-shrink: 0;
+  }
+  .rpt-date-popover-body {
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 2px 2px 8px 0;
+  }
+  .rpt-date-popover-footer {
+    flex-shrink: 0;
+  }
+  .rpt-preset-btn {
+    height: 36px;
+    font-size: 12px;
+  }
+  .rpt-date-type-pill {
+    min-height: 50px;
+  }
+  .rpt-date-input {
+    height: 38px;
+    font-size: 13px;
+  }
+  .rpt-date-clear-btn,
+  .rpt-date-apply-btn {
+    height: 38px;
+    font-size: 12.5px;
+    flex: 1;
+    justify-content: center;
   }
   .rpt-reset-pill-btn {
     width: 100%;
@@ -1692,4 +2318,26 @@ td.rpt-col-rank {
   .rpt-chip-text {
     max-width: 110px;
   }
+  .rpt-date-inputs {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  .rpt-date-type-pill {
+    padding: 4px 2px;
+    min-height: 44px;
+  }
+  .rpt-date-type-label {
+    font-size: 9.5px;
+  }
+}
+
+/* ── Keyframe Animations ── */
+@keyframes rptFadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes rptSheetSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
 }

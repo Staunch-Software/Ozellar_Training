@@ -174,8 +174,17 @@ export const adminListOfficeStaff = () => req('/admin/office-staff')
 
 
 // CSV needs the auth header, so fetch as a blob and trigger a download
-export async function adminDownloadReportCsv() {
-  const res = await fetch(API + '/admin/report.csv', {
+export async function adminDownloadReportCsv({ crewSearch, courseId, status, vessel, fromDate, toDate, dateType } = {}) {
+  const params = new URLSearchParams()
+  if (crewSearch) params.set('crew_search', crewSearch)
+  if (courseId && courseId !== 'all') params.set('course_id', courseId)
+  if (status && status !== 'all') params.set('status', status)
+  if (vessel && vessel !== 'all') params.set('vessel', vessel)
+  if (fromDate) params.set('from_date', fromDate)
+  if (toDate) params.set('to_date', toDate)
+  if (dateType) params.set('date_type', dateType)
+  const qs = params.toString()
+  const res = await fetch(API + '/admin/report.csv' + (qs ? '?' + qs : ''), {
     headers: { Authorization: `Bearer ${getToken()}` },
   })
   if (!res.ok) throw new Error('Could not download the report')
@@ -191,14 +200,18 @@ export async function adminDownloadReportCsv() {
 }
 
 // Admin: download full compliance report as a styled Excel workbook (.xlsx)
-// Accepts optional filters: { crewSearch, courseId, status }
+// Accepts optional filters: { crewSearch, courseId, status, vessel, fromDate, toDate, dateType }
 // The backend applies the same filters before generating the file so the
 // downloaded Excel matches exactly what the user sees on screen.
-export async function adminDownloadReportXlsx({ crewSearch, courseId, status } = {}) {
+export async function adminDownloadReportXlsx({ crewSearch, courseId, status, vessel, fromDate, toDate, dateType } = {}) {
   const params = new URLSearchParams()
   if (crewSearch) params.set('crew_search', crewSearch)
-  if (courseId)   params.set('course_id',   courseId)
-  if (status)     params.set('status',      status)
+  if (courseId && courseId !== 'all') params.set('course_id', courseId)
+  if (status && status !== 'all') params.set('status', status)
+  if (vessel && vessel !== 'all') params.set('vessel', vessel)
+  if (fromDate) params.set('from_date', fromDate)
+  if (toDate) params.set('to_date', toDate)
+  if (dateType) params.set('date_type', dateType)
   const qs = params.toString()
   const res = await fetch(API + '/admin/report.xlsx' + (qs ? '?' + qs : ''), {
     headers: { Authorization: `Bearer ${getToken()}` },
