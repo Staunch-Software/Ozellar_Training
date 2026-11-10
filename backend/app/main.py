@@ -41,8 +41,8 @@ email_scheduler = None
 def send_pending_digest_job():
     """Job to scan for pending approvals and send the digest to the configured admin mailbox."""
     with SessionLocal() as db:
-        admin_email = os.getenv("ADMIN_EMAIL")
-        recipients = [admin_email] if admin_email else []
+        recipients = email_service.get_admin_recipients()
+
         if not recipients:
             print("[send_pending_digest] Skipped: ADMIN_EMAIL not set")
             return
@@ -83,6 +83,7 @@ def send_pending_digest_job():
         if approvals_list:
             for recipient in recipients:
                 email_service.send_digest_email(recipient, approvals_list)
+            print(f"[send_pending_digest] Sent digest for {len(approvals_list)} approvals to {len(recipients)} recipients: {', '.join(recipients)}")
 
 
 @asynccontextmanager

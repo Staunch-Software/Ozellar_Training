@@ -1,4 +1,5 @@
 import os
+import re
 import requests
 import msal
 import base64
@@ -93,9 +94,41 @@ def _format_mobile(mobile_no):
     return mobile_no
 
 
-def send_digest_email(admin_email: str, approvals: list):
+def get_admin_recipients() -> list[str]:
+    """Returns a list of clean, unique email addresses configured in ADMIN_EMAIL or ADMIN_EMAILS.
+    Supports comma (,) or semicolon (;) separated lists."""
+    raw_vals = [os.getenv("ADMIN_EMAIL", ""), os.getenv("ADMIN_EMAILS", "")]
+    recipients: list[str] = []
+    for raw in raw_vals:
+        if not raw:
+            continue
+        for part in re.split(r"[,;]", raw):
+            cleaned = part.strip()
+            if cleaned and cleaned not in recipients:
+                recipients.append(cleaned)
+    return recipients
+
+
+def send_digest_email(admin_email: str | list[str], approvals: list):
     """Sends a digest email with a table of pending approvals and Accept/Reject buttons."""
     if not approvals:
+        return
+
+    recipients: list[str] = []
+    if isinstance(admin_email, list):
+        for item in admin_email:
+            if isinstance(item, str):
+                for part in re.split(r"[,;]", item):
+                    cleaned = part.strip()
+                    if cleaned and cleaned not in recipients:
+                        recipients.append(cleaned)
+    elif isinstance(admin_email, str):
+        for part in re.split(r"[,;]", admin_email):
+            cleaned = part.strip()
+            if cleaned and cleaned not in recipients:
+                recipients.append(cleaned)
+
+    if not recipients:
         return
 
     rows = ""
@@ -158,7 +191,8 @@ def send_digest_email(admin_email: str, approvals: list):
     </body>
     </html>
     """
-    _send_email(admin_email, f"Pending Assessment Approvals ({len(approvals)})", html)
+    for recipient in recipients:
+        _send_email(recipient, f"Pending Assessment Approvals ({len(approvals)})", html)
 
 
 def send_approval_email(crew_email: str, crew_name: str, course_title: str, cert_pdf: bytes, cert_id: str):
