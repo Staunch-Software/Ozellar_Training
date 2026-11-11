@@ -5,6 +5,7 @@ from collections import defaultdict
 from datetime import datetime, timezone, timedelta, date
 from typing import Optional
 
+from pydantic import BaseModel
 from app.time_utils import to_ist_iso, IST
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -12,7 +13,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import func
 
 from app.database import get_db
-from app import models
+from app import models, email_service
 from app.auth import require_module, require_admin, get_current_user
 from app.course_helpers import (
     _maybe_auto_complete_course, enrolled_course_ids, get_progress
@@ -90,6 +91,7 @@ def _report(db):
         rows.append({
             "learnerId": lr.id, "name": lr.full_name, "crewId": lr.crew_id,
             "rank": lr.rank,
+            "email": lr.email or lr.smartpal_email,
             "vessel": lr.current_vessel,
             "currentVessel": lr.current_vessel,
             "signOnDate": lr.sign_on_date.strftime("%Y-%m-%d") if lr.sign_on_date else None,
@@ -103,6 +105,130 @@ def _report(db):
 def admin_report(admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     courses, rows = _report(db)
     return {"courses": [{"id": c.id, "title": c.title} for c in courses], "rows": rows}
+
+
+class SendCourseReminderRequest(BaseModel):
+    learner_id: Optional[str] = None
+    learner_ids: Optional[list[str]] = None
+    rank: Optional[str] = None
+    test_email: Optional[str] = None
+
+
+@router.post("/api/admin/assignments/send-reminder")
+def admin_send_course_reminder(
+    req: SendCourseReminderRequest,
+    admin: models.User = Depends(require_module("courses")),
+    db: Session = Depends(get_db)
+):
+    """Sends course completion instructions/reminder email to seafarers with pending courses."""
+    if req.test_email:
+        test_addr = req.test_email.strip()
+        if not test_addr:
+            raise HTTPException(400, "Test email address cannot be empty")
+        sample_courses = [
+            "Safety Management System & ISM Code",
+            "Cyber Security Awareness for Seafarers"
+        ]
+        ok = email_service.send_course_reminder_email(test_addr, "Seafarer", sample_courses)
+        if not ok:
+            raise HTTPException(500, "Failed to dispatch test email")
+        return {
+            "ok": True,
+            "sent": 1,
+            "skipped": 0,
+            "noEmail": 0,
+            "totalTargeted": 1,
+            "message": f"Test reminder email sent to {test_addr}"
+        }
+
+    if req.learner_id:
+        target_learners = db.query(models.User).filter_by(id=req.learner_id, role="learner").all()
+        if not target_learners:
+            raise HTTPException(404, "Seafarer not found")
+    elif req.learner_ids is not None:
+        if not req.learner_ids:
+            return {
+                "ok": True, "sent": 0, "skipped": 0, "noEmail": 0, "totalTargeted": 0,
+                "message": "No seafarers specified"
+            }
+        target_learners = db.query(models.User).filter(
+            models.User.id.in_(req.learner_ids),
+            models.User.role == "learner"
+        ).all()
+    elif req.rank and req.rank.strip().lower() != "all":
+        target_rank = req.rank.strip().upper()
+        target_learners = db.query(models.User).filter(
+            func.upper(func.trim(models.User.rank)) == target_rank,
+            models.User.role == "learner"
+        ).all()
+    else:
+        target_learners = db.query(models.User).filter_by(role="learner").all()
+
+    if not target_learners:
+        return {
+            "ok": True, "sent": 0, "skipped": 0, "noEmail": 0, "totalTargeted": 0,
+            "message": "No matching seafarers found"
+        }
+
+    learner_ids = [l.id for l in target_learners]
+    all_enrollments = db.query(models.Enrollment).filter(models.Enrollment.learner_id.in_(learner_ids)).all()
+    all_progress = db.query(models.Progress).filter(models.Progress.learner_id.in_(learner_ids)).all()
+    all_certs = db.query(models.Certificate).filter(models.Certificate.learner_id.in_(learner_ids)).all()
+    all_courses = {c.id: c.title for c in db.query(models.Course).all()}
+
+    e_map = defaultdict(list)
+    for e in all_enrollments:
+        e_map[e.learner_id].append(e)
+
+    p_map = {(p.learner_id, p.course_id): p for p in all_progress}
+    c_map = {(c.learner_id, c.course_id): c for c in all_certs}
+
+    sent = 0
+    skipped = 0
+    no_email = 0
+
+    for lr in target_learners:
+        enrs = e_map.get(lr.id, [])
+        if not enrs:
+            skipped += 1
+            continue
+
+        pending_titles = []
+        for enr in enrs:
+            prog = p_map.get((lr.id, enr.course_id))
+            cert = c_map.get((lr.id, enr.course_id))
+            is_completed = (prog and prog.passed) or (cert is not None)
+            if not is_completed:
+                title = all_courses.get(enr.course_id, "Assigned Course")
+                pending_titles.append(title)
+
+        if not pending_titles:
+            skipped += 1
+            continue
+
+        crew_email = lr.email or lr.smartpal_email
+        if not crew_email or not crew_email.strip():
+            no_email += 1
+            continue
+
+        if email_service.send_course_reminder_email(
+            crew_email.strip(),
+            lr.full_name or lr.name or "Seafarer",
+            pending_titles,
+            from_email="data@ozellar.com"
+        ):
+            sent += 1
+        else:
+            skipped += 1
+
+    return {
+        "ok": True,
+        "sent": sent,
+        "skipped": skipped,
+        "noEmail": no_email,
+        "totalTargeted": len(target_learners),
+        "message": f"Reminder emails sent to {sent} seafarer(s)."
+    }
 
 
 @router.post("/api/admin/maintenance/reconcile-progress")

@@ -20,7 +20,7 @@ from sqlalchemy import func
 
 from app.config import UPLOAD_DIR
 from app.database import get_db, SessionLocal
-from app import models, storage
+from app import models, storage, email_service
 from app.video import compress_video
 from app.auth import require_module, require_admin, SECRET_KEY, ALGORITHM
 from app.security_upload import validate_safe_upload
@@ -254,8 +254,10 @@ def admin_list_courses(admin: models.User = Depends(require_module("courses")), 
 
 
 @router.post("/api/admin/courses")
-def admin_create_course(req: CreateCourseRequest, admin: models.User = Depends(require_module("courses")),
-                        db: Session = Depends(get_db)):
+def admin_create_course(req: CreateCourseRequest,
+                         background_tasks: BackgroundTasks,
+                         admin: models.User = Depends(require_module("courses")),
+                         db: Session = Depends(get_db)):
     title = req.title.strip()
     if not title:
         raise HTTPException(400, "Title is required")
@@ -273,6 +275,7 @@ def admin_create_course(req: CreateCourseRequest, admin: models.User = Depends(r
 
     target_ranks = req.targetRanks or []
     target_users = req.targetUsers or []
+    enrolled_targets = []
     if target_ranks or target_users:
         target_ranks_upper = [r.upper() for r in target_ranks]
         users_to_enroll = db.query(models.User).filter(
@@ -282,15 +285,32 @@ def admin_create_course(req: CreateCourseRequest, admin: models.User = Depends(r
         for u in users_to_enroll:
             enroll = models.Enrollment(learner_id=u.id, course_id=course.id, assigned_by=admin.id)
             db.add(enroll)
+            u_email = u.email or u.smartpal_email
+            if u_email and u_email.strip():
+                enrolled_targets.append({
+                    "email": u_email.strip(),
+                    "name": u.full_name or u.name or "Seafarer",
+                    "pending_courses": [course.title]
+                })
 
     db.commit()
     db.refresh(course)
+
+    if enrolled_targets:
+        background_tasks.add_task(
+            email_service.send_course_reminder_batch,
+            enrolled_targets,
+            from_email="data@ozellar.com"
+        )
+
     return admin_course_summary(course)
 
 
 @router.put("/api/admin/courses/{course_id}")
-def admin_update_course(course_id: str, req: UpdateCourseRequest, admin: models.User = Depends(require_module("courses")),
-                        db: Session = Depends(get_db)):
+def admin_update_course(course_id: str, req: UpdateCourseRequest,
+                         background_tasks: BackgroundTasks,
+                         admin: models.User = Depends(require_module("courses")),
+                         db: Session = Depends(get_db)):
     course = db.get(models.Course, course_id)
     if not course:
         raise HTTPException(404, "Course not found")
@@ -313,6 +333,7 @@ def admin_update_course(course_id: str, req: UpdateCourseRequest, admin: models.
     
     target_ranks = req.targetRanks or []
     target_users = req.targetUsers or []
+    newly_enrolled_targets = []
     if target_ranks or target_users:
         target_ranks_upper = [r.upper() for r in target_ranks]
         users_to_enroll = db.query(models.User).filter(
@@ -327,8 +348,22 @@ def admin_update_course(course_id: str, req: UpdateCourseRequest, admin: models.
             if u.id not in existing_user_ids:
                 enroll = models.Enrollment(learner_id=u.id, course_id=course_id, assigned_by=admin.id)
                 db.add(enroll)
+                u_email = u.email or u.smartpal_email
+                if u_email and u_email.strip():
+                    newly_enrolled_targets.append({
+                        "email": u_email.strip(),
+                        "name": u.full_name or u.name or "Seafarer",
+                        "pending_courses": [course.title]
+                    })
         db.commit()
         
+    if newly_enrolled_targets:
+        background_tasks.add_task(
+            email_service.send_course_reminder_batch,
+            newly_enrolled_targets,
+            from_email="data@ozellar.com"
+        )
+
     db.refresh(course)
     return admin_course_summary(course)
 

@@ -156,6 +156,8 @@ export async function fetchVesselCrewCertificatePdfUrl(crewId, courseId) {
   return URL.createObjectURL(await res.blob())
 }
 export const adminReport = () => req('/admin/report')
+export const adminSendCourseReminder = (body) =>
+  req('/admin/assignments/send-reminder', { method: 'POST', body: JSON.stringify(body) })
 export const adminDashboardStats = () => req('/admin/dashboard-stats')
 export const adminApproveCertificate = (userId, courseId, remark = '') =>
   req(`/admin/users/${userId}/courses/${courseId}/approve`, { method: 'POST', body: JSON.stringify({ remark }) })

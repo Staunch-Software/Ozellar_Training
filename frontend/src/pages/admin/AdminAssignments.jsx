@@ -4,9 +4,9 @@ import {
   Check, Award, Clock, Search, X, ChevronDown, Grid3x3, Phone, BookOpen,
   ClipboardList, AlertTriangle, Loader2, CheckSquare, Square, CheckCircle2,
   Circle, Hourglass, Calendar, Target, RotateCcw, MessageSquare, Eye, EyeOff,
-  ExternalLink, Download, Users, RefreshCw
+  ExternalLink, Download, Users, RefreshCw, Mail, MailX, MailCheck, Send
 } from 'lucide-react'
-import { adminReport, adminSetEnrollments, adminFetchCertificatePdfUrl, adminReassignCourse } from '../../api.js'
+import { adminReport, adminSetEnrollments, adminFetchCertificatePdfUrl, adminReassignCourse, adminSendCourseReminder } from '../../api.js'
 import Pagination from '../../components/Pagination.jsx'
 import CardSelect from '../../components/CardSelect.jsx'
 
@@ -440,6 +440,262 @@ function ManageCoursesModal({ row, courses, onClose, onSaved }) {
   )
 }
 
+const hasPendingCourses = (row) => {
+  const cells = Object.values(row.cells || {})
+  return cells.length > 0 && cells.some(c => c && c.status !== 'passed')
+}
+
+/* ─────────────────────────── send reminder modal ─────────────────────────── */
+
+function SendReminderModal({
+  rankFilter,
+  totalFiltered,
+  eligibleCount,
+  withEmailCount,
+  onClose,
+  onSend,
+  busy,
+  result
+}) {
+  const [testEmail, setTestEmail] = useState('sujilkumar3003@gmail.com')
+  const [testBusy, setTestBusy] = useState(false)
+  const [testFeedback, setTestFeedback] = useState(null)
+
+  const missingEmailCount = Math.max(0, eligibleCount - withEmailCount)
+
+  const handleSendTest = async () => {
+    if (testBusy || !testEmail.trim()) return
+    setTestBusy(true)
+    setTestFeedback(null)
+    try {
+      const res = await adminSendCourseReminder({ test_email: testEmail.trim() })
+      setTestFeedback({ type: 'success', text: res.message || `Test reminder email sent to ${testEmail}` })
+    } catch (e) {
+      setTestFeedback({ type: 'error', text: e.message || 'Failed to send test email' })
+    } finally {
+      setTestBusy(false)
+    }
+  }
+
+  return (
+    <ModalShell
+      icon={<Mail size={17} />}
+      title="Send Course Completion Reminders"
+      subtitle={rankFilter && rankFilter !== 'all'
+        ? `Targeting ${rankFilter} seafarers with pending courses`
+        : 'Targeting all seafarers with pending courses'}
+      width={600}
+      busy={busy}
+      onClose={onClose}
+      footer={(
+        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', alignItems: 'center' }}>
+          <button type="button" className="btn" onClick={onClose} disabled={busy}>
+            {result ? 'Close' : 'Cancel'}
+          </button>
+          {!result && (
+            <button
+              type="button"
+              id="asg-modal-confirm-send-btn"
+              className="btn primary"
+              onClick={onSend}
+              disabled={busy || withEmailCount === 0}
+              style={{ background: ACCENT_GRADIENT, borderColor: 'transparent', display: 'inline-flex', alignItems: 'center', gap: 6 }}
+            >
+              {busy ? <Loader2 size={14} className="asg-spin" /> : <Mail size={14} />}
+              {busy ? 'Sending Reminders…' : `Send Reminders (${withEmailCount})`}
+            </button>
+          )}
+        </div>
+      )}
+    >
+      <div style={{ padding: 22, overflowY: 'auto' }}>
+        {result ? (
+          <div style={{
+            padding: 18, borderRadius: 12,
+            background: 'rgba(22,163,74,0.08)', border: '1px solid rgba(22,163,74,0.3)',
+            display: 'flex', flexDirection: 'column', gap: 10,
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, color: '#16a34a', fontWeight: 700, fontSize: 15 }}>
+              <CheckCircle2 size={20} /> Reminder Emails Dispatched!
+            </div>
+            <div style={{ fontSize: 13, color: 'var(--text)' }}>
+              {result.message || `Successfully sent reminder emails to ${result.sent} seafarer(s).`}
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginTop: 6 }}>
+              <div style={{ padding: '8px 10px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                <div className="mut" style={{ fontSize: 11 }}>Sent</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#16a34a' }}>{result.sent}</div>
+              </div>
+              <div style={{ padding: '8px 10px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                <div className="mut" style={{ fontSize: 11 }}>Skipped (No Email)</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: '#e11d48' }}>{result.noEmail}</div>
+              </div>
+              <div style={{ padding: '8px 10px', background: 'var(--surface)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                <div className="mut" style={{ fontSize: 11 }}>Already Completed</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-mut)' }}>{result.skipped}</div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Target Summary 4-Tile Grid */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 16 }}>
+              <div style={{ padding: '9px 11px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                <div className="mut" style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Target</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: 'var(--text)', marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {rankFilter && rankFilter !== 'all' ? rankFilter : 'All Ranks'}
+                </div>
+              </div>
+              <div style={{ padding: '9px 11px', background: 'var(--surface-2)', borderRadius: 10, border: '1px solid var(--border)' }}>
+                <div className="mut" style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.04em' }}>Pending</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: ACCENT, marginTop: 2 }}>
+                  {eligibleCount} <span style={{ fontSize: 11, fontWeight: 'normal', color: 'var(--text-mut)' }}>crew</span>
+                </div>
+              </div>
+              <div style={{ padding: '9px 11px', background: 'rgba(22,163,74,0.06)', borderRadius: 10, border: '1px solid rgba(22,163,74,0.25)' }}>
+                <div style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#16a34a', fontWeight: 600 }}>With Email</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: '#16a34a', marginTop: 2 }}>
+                  {withEmailCount} <span style={{ fontSize: 11, fontWeight: 'normal' }}>ready</span>
+                </div>
+              </div>
+              <div style={{ padding: '9px 11px', background: 'rgba(244,63,94,0.06)', borderRadius: 10, border: '1px solid rgba(244,63,94,0.25)' }}>
+                <div style={{ fontSize: 10.5, textTransform: 'uppercase', letterSpacing: '0.04em', color: '#e11d48', fontWeight: 600 }}>No Email</div>
+                <div style={{ fontSize: 13.5, fontWeight: 700, color: '#e11d48', marginTop: 2, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <MailX size={12} />
+                  <span>{missingEmailCount}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Quick Test Email Box */}
+            <div className="asg-modal-test-card">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 700, fontSize: 12.5, color: 'var(--text)' }}>
+                  <Send size={13} style={{ color: ACCENT }} /> Send a Test Email
+                </div>
+                <span className="mut" style={{ fontSize: 11 }}>Verify formatting & deliverability</span>
+              </div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  type="email"
+                  id="asg-test-email-input"
+                  className="asg-modal-test-input"
+                  placeholder="Enter test recipient email..."
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  disabled={testBusy}
+                />
+                <button
+                  type="button"
+                  id="asg-test-email-btn"
+                  className="asg-modal-test-btn"
+                  onClick={handleSendTest}
+                  disabled={testBusy || !testEmail.trim()}
+                >
+                  {testBusy ? <Loader2 size={12} className="asg-spin" /> : <Send size={12} />}
+                  <span>{testBusy ? 'Sending…' : 'Send Test'}</span>
+                </button>
+              </div>
+              {testFeedback && (
+                <div className={`asg-modal-test-feedback asg-modal-test-feedback--${testFeedback.type}`}>
+                  {testFeedback.type === 'success' ? <CheckCircle2 size={13} /> : <AlertTriangle size={13} />}
+                  <span>{testFeedback.text}</span>
+                </div>
+              )}
+            </div>
+
+            {withEmailCount === 0 && (
+              <div style={{
+                marginBottom: 16, padding: '10px 14px', borderRadius: 8,
+                background: 'rgba(239, 68, 68, 0.08)', border: '1px solid rgba(239, 68, 68, 0.25)',
+                color: '#ef4444', fontSize: 12.5, display: 'flex', alignItems: 'center', gap: 8
+              }}>
+                <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                <span>No seafarers in this selection currently have pending courses with a registered email address.</span>
+              </div>
+            )}
+
+            {/* Email Message Preview */}
+            <div style={{
+              borderRadius: 10, border: '1px solid var(--border)', overflow: 'hidden',
+              background: 'var(--surface-2)', fontSize: 12.5
+            }}>
+              <div style={{
+                padding: '9px 14px', background: 'var(--surface-3, var(--border))',
+                borderBottom: '1px solid var(--border)', fontWeight: 600, color: 'var(--text)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+              }}>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <Mail size={13} style={{ color: ACCENT }} />
+                  <span>Email Content Preview</span>
+                </span>
+                <span style={{ fontSize: 11, color: 'var(--text-mut)' }}>
+                  From: <strong style={{ color: '#E07820' }}>data@ozellar.com</strong>
+                </span>
+              </div>
+              <div style={{ padding: '14px 16px', color: 'var(--text)', lineHeight: 1.6 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8, color: '#E07820', fontSize: 13 }}>
+                  Subject: Action Required: Complete Your Assigned Courses - Ozellar Marine Training
+                </div>
+                <p style={{ margin: '0 0 8px 0', fontWeight: 600 }}>Good day &lt;Seafarer Name&gt;,</p>
+                <p style={{ margin: '0 0 10px 0' }}>
+                  Please be advised to complete your assigned training course(s) on the <strong>Ozellar Marine Training</strong> portal.
+                </p>
+                
+                {/* Pending Course Preview */}
+                <div style={{
+                  padding: '8px 12px', background: 'var(--surface)', borderRadius: 6,
+                  border: '1px solid var(--border)', margin: '8px 0', fontSize: 12
+                }}>
+                  <div style={{ fontWeight: 700, color: '#475569', marginBottom: 4, textTransform: 'uppercase', fontSize: 10.5 }}>
+                    Assigned Course(s) to Complete (Only Pending):
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 0' }}>
+                    <span>● &lt;Course Title 1&gt;</span>
+                    <span style={{ background: '#fef3c7', color: '#b45309', padding: '1px 6px', borderRadius: 999, fontSize: 10, fontWeight: 700 }}>Pending</span>
+                  </div>
+                </div>
+
+                <div style={{
+                  padding: '10px 14px', background: 'rgba(224, 120, 32, 0.05)', borderRadius: 6,
+                  borderLeft: '4px solid #E07820', border: '1px solid rgba(224, 120, 32, 0.25)', margin: '10px 0'
+                }}>
+                  <div style={{ fontWeight: 700, marginBottom: 6, color: '#9a3412', textTransform: 'uppercase', fontSize: 11 }}>Message / Steps to Complete:</div>
+                  <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
+                    <li>Access <a href="https://training.ozellar.com" target="_blank" rel="noreferrer" style={{ color: '#E07820', fontWeight: 700, textDecoration: 'underline' }}>training.ozellar.com</a></li>
+                    <li>Click in <b>Seafarer</b> &mdash; enter name and dob</li>
+                    <li>Upload passport size photo &mdash; this photo will be used for certification</li>
+                    <li>Complete the assigned courses</li>
+                  </ol>
+                </div>
+
+                <div style={{ textAlign: 'center', margin: '12px 0 8px 0' }}>
+                  <span style={{
+                    display: 'inline-block', background: ACCENT_GRADIENT, color: '#fff',
+                    padding: '6px 18px', borderRadius: 6, fontWeight: 700, fontSize: 11.5
+                  }}>
+                    Access Training Portal &rarr;
+                  </span>
+                </div>
+
+                <div style={{ margin: '10px 0 0 0', fontSize: 11, color: 'var(--text-mut)' }}>
+                  Portal: <span style={{ color: '#E07820' }}>https://training.ozellar.com</span> &bull; Support: <span style={{ color: 'var(--text)' }}>data@ozellar.com</span>
+                </div>
+
+                <p style={{ margin: '12px 0 0 0', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                  best regards,<br />
+                  <b>Sudarsan</b><br />
+                  <span className="mut" style={{ fontSize: 11.5 }}>Training &amp; Quality Management &bull; Ozellar Marine Services</span>
+                </p>
+              </div>
+            </div>
+          </>
+        )}
+      </div>
+    </ModalShell>
+  )
+}
+
 /* ─────────────────────────────── main page ─────────────────────────────── */
 
 export default function AdminAssignments() {
@@ -451,6 +707,12 @@ export default function AdminAssignments() {
   const [manageRow, setManageRow] = useState(null)
   const [progressView, setProgressView] = useState(null)   // { row, course, cell }
   const [expanded, setExpanded] = useState(() => new Set()) // learnerIds showing all chips
+  const [showReminderModal, setShowReminderModal] = useState(false)
+  const [reminderBusy, setReminderBusy] = useState(false)
+  const [reminderResult, setReminderResult] = useState(null)
+  const [singleSendingId, setSingleSendingId] = useState(null)
+  const [singleSentIds, setSingleSentIds] = useState(() => new Set())
+  const [toastMessage, setToastMessage] = useState(null)
   const tableScrollRef = useRef(null)
 
   // Seamless wheel scrolling coordinator between outer wrapper and table scroll
@@ -536,26 +798,74 @@ export default function AdminAssignments() {
     ]
   }, [data])
 
+  // Filtered rows
+  const filteredRows = useMemo(() => {
+    if (!data?.rows) return []
+    return data.rows.filter(row => {
+      let matchSearch = true
+      if (search.trim()) {
+        const term = search.trim().toLowerCase()
+        matchSearch = (row.name || '').toLowerCase().includes(term) ||
+               (row.crewId || '').toLowerCase().includes(term) ||
+               (row.rank || '').toLowerCase().includes(term)
+      }
+      let matchRank = true
+      if (rankFilter && rankFilter !== 'all') {
+        matchRank = (row.rank || '').trim().toUpperCase() === rankFilter
+      }
+      return matchSearch && matchRank
+    })
+  }, [data, search, rankFilter])
+
+  // Among filtered rows, how many have pending courses?
+  const eligibleFilteredRows = useMemo(() => {
+    return filteredRows.filter(row => hasPendingCourses(row))
+  }, [filteredRows])
+
+  // Among eligible, how many have an email address?
+  const eligibleWithEmailCount = useMemo(() => {
+    return eligibleFilteredRows.filter(row => row.email && row.email.trim()).length
+  }, [eligibleFilteredRows])
+
+  const handleSendBulkReminders = async () => {
+    if (reminderBusy || eligibleWithEmailCount === 0) return
+    setReminderBusy(true)
+    setReminderResult(null)
+    try {
+      const res = await adminSendCourseReminder({
+        learner_ids: eligibleFilteredRows.map(r => r.learnerId),
+        rank: rankFilter && rankFilter !== 'all' ? rankFilter : undefined,
+      })
+      setReminderResult(res)
+      setToastMessage({ type: 'success', text: `Sent reminder emails to ${res.sent} seafarer(s).` })
+      setTimeout(() => setToastMessage(null), 4000)
+    } catch (err) {
+      alert(err.message || 'Failed to send reminder emails')
+    } finally {
+      setReminderBusy(false)
+    }
+  }
+
+  const handleSendSingleReminder = async (row) => {
+    if (singleSendingId || !row.email || !hasPendingCourses(row)) return
+    setSingleSendingId(row.learnerId)
+    try {
+      const res = await adminSendCourseReminder({ learner_id: row.learnerId })
+      setSingleSentIds(prev => new Set(prev).add(row.learnerId))
+      setToastMessage({ type: 'success', text: `Reminder sent to ${row.name} (${row.email})` })
+      setTimeout(() => setToastMessage(null), 4000)
+    } catch (err) {
+      setToastMessage({ type: 'error', text: err.message || `Failed to send reminder to ${row.name}` })
+      setTimeout(() => setToastMessage(null), 4000)
+    } finally {
+      setSingleSendingId(null)
+    }
+  }
+
   if (!data) return <div className="spinner">Loading assignments…</div>
 
   const toggleExpanded = (id) => setExpanded((s) => {
     const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n
-  })
-
-  // Filtered rows
-  const filteredRows = data.rows.filter(row => {
-    let matchSearch = true
-    if (search.trim()) {
-      const term = search.trim().toLowerCase()
-      matchSearch = (row.name || '').toLowerCase().includes(term) ||
-             (row.crewId || '').toLowerCase().includes(term) ||
-             (row.rank || '').toLowerCase().includes(term)
-    }
-    let matchRank = true
-    if (rankFilter && rankFilter !== 'all') {
-      matchRank = (row.rank || '').trim().toUpperCase() === rankFilter
-    }
-    return matchSearch && matchRank
   })
 
   const itemsPerPage = 20
@@ -640,6 +950,31 @@ export default function AdminAssignments() {
                 className="asg-cardselect"
               />
             </div>
+
+            {/* Send Reminder Mail Button */}
+            <button
+              type="button"
+              id="asg-send-reminders-btn"
+              className="asg-btn-mail"
+              onClick={() => {
+                setReminderResult(null)
+                setShowReminderModal(true)
+              }}
+              title={
+                rankFilter && rankFilter !== 'all'
+                  ? `Send reminder email to ${rankFilter} seafarers with pending courses (${eligibleWithEmailCount})`
+                  : `Send reminder email to all filtered seafarers with pending courses (${eligibleWithEmailCount})`
+              }
+              aria-label="Send reminder email"
+            >
+              <Mail size={14} />
+              <span className="asg-btn-mail-label">
+                Send Mail{rankFilter && rankFilter !== 'all' ? ` (${rankFilter})` : ''}
+              </span>
+              {eligibleWithEmailCount > 0 && (
+                <span className="asg-btn-mail-badge">{eligibleWithEmailCount}</span>
+              )}
+            </button>
 
             {/* Refresh Button */}
             <button
@@ -799,7 +1134,7 @@ export default function AdminAssignments() {
                 <th style={{ width: 48 }}>#</th>
                 <th style={{ width: 300 }}>Seafarer</th>
                 <th>Assigned Courses</th>
-                <th style={{ width: 160 }}>Actions</th>
+                <th style={{ width: 180 }}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -837,6 +1172,23 @@ export default function AdminAssignments() {
                             {formatMobile(row.mobileNo)}
                           </a>
                         )}
+                        {row.email ? (
+                          <span
+                            className="asg-email-pill asg-email-pill--has"
+                            title={`Registered email: ${row.email}`}
+                          >
+                            <Mail size={10} strokeWidth={2.2} />
+                            <span className="asg-email-pill-text">{row.email}</span>
+                          </span>
+                        ) : (
+                          <span
+                            className="asg-email-pill asg-email-pill--missing"
+                            title={`Email not found for ${row.name} (not registered in SmartPAL)`}
+                          >
+                            <MailX size={10} strokeWidth={2.2} />
+                            <span>Email not found</span>
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td>
@@ -857,9 +1209,74 @@ export default function AdminAssignments() {
                       )}
                     </td>
                     <td>
-                      <button type="button" className="asg-manage-btn" onClick={() => setManageRow(row)}>
-                        <BookOpen size={13} /> Manage Courses
-                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        <button type="button" className="asg-manage-btn" onClick={() => setManageRow(row)}>
+                          <BookOpen size={13} /> Manage Courses
+                        </button>
+                        {(() => {
+                          const isSent = singleSentIds.has(row.learnerId)
+                          const isSending = singleSendingId === row.learnerId
+                          const hasEmail = Boolean(row.email && row.email.trim())
+                          const isPending = hasPendingCourses(row)
+
+                          if (!hasEmail) {
+                            return (
+                              <button
+                                type="button"
+                                className="asg-row-mail-btn asg-row-mail-btn--no-email"
+                                onClick={() => {
+                                  setToastMessage({
+                                    type: 'error',
+                                    text: `Cannot send reminder: No email address found for ${row.name}.`
+                                  })
+                                  setTimeout(() => setToastMessage(null), 4000)
+                                }}
+                                title={`Email not found: No registered email address on record for ${row.name}.`}
+                                aria-label={`Email not found for ${row.name}`}
+                              >
+                                <MailX size={13} strokeWidth={2.2} />
+                              </button>
+                            )
+                          }
+
+                          if (!isPending) {
+                            return (
+                              <button
+                                type="button"
+                                className="asg-row-mail-btn asg-row-mail-btn--completed"
+                                disabled
+                                title={`All assigned courses are already completed for ${row.name}.`}
+                                aria-label={`All courses completed for ${row.name}`}
+                              >
+                                <Check size={12} strokeWidth={2.5} />
+                              </button>
+                            )
+                          }
+
+                          return (
+                            <button
+                              type="button"
+                              className={`asg-row-mail-btn ${isSent ? 'asg-row-mail-btn--sent' : 'asg-row-mail-btn--active'}`}
+                              onClick={() => handleSendSingleReminder(row)}
+                              disabled={isSending}
+                              title={
+                                isSent
+                                  ? `Reminder already sent. Click to re-send to ${row.name} (${row.email})`
+                                  : `Send course completion reminder to ${row.name} (${row.email})`
+                              }
+                              aria-label={`Send reminder email to ${row.name}`}
+                            >
+                              {isSending ? (
+                                <Loader2 size={13} className="asg-spin" />
+                              ) : isSent ? (
+                                <MailCheck size={13} strokeWidth={2.2} />
+                              ) : (
+                                <Mail size={13} strokeWidth={2} />
+                              )}
+                            </button>
+                          )
+                        })()}
+                      </div>
                     </td>
                   </tr>
                 )
@@ -888,6 +1305,27 @@ export default function AdminAssignments() {
       {manageRow && (
         <ManageCoursesModal row={manageRow} courses={data.courses}
           onClose={() => setManageRow(null)} onSaved={load} />
+      )}
+      {showReminderModal && (
+        <SendReminderModal
+          rankFilter={rankFilter}
+          totalFiltered={filteredRows.length}
+          eligibleCount={eligibleFilteredRows.length}
+          withEmailCount={eligibleWithEmailCount}
+          onClose={() => {
+            setShowReminderModal(false)
+            setReminderResult(null)
+          }}
+          onSend={handleSendBulkReminders}
+          busy={reminderBusy}
+          result={reminderResult}
+        />
+      )}
+      {toastMessage && (
+        <div className={`asg-toast asg-toast--${toastMessage.type}`}>
+          {toastMessage.type === 'success' ? <CheckCircle2 size={16} /> : <AlertTriangle size={16} />}
+          <span>{toastMessage.text}</span>
+        </div>
       )}
     </div>
   )

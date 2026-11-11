@@ -459,8 +459,9 @@ def approve_assessment(token: str = Form(...), remark: str = Form(...), db: Sess
 
     cert_obj = db.get(models.Certificate, cert_info["id"])
     pdf_bytes = build_certificate_pdf(cert_pdf_data(cert_obj, user, course))
-    if user.email:
-        email_service.send_approval_email(user.email, user.full_name, course.title, pdf_bytes, cert_info["id"])
+    crew_recipient = user.email or user.smartpal_email
+    if crew_recipient:
+        email_service.send_approval_email(crew_recipient, user.full_name, course.title, pdf_bytes, cert_info["id"])
 
     return _styled_html_response(
         "Assessment Approved", 
@@ -533,8 +534,9 @@ def reject_assessment(token: str, db: Session = Depends(get_db)):
         
     db.commit()
 
-    if user.email:
-        email_service.send_rejection_email(user.email, user.full_name, course.title)
+    crew_recipient = user.email or user.smartpal_email
+    if crew_recipient:
+        email_service.send_rejection_email(crew_recipient, user.full_name, course.title)
 
     return _styled_html_response(
         "Assessment Rejected", 

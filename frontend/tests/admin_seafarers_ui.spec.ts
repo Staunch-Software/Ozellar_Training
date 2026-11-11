@@ -13,7 +13,7 @@ test.describe('Admin Course Management - Modern Seafarers Page UI', () => {
       await expect(page).toHaveURL(/\/admin/);
     }
     await page.goto('/admin/course-management/users');
-    await page.waitForLoadState('networkidle');
+    await page.locator('.usr-header-title').waitFor({ state: 'visible', timeout: 15000 });
   });
 
   test('renders sticky header with title, live metric pill, and all modern controls', async ({ page }) => {
@@ -161,7 +161,6 @@ test.describe('Admin Course Management - Modern Seafarers Page UI', () => {
     // VERIFY: Administrator creation is COMPLETELY REMOVED from this page
     await expect(page.getByRole('button', { name: 'Administrator' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Seafarer (Learner)' })).toHaveCount(0);
-    await expect(page.locator('#usr-form-email')).toHaveCount(0);
     await expect(page.locator('#usr-form-password')).toHaveCount(0);
 
     // VERIFY: Crew authentication notice is present
@@ -169,13 +168,14 @@ test.describe('Admin Course Management - Modern Seafarers Page UI', () => {
     await expect(page.locator('.usr-modal-notice')).toContainText('Seafarer ID');
     await expect(page.locator('.usr-modal-notice')).toContainText('Date of Birth');
 
-    // VERIFY: Seafarer input fields are cleanly rendered
+    // VERIFY: Seafarer input fields are cleanly rendered (including email for reminders)
     await expect(page.locator('#usr-form-name')).toBeVisible();
     await expect(page.locator('#usr-form-rank')).toBeVisible();
     await expect(page.locator('#usr-form-crewid')).toBeVisible();
     await expect(page.locator('#usr-form-dob')).toBeVisible();
     await expect(page.locator('#usr-form-ppno')).toBeVisible();
     await expect(page.locator('#usr-form-mobile')).toBeVisible();
+    await expect(page.locator('#usr-form-email')).toBeVisible();
 
     // VERIFY: Submit button is "Register Seafarer"
     const submitBtn = page.locator('#usr-form-submit');

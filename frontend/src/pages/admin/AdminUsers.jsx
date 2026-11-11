@@ -3,7 +3,7 @@ import { useEffect, useState, useMemo, useRef } from 'react'
 import {
   Users, UserPlus, Check, Ban, AlertCircle, X, Search,
   RefreshCw, ChevronLeft, ChevronRight, Phone, Shield,
-  User, Award, Hash, Calendar, FileText, Info
+  User, Award, Hash, Calendar, FileText, Info, Mail
 } from 'lucide-react'
 import { adminListUsers, adminCreateUser, adminUpdateUser } from '../../api.js'
 import CardSelect from '../../components/CardSelect.jsx'
@@ -14,7 +14,8 @@ const EMPTY = {
   dob: '',
   rank: '',
   ppNo: '',
-  mobileNo: ''
+  mobileNo: '',
+  email: ''
 }
 
 const ROWS_PER_PAGE = 50
@@ -223,7 +224,8 @@ export default function AdminUsers() {
         dob: cleanDob,
         rank: form.rank.trim() || undefined,
         ppNo: form.ppNo.trim() || undefined,
-        mobileNo: form.mobileNo.trim() || undefined
+        mobileNo: form.mobileNo.trim() || undefined,
+        email: form.email.trim() || undefined
       })
       setForm(EMPTY)
       setShowModal(false)
@@ -520,7 +522,9 @@ export default function AdminUsers() {
                           <div className="usr-details">
                             <span className="usr-name">{u.name}</span>
                             <span className="usr-meta">
-                              {isLearner ? (u.crewId ? `ID: ${u.crewId}` : 'No Crew ID') : (u.email || 'Admin User')}
+                              {isLearner
+                                ? `${u.crewId ? `ID: ${u.crewId}` : 'No Crew ID'}${u.email ? ` · ${u.email}` : ''}`
+                                : (u.email || 'Admin User')}
                             </span>
                           </div>
                         </div>
@@ -843,6 +847,25 @@ export default function AdminUsers() {
                         placeholder="e.g. 98765 43210"
                       />
                     </div>
+                  </div>
+
+                  {/* Email Address */}
+                  <div className="usr-field-group">
+                    <label htmlFor="usr-form-email" className="usr-label">
+                      Email Address
+                    </label>
+                    <div className="usr-input-wrap">
+                      <Mail size={15} className="usr-input-icon" />
+                      <input
+                        id="usr-form-email"
+                        type="email"
+                        className="usr-input"
+                        value={form.email}
+                        onChange={(e) => setFormField('email', e.target.value)}
+                        placeholder="e.g. seafarer@ozellar.com"
+                      />
+                    </div>
+                    <span className="usr-field-hint">Used for course assignments & reminders</span>
                   </div>
                 </div>
               </div>

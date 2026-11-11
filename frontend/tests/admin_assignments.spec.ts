@@ -43,7 +43,29 @@ test.describe('Admin Course Management - Assignments Page UI', () => {
     // 3. Header Controls
     await expect(page.locator('#asg-search-input')).toBeVisible();
     await expect(page.locator('#asg-rank-filter')).toBeVisible();
+    await expect(page.locator('#asg-send-reminders-btn')).toBeVisible();
     await expect(page.locator('#asg-refresh-btn')).toBeVisible();
+  });
+
+  test('renders top send reminder mail button and row-level mail buttons with confirmation modal', async ({ page }) => {
+    // 1. Top Send Mail button exists
+    const mailBtn = page.locator('#asg-send-reminders-btn');
+    await expect(mailBtn).toBeVisible();
+    await expect(mailBtn).toContainText(/Send Mail/i);
+
+    // 2. Row-level mail button exists in seafarer table
+    const rowMailBtn = page.locator('.asg-row-mail-btn').first();
+    await expect(rowMailBtn).toBeVisible();
+
+    // 3. Click top send mail button opens confirmation modal
+    await mailBtn.click();
+    await expect(page.getByText('Send Course Completion Reminders').first()).toBeVisible();
+    await expect(page.getByText('Sudarsan').first()).toBeVisible();
+    await expect(page.getByText('training.ozellar.com').first()).toBeVisible();
+
+    // 4. Close modal
+    await page.getByRole('button', { name: /Cancel/i }).first().click();
+    await expect(page.getByText('Send Course Completion Reminders')).not.toBeVisible();
   });
 
   test('renders 5 unique light-themed compact KPI cards with badges', async ({ page }) => {

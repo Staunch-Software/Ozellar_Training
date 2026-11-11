@@ -2,7 +2,7 @@
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -27,7 +27,8 @@ class CreateUserRequest(BaseModel):
     dob: str | None = None          # learner — 8 digits DDMMYYYY
     rank: str | None = None
     ppNo: str | None = None
-    email: str | None = None        # admin / super_admin
+    email: str | None = None        # admin / super_admin OR learner email
+    mobileNo: str | None = None     # mobile number
     password: str | None = None     # admin / super_admin
     modules: list[str] | None = None      # admin: granted modules (auth.ADMIN_MODULES)
     department: str | None = None         # admin: briefing department
@@ -39,6 +40,8 @@ class UpdateUserRequest(BaseModel):
     fullName: str | None = None
     rank: str | None = None
     ppNo: str | None = None
+    email: str | None = None
+    mobileNo: str | None = None
     role: str | None = None
     password: str | None = None
     currentPassword: str | None = None
@@ -62,7 +65,7 @@ class InlineApproveRequest(BaseModel):
 def admin_user_view(db, u):
     v = {
         "id": u.id, "role": u.role, "name": u.full_name, "rank": u.rank,
-        "crewId": u.crew_id, "email": u.email, "ppNo": u.pp_no,
+        "crewId": u.crew_id, "email": u.email or u.smartpal_email, "ppNo": u.pp_no,
         "mobileNo": u.mobile_number,
         "dob": u.date_of_birth.strftime("%d%m%Y") if u.date_of_birth else None,
         "isActive": bool(u.is_active),
@@ -166,9 +169,15 @@ def admin_create_user(req: CreateUserRequest, admin: models.User = Depends(requi
             raise HTTPException(400, "Date of birth must be 8 digits (DDMMYYYY)")
         if db.query(models.User).filter_by(crew_id=crew_id).first():
             raise HTTPException(400, "That Crew ID is already in use")
+
+        clean_email = (req.email or "").strip().lower() or None
+        clean_mobile = (req.mobileNo or "").strip() or None
+
         user = models.User(role="learner", crew_id=crew_id, full_name=name,
                            rank=(req.rank or "").strip() or None, date_of_birth=dob,
-                           pp_no=(req.ppNo or "").strip() or None)
+                           pp_no=(req.ppNo or "").strip() or None,
+                           smartpal_email=clean_email,
+                           mobile_number=clean_mobile)
 
     elif req.role in ("admin", "super_admin"):
         email = (req.email or "").strip().lower()
@@ -206,6 +215,14 @@ def admin_update_user(user_id: str, req: UpdateUserRequest,
         user.rank = req.rank.strip() or None
     if req.ppNo is not None:
         user.pp_no = req.ppNo.strip() or None
+    if req.email is not None:
+        clean_email = req.email.strip().lower() or None
+        if user.role == "learner":
+            user.smartpal_email = clean_email
+        else:
+            user.email = clean_email
+    if req.mobileNo is not None:
+        user.mobile_number = req.mobileNo.strip() or None
     db.commit()
     return admin_user_view(db, user)
 
@@ -340,29 +357,41 @@ def admin_inline_approve(user_id: str, course_id: str,
     db.commit()
     cert_obj = db.get(models.Certificate, cert_info["id"])
     pdf_bytes = build_certificate_pdf(cert_pdf_data(cert_obj, user, course))
-    if user.email:
-        email_service.send_approval_email(user.email, user.full_name, course.title, pdf_bytes, cert_info["id"])
+    crew_recipient = user.email or user.smartpal_email
+    if crew_recipient:
+        email_service.send_approval_email(crew_recipient, user.full_name, course.title, pdf_bytes, cert_info["id"])
     return {"ok": True, "certId": cert_info["id"]}
 
 
 @router.post("/api/admin/users/{user_id}/enrollments")
 def admin_assign(user_id: str, req: AssignRequest,
+                 background_tasks: BackgroundTasks,
                  admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     user = db.get(models.User, user_id)
     if not user or user.role != "learner":
         raise HTTPException(404, "Learner not found")
-    if not db.query(models.Course).filter_by(id=req.courseId).first():
+    course = db.query(models.Course).filter_by(id=req.courseId).first()
+    if not course:
         raise HTTPException(404, "Course not found")
     exists = (db.query(models.Enrollment)
               .filter_by(learner_id=user_id, course_id=req.courseId).first())
     if not exists:
-        course = db.query(models.Course).filter_by(id=req.courseId).first()
         db.add(models.Enrollment(learner_id=user_id, course_id=req.courseId,
                                  assigned_by=admin.id))
         notify(db, user_id, "assigned", "New course assigned",
                f"{course.title} has been assigned to you.",
                f"/course/{course.slug}")
         db.commit()
+
+        crew_email = user.email or user.smartpal_email
+        if crew_email and crew_email.strip():
+            background_tasks.add_task(
+                email_service.send_course_reminder_email,
+                crew_email=crew_email.strip(),
+                crew_name=user.full_name or user.name or "Seafarer",
+                pending_courses=[course.title],
+                from_email="data@ozellar.com"
+            )
     return {"ok": True}
 
 
@@ -376,6 +405,7 @@ def admin_unassign(user_id: str, course_id: str,
 
 @router.put("/api/admin/users/{user_id}/enrollments")
 def admin_bulk_set_enrollments(user_id: str, req: BulkAssignRequest,
+                               background_tasks: BackgroundTasks,
                                admin: models.User = Depends(require_module("courses")), db: Session = Depends(get_db)):
     """Set a learner's full course assignment list in one call."""
     user = db.get(models.User, user_id)
@@ -396,6 +426,7 @@ def admin_bulk_set_enrollments(user_id: str, req: BulkAssignRequest,
                    models.Enrollment.course_id.in_(to_remove))
            .delete(synchronize_session=False))
 
+    newly_assigned_titles = []
     if to_add:
         courses_by_id = {c.id: c for c in
                          db.query(models.Course).filter(models.Course.id.in_(to_add)).all()}
@@ -403,9 +434,22 @@ def admin_bulk_set_enrollments(user_id: str, req: BulkAssignRequest,
             db.add(models.Enrollment(learner_id=user_id, course_id=cid, assigned_by=admin.id))
             course = courses_by_id.get(cid)
             if course:
+                newly_assigned_titles.append(course.title)
                 notify(db, user_id, "assigned", "New course assigned",
                        f"{course.title} has been assigned to you.",
                        f"/course/{course.slug}")
 
     db.commit()
+
+    # Automatically notify seafarer via email of newly assigned courses
+    crew_email = user.email or user.smartpal_email
+    if newly_assigned_titles and crew_email and crew_email.strip():
+        background_tasks.add_task(
+            email_service.send_course_reminder_email,
+            crew_email=crew_email.strip(),
+            crew_name=user.full_name or user.name or "Seafarer",
+            pending_courses=newly_assigned_titles,
+            from_email="data@ozellar.com"
+        )
+
     return {"ok": True, "added": len(to_add), "removed": len(to_remove)}
