@@ -8,8 +8,10 @@ import base64
 TENANT_ID = os.getenv("AZURE_TENANT_ID")
 CLIENT_ID = os.getenv("AZURE_CLIENT_ID")
 CLIENT_SECRET = os.getenv("AZURE_CLIENT_SECRET")
-# The mailbox to send from. Must have Mail.Send permission in Azure.
-SMTP_USER = os.getenv("SMTP_USER", "data@ozellar.com")
+# The default mailbox for approvals, certificates, digests (existing sender):
+SMTP_USER = os.getenv("SMTP_USER", "techdevops@ozellar.com")
+# Dedicated separate sender for course assignment & reminder emails:
+COURSE_REMINDER_SENDER = os.getenv("COURSE_REMINDER_SENDER", "data@ozellar.com")
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://training.ozellar.com")
 PRODUCTION_PORTAL_URL = "https://training.ozellar.com"
 
@@ -245,12 +247,13 @@ def send_course_reminder_email(
     crew_email: str,
     crew_name: str,
     pending_courses: list[str] | None = None,
-    from_email: str = "data@ozellar.com"
+    from_email: str | None = None
 ) -> bool:
     """Sends a professional instruction/reminder email to a seafarer to complete assigned courses."""
     if not crew_email or not crew_email.strip():
         return False
 
+    sender = from_email or COURSE_REMINDER_SENDER
     portal_url = PRODUCTION_PORTAL_URL.rstrip("/")
     portal_host = "training.ozellar.com"
     clean_name = crew_name.strip() if crew_name and crew_name.strip() else "Seafarer"
@@ -415,15 +418,16 @@ def send_course_reminder_email(
         to_email=crew_email.strip(),
         subject=subject,
         html_content=html,
-        from_email=from_email
+        from_email=sender
     )
 
 
-def send_course_reminder_batch(targets: list[dict], from_email: str = "data@ozellar.com") -> int:
+def send_course_reminder_batch(targets: list[dict], from_email: str | None = None) -> int:
     """Dispatches course reminder emails to a list of seafarers.
     Each item in targets: {"email": str, "name": str, "pending_courses": list[str]}
     Returns the count of successfully sent emails.
     """
+    sender = from_email or COURSE_REMINDER_SENDER
     sent_count = 0
     for t in targets:
         email = (t.get("email") or "").strip()
@@ -432,7 +436,7 @@ def send_course_reminder_batch(targets: list[dict], from_email: str = "data@ozel
         name = t.get("name") or "Seafarer"
         courses = t.get("pending_courses") or []
         try:
-            if send_course_reminder_email(email, name, courses, from_email=from_email):
+            if send_course_reminder_email(email, name, courses, from_email=sender):
                 sent_count += 1
         except Exception as e:
             print(f"[email_service] Error auto-sending reminder to {email}: {e}")
