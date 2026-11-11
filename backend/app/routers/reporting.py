@@ -356,6 +356,24 @@ def admin_report_csv(
                     headers={"Content-Disposition": "attachment; filename=ozellar-compliance-report.csv"})
 
 
+def _sanitize_sheet_title(title: str, existing_titles: set) -> str:
+    """Sanitize and ensure uniqueness of Excel worksheet titles (max 31 chars, no invalid characters)."""
+    import re
+    cleaned = re.sub(r'[\\/*?:\[\]]', '', title or '').strip()
+    if not cleaned:
+        cleaned = "Course"
+    base = cleaned[:31].strip()
+    candidate = base
+    counter = 1
+    while candidate.lower() in existing_titles:
+        suffix = f"_{counter}"
+        max_base = 31 - len(suffix)
+        candidate = f"{base[:max_base].strip()}{suffix}"
+        counter += 1
+    existing_titles.add(candidate.lower())
+    return candidate
+
+
 @router.get("/api/admin/report.xlsx")
 def admin_report_xlsx(
     admin: models.User = Depends(require_module("courses")),
@@ -450,8 +468,6 @@ def admin_report_xlsx(
             filter_note.append(f"{d_type_label}: to {to_date}")
 
     wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Compliance Report"
 
     HDR_FILL   = PatternFill("solid", fgColor="1E3A5F")
     PASS_FILL  = PatternFill("solid", fgColor="D6F5E3")
@@ -467,36 +483,61 @@ def admin_report_xlsx(
     border_thick_bottom = Border(left=thin, right=thin, top=thin, bottom=thick_bottom)
     center = Alignment(horizontal="center", vertical="center")
     left   = Alignment(horizontal="left",   vertical="center", wrap_text=False)
+    status_labels = {"passed": "Completed", "in-progress": "In Progress", "assigned": "Not Started"}
 
-    title_text = "Ozellar Marine — Compliance Report"
+    # -------------------------------------------------------------
+    # Multi-Sheet Workbook:
+    # 1. "All Records" tab: Displays all records across all courses with the Course column.
+    #    This allows admins searching for a particular user or filtering to see everything
+    #    in one place without clicking across multiple sheets.
+    # 2. Individual Course tabs: One tab per course containing only that course's enrolled
+    #    crew, omitting the redundant Course column for a cleaner 13-column layout.
+    # -------------------------------------------------------------
+    has_filter = bool(crew_search or (vessel and vessel != "all") or from_date or to_date or (status and status != "all"))
+    if course_id and course_id != "all":
+        courses_to_render = courses
+    elif has_filter:
+        active_courses = [c for c in courses if any(c.id in r.get("cells", {}) for r in rows)]
+        courses_to_render = active_courses if active_courses else courses[:1]
+    else:
+        courses_to_render = courses
+
+    # --- TAB 1: ALL RECORDS (Exact layout and grouping from original compliance report) ---
+    ws_all = wb.active
+    ws_all.title = "All Records"
+
+    headers_all = ["Crew ID", "Name", "Rank", "Vessel", "Onboard Date", "Mobile Number", "Active",
+                   "Course", "Status", "Score (%)", "Attempts", "Started On", "Completed On", "Approval Remark"]
+    col_widths_all = [14, 26, 18, 22, 14, 16, 8, 36, 14, 11, 10, 14, 14, 40]
+
+    all_title_text = "Ozellar Marine — Compliance Report"
     if filter_note:
-        title_text += f"  |  Filters: {', '.join(filter_note)}"
-    ws.merge_cells("A1:N1")
-    tc = ws.cell(row=1, column=1, value=title_text)
-    tc.font = Font(bold=True, size=12, color="1E3A5F")
-    tc.alignment = Alignment(horizontal="left", vertical="center")
-    ws.row_dimensions[1].height = 22
+        all_title_text += f"  |  Filters: {', '.join(filter_note)}"
+    ws_all.merge_cells("A1:N1")
+    tc_all = ws_all.cell(row=1, column=1, value=all_title_text)
+    tc_all.font = Font(bold=True, size=12, color="1E3A5F")
+    tc_all.alignment = Alignment(horizontal="left", vertical="center")
+    ws_all.row_dimensions[1].height = 22
 
-    ws.merge_cells("A2:N2")
-    sc = ws.cell(row=2, column=1,
-                 value=f"Generated: {datetime.now(IST).strftime('%d %b %Y %H:%M IST')}  ·  "
-                       f"{len(rows)} crew member(s) shown")
-    sc.font = Font(size=9, color="5C626D")
-    sc.alignment = Alignment(horizontal="left", vertical="center")
-    ws.row_dimensions[2].height = 16
+    ws_all.merge_cells("A2:N2")
+    sc_all = ws_all.cell(
+        row=2, column=1,
+        value=f"Generated: {datetime.now(IST).strftime('%d %b %Y %H:%M IST')}  ·  "
+              f"{len(rows)} crew member(s) shown"
+    )
+    sc_all.font = Font(size=9, color="5C626D")
+    sc_all.alignment = Alignment(horizontal="left", vertical="center")
+    ws_all.row_dimensions[2].height = 16
 
-    headers = ["Crew ID", "Name", "Rank", "Vessel", "Onboard Date", "Mobile Number", "Active",
-               "Course", "Status", "Score (%)", "Attempts", "Started On", "Completed On", "Approval Remark"]
-    ws.append(headers)
-    for ci, h in enumerate(headers, 1):
-        cell = ws.cell(row=3, column=ci)
+    ws_all.append(headers_all)
+    for ci, h in enumerate(headers_all, 1):
+        cell = ws_all.cell(row=3, column=ci)
         cell.fill = HDR_FILL
         cell.font = HDR_FONT
         cell.alignment = center
         cell.border = border
-    ws.row_dimensions[3].height = 22
+    ws_all.row_dimensions[3].height = 22
 
-    status_labels = {"passed": "Completed", "in-progress": "In Progress", "assigned": "Not Started"}
     row_idx = 4
     for r in rows:
         active = "Yes" if r["isActive"] else "No"
@@ -504,38 +545,54 @@ def admin_report_xlsx(
         vessel_name = r.get("currentVessel") or r.get("vessel") or ""
         onboard_date = r.get("signOnDate") or ""
         start_row = row_idx
-        
+
         if not r["cells"]:
             data = [r["crewId"], r["name"], r["rank"] or "", vessel_name, onboard_date, mobile, active,
                     "(no courses assigned)", "", "", "", "", "", ""]
-            ws.append(data)
+            ws_all.append(data)
             for ci in range(1, 15):
-                c = ws.cell(row=row_idx, column=ci)
+                c = ws_all.cell(row=row_idx, column=ci)
                 c.fill = ASGN_FILL if ci > 7 else WHITE_FILL
                 c.font = BODY_FONT
-                c.alignment = left; c.border = border
+                c.alignment = left
+                c.border = border
             row_idx += 1
             continue
 
-        for course in courses:
+        for course in courses_to_render:
             cell_data = r["cells"].get(course.id)
             if not cell_data:
                 continue
-            status = cell_data["status"]
+            status = cell_data.get("status", "assigned")
             label  = status_labels.get(status, status)
-            score  = cell_data["score"] if cell_data["score"] is not None else ""
+            score  = cell_data.get("score") if cell_data.get("score") is not None else ""
             started_on = cell_data.get("startedOn") or ""
             passed_on = cell_data.get("passedOn") or ""
             attempts = cell_data.get("attempts", 0)
-            if attempts == 0: attempts = ""
+            if attempts == 0:
+                attempts = ""
             remark = cell_data.get("approvalRemark") or ""
 
             fill = PASS_FILL if status == "passed" else (WIP_FILL if status == "in-progress" else ASGN_FILL)
-            data = [r["crewId"], r["name"], r["rank"] or "", vessel_name, onboard_date, mobile, active,
-                    course.title, label, score, attempts, started_on, passed_on, remark]
-            ws.append(data)
+            data = [
+                r["crewId"],
+                r["name"],
+                r["rank"] or "",
+                vessel_name,
+                onboard_date,
+                mobile,
+                active,
+                course.title,
+                label,
+                score,
+                attempts,
+                started_on,
+                passed_on,
+                remark,
+            ]
+            ws_all.append(data)
             for ci, val in enumerate(data, 1):
-                c = ws.cell(row=row_idx, column=ci)
+                c = ws_all.cell(row=row_idx, column=ci)
                 c.fill = fill if ci > 7 else WHITE_FILL
                 c.font = BOLD_FONT if ci == 2 else BODY_FONT
                 c.alignment = left
@@ -544,16 +601,118 @@ def admin_report_xlsx(
 
         if row_idx - 1 > start_row:
             for ci in range(1, 8):
-                ws.merge_cells(start_row=start_row, start_column=ci, end_row=row_idx-1, end_column=ci)
+                ws_all.merge_cells(start_row=start_row, start_column=ci, end_row=row_idx - 1, end_column=ci)
 
-        for ci in range(1, 15):
-            ws.cell(row=row_idx-1, column=ci).border = border_thick_bottom
+        if row_idx > start_row:
+            for ci in range(1, 15):
+                ws_all.cell(row=row_idx - 1, column=ci).border = border_thick_bottom
 
-    col_widths = [14, 26, 18, 22, 14, 16, 8, 36, 14, 11, 10, 14, 14, 40]
-    for ci, w in enumerate(col_widths, 1):
-        ws.column_dimensions[get_column_letter(ci)].width = w
+    for ci, w in enumerate(col_widths_all, 1):
+        ws_all.column_dimensions[get_column_letter(ci)].width = w
 
-    ws.freeze_panes = "A4"
+    ws_all.freeze_panes = "A4"
+
+    # --- TABS 2..N: INDIVIDUAL COURSE SHEETS (Course column omitted for clean 13-col view) ---
+    headers_course = ["Crew ID", "Name", "Rank", "Vessel", "Onboard Date", "Mobile Number", "Active",
+                      "Status", "Score (%)", "Attempts", "Started On", "Completed On", "Approval Remark"]
+    col_widths_course = [14, 26, 18, 22, 14, 16, 8, 14, 11, 10, 14, 14, 40]
+
+    used_titles = {"all records"}
+    for course in courses_to_render:
+        enrolled_learners = [r for r in rows if course.id in r.get("cells", {})]
+        sheet_title = _sanitize_sheet_title(course.title, used_titles)
+        ws = wb.create_sheet(title=sheet_title)
+
+        # Row 1: Course Title & Filters
+        course_title_text = f"Ozellar Marine — Course: {course.title}"
+        if filter_note:
+            course_title_text += f"  |  Filters: {', '.join(filter_note)}"
+        ws.merge_cells("A1:M1")
+        tc = ws.cell(row=1, column=1, value=course_title_text)
+        tc.font = Font(bold=True, size=12, color="1E3A5F")
+        tc.alignment = Alignment(horizontal="left", vertical="center")
+        ws.row_dimensions[1].height = 22
+
+        # Row 2: Subtitle / Stats Bar for this course
+        passed_cnt = sum(1 for r in enrolled_learners if r["cells"][course.id].get("status") == "passed")
+        wip_cnt    = sum(1 for r in enrolled_learners if r["cells"][course.id].get("status") == "in-progress")
+        asgn_cnt   = sum(1 for r in enrolled_learners if r["cells"][course.id].get("status") == "assigned")
+        total_cnt  = len(enrolled_learners)
+
+        ws.merge_cells("A2:M2")
+        sc = ws.cell(
+            row=2, column=1,
+            value=f"Generated: {datetime.now(IST).strftime('%d %b %Y %H:%M IST')}  ·  "
+                  f"Total Enrolled: {total_cnt}  ·  "
+                  f"Completed: {passed_cnt}  ·  "
+                  f"In Progress: {wip_cnt}  ·  "
+                  f"Not Started: {asgn_cnt}"
+        )
+        sc.font = Font(size=9, color="5C626D")
+        sc.alignment = Alignment(horizontal="left", vertical="center")
+        ws.row_dimensions[2].height = 16
+
+        # Row 3: Headers (Course column omitted)
+        ws.append(headers_course)
+        for ci, h in enumerate(headers_course, 1):
+            cell = ws.cell(row=3, column=ci)
+            cell.fill = HDR_FILL
+            cell.font = HDR_FONT
+            cell.alignment = center
+            cell.border = border
+        ws.row_dimensions[3].height = 22
+
+        # Row 4+: Data Rows
+        c_row_idx = 4
+        for r in enrolled_learners:
+            cell_data = r["cells"][course.id]
+            status = cell_data.get("status", "assigned")
+            label  = status_labels.get(status, status)
+            score  = cell_data.get("score") if cell_data.get("score") is not None else ""
+            started_on = cell_data.get("startedOn") or ""
+            passed_on = cell_data.get("passedOn") or ""
+            attempts = cell_data.get("attempts", 0)
+            if attempts == 0:
+                attempts = ""
+            remark = cell_data.get("approvalRemark") or ""
+            vessel_name = r.get("currentVessel") or r.get("vessel") or ""
+            onboard_date = r.get("signOnDate") or ""
+            active = "Yes" if r["isActive"] else "No"
+            mobile = r.get("mobileNo") or ""
+
+            fill = PASS_FILL if status == "passed" else (WIP_FILL if status == "in-progress" else ASGN_FILL)
+            data = [
+                r["crewId"],
+                r["name"],
+                r["rank"] or "",
+                vessel_name,
+                onboard_date,
+                mobile,
+                active,
+                label,
+                score,
+                attempts,
+                started_on,
+                passed_on,
+                remark,
+            ]
+            ws.append(data)
+            for ci, val in enumerate(data, 1):
+                c = ws.cell(row=c_row_idx, column=ci)
+                c.fill = fill if ci > 7 else WHITE_FILL
+                c.font = BOLD_FONT if ci == 2 else BODY_FONT
+                c.alignment = center if ci in (1, 3, 5, 7, 8, 9, 10, 11, 12) else left
+                c.border = border
+            c_row_idx += 1
+
+        if c_row_idx > 4:
+            for ci in range(1, 14):
+                ws.cell(row=c_row_idx - 1, column=ci).border = border_thick_bottom
+
+        for ci, w in enumerate(col_widths_course, 1):
+            ws.column_dimensions[get_column_letter(ci)].width = w
+
+        ws.freeze_panes = "A4"
 
     buf = io.BytesIO()
     wb.save(buf)
