@@ -42,9 +42,10 @@ def send_pending_digest_job():
     """Job to scan for pending approvals and send the digest to the configured admin mailbox."""
     with SessionLocal() as db:
         recipients = email_service.get_admin_recipients()
+        cc_list = email_service.get_approver_cc_recipients()
 
         if not recipients:
-            print("[send_pending_digest] Skipped: ADMIN_EMAIL not set")
+            print("[send_pending_digest] Skipped: APPROVER_EMAIL/ADMIN_EMAIL not set")
             return
 
         pending = db.query(models.AssessmentApproval).filter_by(status="pending", digest_sent=False).all()
@@ -90,8 +91,18 @@ def send_pending_digest_job():
 
         db.commit()
         if approvals_list:
-            email_service.send_digest_email(recipients, approvals_list)
-            print(f"[send_pending_digest] Sent digest for {len(approvals_list)} approvals to {recipients[0] if recipients else ''}")
+            to_recipient = recipients[0]
+            final_ccs = [c for c in cc_list if c.lower() != to_recipient.lower()]
+            for extra in recipients[1:]:
+                if extra.lower() != to_recipient.lower() and extra not in final_ccs:
+                    final_ccs.append(extra)
+
+            email_service.send_digest_email(
+                admin_email=to_recipient,
+                approvals=approvals_list,
+                cc_emails=final_ccs
+            )
+            print(f"[send_pending_digest] Sent digest for {len(approvals_list)} approvals to {to_recipient} (CC: {', '.join(final_ccs) if final_ccs else '(none)'})")
 
 
 @asynccontextmanager

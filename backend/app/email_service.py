@@ -18,7 +18,7 @@ DEFAULT_COURSE_REMINDER_CC = [
     c.strip() for c in re.split(r"[,;]", COURSE_REMINDER_CC_RAW) if c.strip()
 ]
 # CC recipients for pending approval digest emails:
-APPROVAL_DIGEST_CC_RAW = os.getenv("APPROVAL_DIGEST_CC", "shweta.s@ozellar.com")
+APPROVAL_DIGEST_CC_RAW = os.getenv("APPROVER_CC") or os.getenv("APPROVAL_DIGEST_CC") or "shweta.s@ozellar.com"
 DEFAULT_APPROVAL_DIGEST_CC = [
     c.strip() for c in re.split(r"[,;]", APPROVAL_DIGEST_CC_RAW) if c.strip()
 ]
@@ -136,9 +136,13 @@ def _format_mobile(mobile_no):
 
 
 def get_admin_recipients() -> list[str]:
-    """Returns a list of clean, unique email addresses configured in ADMIN_EMAIL or ADMIN_EMAILS.
+    """Returns a list of clean, unique email addresses configured in APPROVER_EMAIL, or fallback ADMIN_EMAIL / ADMIN_EMAILS.
     Supports comma (,) or semicolon (;) separated lists."""
-    raw_vals = [os.getenv("ADMIN_EMAIL", ""), os.getenv("ADMIN_EMAILS", "")]
+    approver = os.getenv("APPROVER_EMAIL")
+    if approver and approver.strip():
+        raw_vals = [approver]
+    else:
+        raw_vals = [os.getenv("ADMIN_EMAIL", ""), os.getenv("ADMIN_EMAILS", "")]
     recipients: list[str] = []
     for raw in raw_vals:
         if not raw:
@@ -148,6 +152,18 @@ def get_admin_recipients() -> list[str]:
             if cleaned and cleaned not in recipients:
                 recipients.append(cleaned)
     return recipients
+
+
+def get_approver_cc_recipients() -> list[str]:
+    """Returns a list of clean, unique CC email addresses configured in APPROVER_CC or APPROVAL_DIGEST_CC.
+    Defaults to ['shweta.s@ozellar.com']."""
+    raw_val = os.getenv("APPROVER_CC") or os.getenv("APPROVAL_DIGEST_CC") or "shweta.s@ozellar.com"
+    cc_list: list[str] = []
+    for part in re.split(r"[,;]", raw_val):
+        cleaned = part.strip()
+        if cleaned and cleaned not in cc_list:
+            cc_list.append(cleaned)
+    return cc_list
 
 
 def send_digest_email(

@@ -7,18 +7,28 @@ from app.main import send_pending_digest_job
 
 
 def test_get_admin_recipients_unset(monkeypatch):
+    monkeypatch.delenv("APPROVER_EMAIL", raising=False)
     monkeypatch.delenv("ADMIN_EMAIL", raising=False)
     monkeypatch.delenv("ADMIN_EMAILS", raising=False)
     assert email_service.get_admin_recipients() == []
 
 
+def test_get_approver_recipients_and_cc(monkeypatch):
+    monkeypatch.setenv("APPROVER_EMAIL", "approver@ozellar.com")
+    monkeypatch.setenv("APPROVER_CC", "shweta.s@ozellar.com, auditor@ozellar.com")
+    assert email_service.get_admin_recipients() == ["approver@ozellar.com"]
+    assert email_service.get_approver_cc_recipients() == ["shweta.s@ozellar.com", "auditor@ozellar.com"]
+
+
 def test_get_admin_recipients_single(monkeypatch):
+    monkeypatch.delenv("APPROVER_EMAIL", raising=False)
     monkeypatch.setenv("ADMIN_EMAIL", "admin@ozellar.com")
     monkeypatch.delenv("ADMIN_EMAILS", raising=False)
     assert email_service.get_admin_recipients() == ["admin@ozellar.com"]
 
 
 def test_get_admin_recipients_comma_separated(monkeypatch):
+    monkeypatch.delenv("APPROVER_EMAIL", raising=False)
     monkeypatch.setenv("ADMIN_EMAIL", " admin1@ozellar.com , admin2@ozellar.com ,admin3@ozellar.com ")
     monkeypatch.delenv("ADMIN_EMAILS", raising=False)
     assert email_service.get_admin_recipients() == [
@@ -29,6 +39,7 @@ def test_get_admin_recipients_comma_separated(monkeypatch):
 
 
 def test_get_admin_recipients_semicolon_and_duplicates(monkeypatch):
+    monkeypatch.delenv("APPROVER_EMAIL", raising=False)
     monkeypatch.setenv("ADMIN_EMAIL", "admin1@ozellar.com; admin2@ozellar.com ; admin1@ozellar.com")
     monkeypatch.delenv("ADMIN_EMAILS", raising=False)
     assert email_service.get_admin_recipients() == [
@@ -38,6 +49,7 @@ def test_get_admin_recipients_semicolon_and_duplicates(monkeypatch):
 
 
 def test_get_admin_recipients_both_env_vars(monkeypatch):
+    monkeypatch.delenv("APPROVER_EMAIL", raising=False)
     monkeypatch.setenv("ADMIN_EMAIL", "email1@ozellar.com, email2@ozellar.com")
     monkeypatch.setenv("ADMIN_EMAILS", "email2@ozellar.com; email3@ozellar.com")
     assert email_service.get_admin_recipients() == [
@@ -205,12 +217,15 @@ def test_send_pending_digest_job_dispatch(db, monkeypatch):
     db.commit()
 
     sent_recipients = []
+    sent_ccs = []
     captured_approvals = []
-    def fake_send_digest(recipient, approvals):
-        if isinstance(recipient, list):
-            sent_recipients.extend(recipient)
+    def fake_send_digest(admin_email, approvals, cc_emails=None):
+        if isinstance(admin_email, list):
+            sent_recipients.extend(admin_email)
         else:
-            sent_recipients.append(recipient)
+            sent_recipients.append(admin_email)
+        if cc_emails:
+            sent_ccs.extend(cc_emails)
         captured_approvals.extend(approvals)
 
     class MockSessionContext:
@@ -224,7 +239,7 @@ def test_send_pending_digest_job_dispatch(db, monkeypatch):
             send_pending_digest_job()
 
     assert "lead@ozellar.com" in sent_recipients
-    assert "manager@ozellar.com" in sent_recipients
+    assert "manager@ozellar.com" in sent_ccs
 
     # Check status and vessel logic
     sail_ap = next(a for a in captured_approvals if a["crew_id"] == "CSAIL1")
