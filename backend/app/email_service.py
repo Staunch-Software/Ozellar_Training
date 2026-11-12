@@ -17,6 +17,11 @@ COURSE_REMINDER_CC_RAW = os.getenv("COURSE_REMINDER_CC", "sudarsan.s@ozellar.com
 DEFAULT_COURSE_REMINDER_CC = [
     c.strip() for c in re.split(r"[,;]", COURSE_REMINDER_CC_RAW) if c.strip()
 ]
+# CC recipients for pending approval digest emails:
+APPROVAL_DIGEST_CC_RAW = os.getenv("APPROVAL_DIGEST_CC", "shweta.s@ozellar.com")
+DEFAULT_APPROVAL_DIGEST_CC = [
+    c.strip() for c in re.split(r"[,;]", APPROVAL_DIGEST_CC_RAW) if c.strip()
+]
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://training.ozellar.com")
 PRODUCTION_PORTAL_URL = "https://training.ozellar.com"
 
@@ -145,8 +150,12 @@ def get_admin_recipients() -> list[str]:
     return recipients
 
 
-def send_digest_email(admin_email: str | list[str], approvals: list):
-    """Sends a digest email with a table of pending approvals and Accept/Reject buttons."""
+def send_digest_email(
+    admin_email: str | list[str],
+    approvals: list,
+    cc_emails: list[str] | str | None = None
+):
+    """Sends a digest email with a table of pending approvals to the primary admin recipient with CC."""
     if not approvals:
         return
 
@@ -166,6 +175,27 @@ def send_digest_email(admin_email: str | list[str], approvals: list):
 
     if not recipients:
         return
+
+    to_recipient = recipients[0]
+    cc_list: list[str] = []
+
+    # Secondary admin emails from admin_email become CC
+    for r in recipients[1:]:
+        if r.lower() != to_recipient.lower() and r not in cc_list:
+            cc_list.append(r)
+
+    # Add explicitly passed CCs or default approval digest CC (shweta.s@ozellar.com)
+    if cc_emails is not None:
+        raw_ccs = re.split(r"[,;]", cc_emails) if isinstance(cc_emails, str) else cc_emails
+        for c in raw_ccs:
+            cleaned = (c or "").strip()
+            if cleaned and cleaned.lower() != to_recipient.lower() and cleaned not in cc_list:
+                cc_list.append(cleaned)
+    else:
+        for c in DEFAULT_APPROVAL_DIGEST_CC:
+            cleaned = c.strip()
+            if cleaned and cleaned.lower() != to_recipient.lower() and cleaned not in cc_list:
+                cc_list.append(cleaned)
 
     rows = ""
     for ap in approvals:
@@ -247,8 +277,12 @@ def send_digest_email(admin_email: str | list[str], approvals: list):
     </body>
     </html>
     """
-    for recipient in recipients:
-        _send_email(recipient, f"Pending Assessment Approvals ({len(approvals)})", html)
+    _send_email(
+        to_email=to_recipient,
+        subject=f"Pending Assessment Approvals ({len(approvals)})",
+        html_content=html,
+        cc_emails=cc_list
+    )
 
 
 def send_approval_email(crew_email: str, crew_name: str, course_title: str, cert_pdf: bytes, cert_id: str, cc_emails: list[str] | str | None = None):

@@ -67,20 +67,45 @@ def test_send_digest_email_multiple_recipients():
     }]
     with patch.object(email_service, "_send_email") as mock_send:
         email_service.send_digest_email("admin1@ozellar.com, admin2@ozellar.com", approvals)
-        assert mock_send.call_count == 2
-        calls = [call[0] for call in mock_send.call_args_list]
-        recipients = [c[0] for c in calls]
-        assert recipients == ["admin1@ozellar.com", "admin2@ozellar.com"]
+        assert mock_send.call_count == 1
+        call_kwargs = mock_send.call_args.kwargs
+        to_email = call_kwargs.get("to_email") or mock_send.call_args[0][0]
+        cc_emails = call_kwargs.get("cc_emails")
+        assert to_email == "admin1@ozellar.com"
+        assert "admin2@ozellar.com" in cc_emails
         # Subject check
-        assert calls[0][1] == "Pending Assessment Approvals (1)"
+        subject = call_kwargs.get("subject") or mock_send.call_args[0][1]
+        assert subject == "Pending Assessment Approvals (1)"
         # HTML body check
-        assert "Test Cadet" in calls[0][2]
-        assert "Safety at Sea" in calls[0][2]
-        assert "95%" in calls[0][2]
-        assert "mock-token-xyz" in calls[0][2]
-        assert "Status / Vessel" in calls[0][2]
-        assert "ONBOARD" in calls[0][2]
-        assert "AMNSI Stallion" in calls[0][2]
+        html = call_kwargs.get("html_content") or mock_send.call_args[0][2]
+        assert "Test Cadet" in html
+        assert "Safety at Sea" in html
+        assert "95%" in html
+        assert "mock-token-xyz" in html
+        assert "Status / Vessel" in html
+        assert "ONBOARD" in html
+        assert "AMNSI Stallion" in html
+
+
+def test_send_digest_email_default_cc_shweta():
+    approvals = [{
+        "learner_name": "Test Cadet",
+        "crew_id": "C999",
+        "rank": "Cadet",
+        "status": "Onboard",
+        "vessel": "AMNSI Stallion",
+        "course_title": "Safety at Sea",
+        "score": 95,
+        "token": "mock-token-xyz"
+    }]
+    with patch.object(email_service, "_send_email") as mock_send:
+        email_service.send_digest_email("sudarsan.s@ozellar.com", approvals)
+        assert mock_send.call_count == 1
+        call_kwargs = mock_send.call_args.kwargs
+        to_email = call_kwargs.get("to_email") or mock_send.call_args[0][0]
+        cc_emails = call_kwargs.get("cc_emails")
+        assert to_email == "sudarsan.s@ozellar.com"
+        assert "shweta.s@ozellar.com" in cc_emails
 
 
 def test_send_digest_email_leave_and_fallback():
@@ -111,7 +136,7 @@ def test_send_digest_email_leave_and_fallback():
     with patch.object(email_service, "_send_email") as mock_send:
         email_service.send_digest_email("admin@ozellar.com", approvals)
         mock_send.assert_called_once()
-        html = mock_send.call_args[0][2]
+        html = mock_send.call_args.kwargs.get("html_content") or mock_send.call_args[0][2]
         assert "Status / Vessel" in html
         assert "LEAVE" in html
         assert "ONBOARD" in html
@@ -133,9 +158,12 @@ def test_send_digest_email_list_input():
     }]
     with patch.object(email_service, "_send_email") as mock_send:
         email_service.send_digest_email(["one@ozellar.com", "two@ozellar.com"], approvals)
-        assert mock_send.call_count == 2
-        recipients = [call[0][0] for call in mock_send.call_args_list]
-        assert recipients == ["one@ozellar.com", "two@ozellar.com"]
+        assert mock_send.call_count == 1
+        call_kwargs = mock_send.call_args.kwargs
+        to_email = call_kwargs.get("to_email") or mock_send.call_args[0][0]
+        cc_emails = call_kwargs.get("cc_emails")
+        assert to_email == "one@ozellar.com"
+        assert "two@ozellar.com" in cc_emails
 
 
 def test_send_pending_digest_job_dispatch(db, monkeypatch):
@@ -179,7 +207,10 @@ def test_send_pending_digest_job_dispatch(db, monkeypatch):
     sent_recipients = []
     captured_approvals = []
     def fake_send_digest(recipient, approvals):
-        sent_recipients.append(recipient)
+        if isinstance(recipient, list):
+            sent_recipients.extend(recipient)
+        else:
+            sent_recipients.append(recipient)
         captured_approvals.extend(approvals)
 
     class MockSessionContext:

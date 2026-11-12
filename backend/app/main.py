@@ -90,9 +90,8 @@ def send_pending_digest_job():
 
         db.commit()
         if approvals_list:
-            for recipient in recipients:
-                email_service.send_digest_email(recipient, approvals_list)
-            print(f"[send_pending_digest] Sent digest for {len(approvals_list)} approvals to {len(recipients)} recipients: {', '.join(recipients)}")
+            email_service.send_digest_email(recipients, approvals_list)
+            print(f"[send_pending_digest] Sent digest for {len(approvals_list)} approvals to {recipients[0] if recipients else ''}")
 
 
 @asynccontextmanager
