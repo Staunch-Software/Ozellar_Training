@@ -530,6 +530,7 @@ export default function AdminOrientationEnrollments() {
                   const dept = e.department ? DEPT_LABEL[e.department] : null
                   const DeptIcon = dept?.icon
                   const sl = STATUS_LABEL[e.status] || { label: e.status, cls: '' }
+                  const canApprove = isSuperAdmin && e.status === 'master_approved'
                   return (
                     <tr key={e.id}>
                       <td>
@@ -570,11 +571,11 @@ export default function AdminOrientationEnrollments() {
                         <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
                           <button
                             type="button"
-                            className={`btn sm ${e.status === 'master_approved' ? 'primary' : ''}`}
-                            title="Review completed task details and attachments to decide"
+                            className={`btn sm ${canApprove ? 'primary' : ''}`}
+                            title={canApprove ? "Review completed task details and attachments to approve or reject" : "Review completed task details and attachments"}
                             onClick={() => navigate(`/admin/orientation/review/${e.id}`)}
                           >
-                            <Eye size={13} /> {e.status === 'master_approved' ? 'Review & Approve' : 'Review'}
+                            <Eye size={13} /> {canApprove ? 'Review & Approve' : 'Review'}
                           </button>
                           {isSuperAdmin && (
                             <button

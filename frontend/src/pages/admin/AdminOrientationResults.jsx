@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Download, BarChart3, Ship, Search, Eye } from 'lucide-react'
 import { adminGetOrientationResults, adminListOrientationPrograms, adminListOrientationVessels, adminDownloadOrientationResultsXlsx } from '../../api.js'
+import { useAuth } from '../../auth.jsx'
 import CardSelect from '../../components/CardSelect.jsx'
 
 const STATUS_OPTIONS = [
@@ -36,6 +37,8 @@ function ProgressBar({ pct }) {
 
 export default function AdminOrientationResults() {
   const navigate = useNavigate()
+  const { user: me } = useAuth()
+  const isSuperAdmin = me?.role === 'super_admin'
   const [rows, setRows] = useState(null)
   const [programs, setPrograms] = useState([])
   const [vessels, setVessels] = useState([])
@@ -189,14 +192,19 @@ export default function AdminOrientationResults() {
                     <td className="orn-table-muted orn-table-nowrap">{fmt(r.submittedAt)}</td>
                     <td className="orn-table-muted orn-table-nowrap">{fmt(r.decidedAt)}</td>
                     <td>
-                      <button
-                        type="button"
-                        className={`btn sm ${r.status === 'master_approved' ? 'primary' : ''}`}
-                        title="Review completed task details & attachments"
-                        onClick={() => navigate(`/admin/orientation/review/${r.enrollmentId}`)}
-                      >
-                        <Eye size={13} /> {r.status === 'master_approved' ? 'Review & Approve' : 'Review'}
-                      </button>
+                      {(() => {
+                        const canApprove = isSuperAdmin && r.status === 'master_approved'
+                        return (
+                          <button
+                            type="button"
+                            className={`btn sm ${canApprove ? 'primary' : ''}`}
+                            title={canApprove ? "Review completed task details & attachments to approve or reject" : "Review completed task details & attachments"}
+                            onClick={() => navigate(`/admin/orientation/review/${r.enrollmentId}`)}
+                          >
+                            <Eye size={13} /> {canApprove ? 'Review & Approve' : 'Review'}
+                          </button>
+                        )
+                      })()}
                     </td>
                   </tr>
                 ))}
