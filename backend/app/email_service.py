@@ -146,11 +146,30 @@ def send_digest_email(admin_email: str | list[str], approvals: list):
 
         score_str = f"{ap['score']}%" if ap.get('score') is not None else "N/A"
 
+        status_val = (ap.get("status") or ap.get("vessel_status") or "").strip()
+        vessel_val = (ap.get("vessel") or "").strip()
+        is_onboard = status_val.lower() == "onboard"
+
+        if is_onboard:
+            vessel_html = (
+                f'<div style="font-size: 11.5px; font-weight: 600; color: #0f172a; margin-top: 3px;">{vessel_val}</div>'
+                if vessel_val
+                else ""
+            )
+            status_cell = (
+                f'<span style="display: inline-block; background-color: #dcfce7; color: #15803d; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 4px; border: 1px solid #bbf7d0;">ONBOARD</span>{vessel_html}'
+            )
+        else:
+            status_cell = (
+                '<span style="display: inline-block; background-color: #f1f5f9; color: #64748b; font-weight: 700; font-size: 11px; padding: 2px 7px; border-radius: 4px; border: 1px solid #e2e8f0;">LEAVE</span>'
+            )
+
         rows += f"""
         <tr>
             <td style="padding: 8px; border: 1px solid #ddd;">{ap['learner_name']}</td>
             <td style="padding: 8px; border: 1px solid #ddd;">{ap['crew_id']}</td>
             <td style="padding: 8px; border: 1px solid #ddd;">{ap.get('rank') or '—'}</td>
+            <td style="padding: 8px; border: 1px solid #ddd;">{status_cell}</td>
             <td style="padding: 8px; border: 1px solid #ddd;">{_format_mobile(ap.get('mobile_no')) or '—'}</td>
             <td style="padding: 8px; border: 1px solid #ddd;">{ap['course_title']}</td>
             <td style="padding: 8px; border: 1px solid #ddd;">{score_str}</td>
@@ -183,6 +202,7 @@ def send_digest_email(admin_email: str | list[str], approvals: list):
                     <th>Name</th>
                     <th>Crew ID</th>
                     <th>Rank</th>
+                    <th>Status / Vessel</th>
                     <th>Mobile No</th>
                     <th>Course</th>
                     <th>Score</th>

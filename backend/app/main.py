@@ -69,10 +69,19 @@ def send_pending_digest_job():
             ap.approval_token = token
             ap.digest_sent = True
 
+            emp_st = (user.emp_status or "").strip().upper()
+            vsl = (user.current_vessel or "").strip()
+            is_onboard = emp_st in ("SAIL", "ONBOARD")
+            status_label = "Onboard" if is_onboard else "Leave"
+            vessel_name = vsl if (is_onboard and vsl) else None
+
             approvals_list.append({
                 "learner_name": user.full_name,
                 "crew_id": user.crew_id,
                 "rank": user.rank,
+                "status": status_label,
+                "vessel": vessel_name,
+                "vessel_status": status_label,
                 "mobile_no": user.mobile_number,
                 "course_title": course.title,
                 "score": ap.score,

@@ -119,6 +119,10 @@ def _decode_approval_token(token: str) -> str:
 def _approve_remark_form_page(ap, user, course, token: str, error: str | None = None):
     score_str = f"{ap.score}%" if ap.score is not None else "N/A"
     error_html = f'<div class="error">{error}</div>' if error else ""
+    emp_st = (getattr(user, "emp_status", None) or "").strip().upper()
+    vsl = (getattr(user, "current_vessel", None) or "").strip()
+    is_onboard = emp_st in ("SAIL", "ONBOARD")
+    status_vessel_display = f"Onboard ({vsl})" if (is_onboard and vsl) else ("Onboard" if is_onboard else "Leave")
     return HTMLResponse(f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -167,6 +171,7 @@ def _approve_remark_form_page(ap, user, course, token: str, error: str | None = 
                 <div class="info-row"><span>Crew Member</span><span>{user.full_name}</span></div>
                 <div class="info-row"><span>Crew ID</span><span>{user.crew_id or '—'}</span></div>
                 <div class="info-row"><span>Rank</span><span>{user.rank or '—'}</span></div>
+                <div class="info-row"><span>Status / Vessel</span><span>{status_vessel_display}</span></div>
                 <div class="info-row"><span>Course</span><span>{course.title}</span></div>
                 <div class="info-row"><span>Score</span><span>{score_str}</span></div>
             </div>
