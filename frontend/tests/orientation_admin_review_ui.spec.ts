@@ -3,12 +3,14 @@ import { test, expect } from '@playwright/test'
 test.describe('Admin Orientation - Dedicated Approver-Style Review Page & File Preview', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/')
-    await page.waitForLoadState('domcontentloaded')
+    await page.waitForLoadState('networkidle')
+
+    if (page.url().includes('/admin')) return
 
     // Login as Admin
     const adminTab = page.getByRole('tab', { name: 'Admin' })
     if (await adminTab.isVisible({ timeout: 4000 }).catch(() => false)) {
-      await adminTab.click()
+      await adminTab.click({ force: true })
       await page.fill('#email', 'admin@ozellarmarine.com')
       await page.fill('#pw', 'Admin@123')
       await page.click('button[type="submit"]')
@@ -113,7 +115,7 @@ test.describe('Admin Orientation - Dedicated Approver-Style Review Page & File P
     }
   })
 
-  test('evidence cards inside review card open FilePreviewModal with universal format support', async ({ page }) => {
+  test('evidence cards inside review card open FilePreviewModal with universal format support and next/prev carousel navigation', async ({ page }) => {
     await page.goto('/admin/orientation-program/enrollments')
     await page.waitForLoadState('networkidle')
 
@@ -131,6 +133,33 @@ test.describe('Admin Orientation - Dedicated Approver-Style Review Page & File P
       await expect(fileModal).toBeVisible({ timeout: 6000 })
       await expect(fileModal.locator('.fpm-kind-badge')).toBeVisible()
       await expect(fileModal.locator('.fpm-title')).toBeVisible()
+
+      // When multiple attachments exist, verify next/prev carousel controls & strip
+      if (count > 1) {
+        const carouselNav = fileModal.locator('.fpm-carousel-nav')
+        await expect(carouselNav).toBeVisible()
+        await expect(fileModal.locator('.fpm-nav-counter')).toContainText(/1 \/ /)
+
+        // Floating edge next button
+        const nextEdgeBtn = fileModal.locator('.fpm-floating-edge--next')
+        await expect(nextEdgeBtn).toBeVisible()
+        await nextEdgeBtn.click()
+
+        // Counter updates to 2
+        await expect(fileModal.locator('.fpm-nav-counter')).toContainText(/2 \/ /)
+
+        // Bottom strip tabs exist and can switch back
+        const stripTabs = fileModal.locator('.fpm-strip-tab')
+        await expect(stripTabs).toHaveCount(count)
+        await stripTabs.first().click()
+        await expect(fileModal.locator('.fpm-nav-counter')).toContainText(/1 \/ /)
+
+        // Keyboard navigation (ArrowRight and ArrowLeft)
+        await page.keyboard.press('ArrowRight')
+        await expect(fileModal.locator('.fpm-nav-counter')).toContainText(/2 \/ /)
+        await page.keyboard.press('ArrowLeft')
+        await expect(fileModal.locator('.fpm-nav-counter')).toContainText(/1 \/ /)
+      }
 
       // Close modal
       await fileModal.locator('.fpm-close-btn').click()

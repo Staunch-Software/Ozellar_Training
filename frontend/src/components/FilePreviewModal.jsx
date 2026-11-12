@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   X, ExternalLink, Download, ZoomIn, ZoomOut, RotateCw, RotateCcw,
   FileText, Image as ImageIcon, Video, Music, FileSpreadsheet,
-  FileArchive, File, Copy, Check, Table, AlertCircle, FileQuestion, Maximize2, Search
+  FileArchive, File, Copy, Check, Table, AlertCircle, FileQuestion, Maximize2, Search,
+  ChevronLeft, ChevronRight, Layers
 } from 'lucide-react'
 import './FilePreviewModal.css'
 
@@ -304,7 +305,40 @@ export function cleanFileName(url = '', fallback = 'Attachment') {
   }
 }
 
-export default function FilePreviewModal({ url, title, onClose }) {
+export default function FilePreviewModal({
+  url,
+  title,
+  items,          // Optional array of { url, title, taskTitle }
+  initialIndex = 0,
+  taskTitle = '',
+  onClose
+}) {
+  const activeItems = useMemo(() => {
+    if (Array.isArray(items) && items.length > 0) return items
+    if (url) return [{ url, title: title || cleanFileName(url), taskTitle }]
+    return []
+  }, [items, url, title, taskTitle])
+
+  const [currentIndex, setCurrentIndex] = useState(() => {
+    const init = typeof initialIndex === 'number' ? initialIndex : 0
+    return Math.max(0, Math.min(Math.max(0, activeItems.length - 1), init))
+  })
+
+  useEffect(() => {
+    if (typeof initialIndex === 'number' && initialIndex >= 0) {
+      setCurrentIndex(Math.max(0, Math.min(Math.max(0, activeItems.length - 1), initialIndex)))
+    }
+  }, [initialIndex, activeItems.length])
+
+  const currentItem = activeItems[currentIndex] || activeItems[0] || {}
+  const activeUrl = currentItem.url || url
+  const activeTitle = currentItem.title || title || cleanFileName(activeUrl)
+  const activeTaskTitle = currentItem.taskTitle || taskTitle
+  const hasMultiple = activeItems.length > 1
+
+  const goPrev = () => setCurrentIndex((idx) => Math.max(0, idx - 1))
+  const goNext = () => setCurrentIndex((idx) => Math.min(activeItems.length - 1, idx + 1))
+
   const [scale, setScale] = useState(1)
   const [rotate, setRotate] = useState(0)
   const [copied, setCopied] = useState(false)
@@ -313,33 +347,36 @@ export default function FilePreviewModal({ url, title, onClose }) {
   const [textLoading, setTextLoading] = useState(false)
   const [textError, setTextError] = useState(null)
 
-  const meta = useMemo(() => detectFileType(url, title), [url, title])
-  const displayName = useMemo(() => title || cleanFileName(url), [url, title])
+  const meta = useMemo(() => detectFileType(activeUrl, activeTitle), [activeUrl, activeTitle])
+  const displayName = useMemo(() => activeTitle || cleanFileName(activeUrl), [activeTitle, activeUrl])
   const Icon = meta.icon
 
-  // Close on Escape key
+  // Close on Escape, Next/Prev on ArrowLeft / ArrowRight
   useEffect(() => {
     const onKey = (e) => {
+      if (['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName)) return
       if (e.key === 'Escape') onClose?.()
+      if (e.key === 'ArrowLeft' && hasMultiple) goPrev()
+      if (e.key === 'ArrowRight' && hasMultiple) goNext()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [onClose, hasMultiple, activeItems.length])
 
-  // Reset transforms when url changes
+  // Reset transforms when activeUrl changes
   useEffect(() => {
     setScale(1)
     setRotate(0)
     setTextContent(null)
     setTextError(null)
-  }, [url])
+  }, [activeUrl])
 
   // If text file or CSV, load content
   useEffect(() => {
-    if (meta.kind === 'text' && url) {
+    if (meta.kind === 'text' && activeUrl) {
       setTextLoading(true)
       setTextError(null)
-      fetch(url)
+      fetch(activeUrl)
         .then((res) => {
           if (!res.ok) throw new Error(`HTTP ${res.status}`)
           return res.text()
@@ -353,12 +390,12 @@ export default function FilePreviewModal({ url, title, onClose }) {
           setTextLoading(false)
         })
     }
-  }, [meta.kind, url])
+  }, [meta.kind, activeUrl])
 
   const handleDownload = async () => {
-    if (!url) return
+    if (!activeUrl) return
     try {
-      const res = await fetch(url)
+      const res = await fetch(activeUrl)
       const blob = await res.blob()
       const blobUrl = URL.createObjectURL(blob)
       const a = document.createElement('a')
@@ -369,7 +406,7 @@ export default function FilePreviewModal({ url, title, onClose }) {
       a.remove()
       setTimeout(() => URL.revokeObjectURL(blobUrl), 1000)
     } catch {
-      window.open(url, '_blank')
+      window.open(activeUrl, '_blank')
     }
   }
 
@@ -408,7 +445,7 @@ export default function FilePreviewModal({ url, title, onClose }) {
     })
   }, [meta.ext, textContent])
 
-  if (!url) return null
+  if (!activeUrl && activeItems.length === 0) return null
 
   return (
     <div className="fpm-overlay" onClick={(e) => e.target === e.currentTarget && onClose?.()}>
@@ -424,7 +461,46 @@ export default function FilePreviewModal({ url, title, onClose }) {
               <h3 className="fpm-title">{displayName}</h3>
               <span className="fpm-ext-pill">.{meta.ext.toUpperCase()}</span>
             </div>
+            {activeTaskTitle && (
+              <div className="fpm-task-pill" title={activeTaskTitle}>
+                <span className="fpm-task-pill-dot" />
+                <span className="fpm-task-pill-text">{activeTaskTitle}</span>
+              </div>
+            )}
           </div>
+
+          {/* Carousel Next / Prev Controls */}
+          {hasMultiple && (
+            <div className="fpm-carousel-nav">
+              <button
+                type="button"
+                className="fpm-nav-btn"
+                disabled={currentIndex === 0}
+                onClick={goPrev}
+                title="Previous attachment (ArrowLeft)"
+                aria-label="Previous attachment"
+              >
+                <ChevronLeft size={16} />
+                <span className="fpm-nav-btn-text">Prev</span>
+              </button>
+              <div className="fpm-nav-counter">
+                <span className="fpm-counter-current">{currentIndex + 1}</span>
+                <span className="fpm-counter-sep">/</span>
+                <span className="fpm-counter-total">{activeItems.length}</span>
+              </div>
+              <button
+                type="button"
+                className="fpm-nav-btn"
+                disabled={currentIndex === activeItems.length - 1}
+                onClick={goNext}
+                title="Next attachment (ArrowRight)"
+                aria-label="Next attachment"
+              >
+                <span className="fpm-nav-btn-text">Next</span>
+                <ChevronRight size={16} />
+              </button>
+            </div>
+          )}
 
           <div className="fpm-header-actions">
             {/* Image zoom controls */}
@@ -514,7 +590,7 @@ export default function FilePreviewModal({ url, title, onClose }) {
 
             {/* Open in new tab */}
             <a
-              href={url}
+              href={activeUrl}
               target="_blank"
               rel="noreferrer"
               className="fpm-action-btn fpm-open-link"
@@ -538,11 +614,36 @@ export default function FilePreviewModal({ url, title, onClose }) {
 
         {/* Body Viewer */}
         <div className="fpm-body">
+          {/* Floating Edge Arrows for Quick Navigation */}
+          {hasMultiple && currentIndex > 0 && (
+            <button
+              type="button"
+              className="fpm-floating-edge fpm-floating-edge--prev"
+              onClick={goPrev}
+              title="Previous Attachment (ArrowLeft)"
+              aria-label="Previous Attachment"
+            >
+              <ChevronLeft size={22} />
+            </button>
+          )}
+
+          {hasMultiple && currentIndex < activeItems.length - 1 && (
+            <button
+              type="button"
+              className="fpm-floating-edge fpm-floating-edge--next"
+              onClick={goNext}
+              title="Next Attachment (ArrowRight)"
+              aria-label="Next Attachment"
+            >
+              <ChevronRight size={22} />
+            </button>
+          )}
+
           {/* 1. Images */}
           {meta.kind === 'image' && (
             <div className="fpm-image-stage">
               <img
-                src={url}
+                src={activeUrl}
                 alt={displayName}
                 style={{
                   transform: `scale(${scale}) rotate(${rotate}deg)`,
@@ -557,7 +658,7 @@ export default function FilePreviewModal({ url, title, onClose }) {
           {meta.kind === 'pdf' && (
             <div className="fpm-pdf-frame-wrap">
               <iframe
-                src={`${url}#toolbar=1&navpanes=0`}
+                src={`${activeUrl}#toolbar=1&navpanes=0`}
                 title={displayName}
                 className="fpm-pdf-iframe"
               />
@@ -577,7 +678,7 @@ export default function FilePreviewModal({ url, title, onClose }) {
                 <div className="fpm-error-box">
                   <AlertCircle size={24} color="#ef4444" />
                   <p>{textError}</p>
-                  <a href={url} target="_blank" rel="noreferrer" className="btn sm">
+                  <a href={activeUrl} target="_blank" rel="noreferrer" className="btn sm">
                     Open File Directly
                   </a>
                 </div>
@@ -623,7 +724,7 @@ export default function FilePreviewModal({ url, title, onClose }) {
           {meta.kind === 'video' && (
             <div className="fpm-media-stage">
               <video
-                src={url}
+                src={activeUrl}
                 controls
                 autoPlay
                 className="fpm-video-player"
@@ -643,7 +744,7 @@ export default function FilePreviewModal({ url, title, onClose }) {
                 <h4 className="fpm-audio-title">{displayName}</h4>
                 <p className="fpm-audio-sub">Audio Attachment</p>
                 <audio
-                  src={url}
+                  src={activeUrl}
                   controls
                   autoPlay
                   className="fpm-audio-player"
@@ -657,7 +758,7 @@ export default function FilePreviewModal({ url, title, onClose }) {
           {/* 6. Word Document (.docx inline viewer) */}
           {meta.kind === 'word' && meta.ext === 'docx' && (
             <DocxViewer
-              url={url}
+              url={activeUrl}
               displayName={displayName}
               onDownload={handleDownload}
             />
@@ -666,7 +767,7 @@ export default function FilePreviewModal({ url, title, onClose }) {
           {/* 7. Excel Spreadsheet (.xlsx / .xls inline spreadsheet grid) */}
           {meta.kind === 'excel' && (
             <ExcelViewer
-              url={url}
+              url={activeUrl}
               displayName={displayName}
               onDownload={handleDownload}
             />
@@ -692,7 +793,7 @@ export default function FilePreviewModal({ url, title, onClose }) {
                   <button type="button" className="fpm-btn-primary" onClick={handleDownload}>
                     <Download size={15} /> Download Document
                   </button>
-                  <a href={url} target="_blank" rel="noreferrer" className="fpm-btn-secondary">
+                  <a href={activeUrl} target="_blank" rel="noreferrer" className="fpm-btn-secondary">
                     <ExternalLink size={15} /> Open in New Tab
                   </a>
                 </div>
@@ -719,7 +820,7 @@ export default function FilePreviewModal({ url, title, onClose }) {
                   <button type="button" className="fpm-btn-primary" onClick={handleDownload}>
                     <Download size={15} /> Download {meta.label}
                   </button>
-                  <a href={url} target="_blank" rel="noreferrer" className="fpm-btn-secondary">
+                  <a href={activeUrl} target="_blank" rel="noreferrer" className="fpm-btn-secondary">
                     <ExternalLink size={15} /> Open Link
                   </a>
                 </div>
@@ -727,6 +828,36 @@ export default function FilePreviewModal({ url, title, onClose }) {
             </div>
           )}
         </div>
+
+        {/* Bottom Attachment Strip Track */}
+        {hasMultiple && (
+          <div className="fpm-strip-footer">
+            <div className="fpm-strip-label">
+              <Layers size={13} />
+              <span>QUESTION ATTACHMENTS ({activeItems.length})</span>
+            </div>
+            <div className="fpm-strip-track">
+              {activeItems.map((item, i) => {
+                const itemMeta = detectFileType(item.url, item.title)
+                const ItemIcon = itemMeta.icon
+                const isSel = i === currentIndex
+                return (
+                  <button
+                    key={item.url + i}
+                    type="button"
+                    className={`fpm-strip-tab ${isSel ? 'selected' : ''}`}
+                    onClick={() => setCurrentIndex(i)}
+                    title={`Switch to Attachment ${i + 1}: ${item.title}`}
+                  >
+                    <span className="fpm-strip-badge">#{i + 1}</span>
+                    <ItemIcon size={13} style={{ color: itemMeta.color }} />
+                    <span className="fpm-strip-title">{item.title}</span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

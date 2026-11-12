@@ -37,7 +37,7 @@ function PremiumEvidenceCard({ url, taskTitle, onOpen }) {
   return (
     <div
       className="orp-evidence-card"
-      onClick={() => onOpen(url, `${taskTitle} — ${fileName}`)}
+      onClick={onOpen}
       title={`Click to preview ${fileName}`}
     >
       <div className={`orp-evidence-thumb orp-evidence-thumb--${meta.kind}`}>
@@ -246,12 +246,24 @@ export default function AdminOrientationReviewPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const [idx, setIdx] = useState(0)
-  const [viewer, setViewer] = useState(null) // { url, title }
+  const [viewer, setViewer] = useState(null) // { items, index, taskTitle }
   const [deciding, setDeciding] = useState(false)
   const activePipRef = useRef(null)
   const { confirm, dialog } = useConfirm()
 
-  const openViewer = (url, taskTitle) => setViewer({ url, title: taskTitle })
+  const openViewer = (clickedIdx) => {
+    const proofUrls = task?.proofUrls || []
+    const items = proofUrls.map((u, i) => ({
+      url: u,
+      title: attachmentLabel(u, i, proofUrls.length),
+      taskTitle: `Task #${idx + 1}: ${task?.title || 'Checklist Requirement'}`
+    }))
+    setViewer({
+      items,
+      index: clickedIdx,
+      taskTitle: `Task #${idx + 1}: ${task?.title || ''}`
+    })
+  }
 
   const loadData = () => {
     if (!id) return
@@ -332,7 +344,14 @@ export default function AdminOrientationReviewPage() {
   return (
     <div className="orp-container">
       {dialog}
-      {viewer && <FilePreviewModal url={viewer.url} title={viewer.title} onClose={() => setViewer(null)} />}
+      {viewer && (
+        <FilePreviewModal
+          items={viewer.items}
+          initialIndex={viewer.index}
+          taskTitle={viewer.taskTitle}
+          onClose={() => setViewer(null)}
+        />
+      )}
 
       <div className="orp-frame">
         {loading && !data && (
@@ -511,7 +530,7 @@ export default function AdminOrientationReviewPage() {
                             key={url}
                             url={url}
                             taskTitle={attachmentLabel(url, i, evidenceCount)}
-                            onOpen={openViewer}
+                            onOpen={() => openViewer(i)}
                           />
                         ))}
                       </div>
