@@ -461,6 +461,11 @@ function SendReminderModal({
   const [testBusy, setTestBusy] = useState(false)
   const [testFeedback, setTestFeedback] = useState(null)
 
+  useEffect(() => {
+    setTestEmail('')
+    setTestFeedback(null)
+  }, [])
+
   const missingEmailCount = Math.max(0, eligibleCount - withEmailCount)
 
   const handleSendTest = async () => {
@@ -579,11 +584,15 @@ function SendReminderModal({
                 <input
                   type="email"
                   id="asg-test-email-input"
+                  name="custom-test-email-no-autofill"
                   className="asg-modal-test-input"
                   placeholder="Enter test recipient email..."
                   value={testEmail}
                   onChange={(e) => setTestEmail(e.target.value)}
                   disabled={testBusy}
+                  autoComplete="off"
+                  autoCorrect="off"
+                  spellCheck="false"
                 />
                 <button
                   type="button"
