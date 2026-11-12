@@ -739,6 +739,283 @@
   }
 }
 
+/* ============================================================
+   Interactive Excel Spreadsheet Viewer (.xlsx / .xls)
+   ============================================================ */
+.fpm-excel-container {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  background: var(--surface, #ffffff);
+  overflow: hidden;
+}
+
+.fpm-excel-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid var(--border, #cbd5e1);
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.fpm-excel-info {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+}
+
+.fpm-excel-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.fpm-excel-search svg:first-child {
+  position: absolute;
+  left: 10px;
+  color: #94a3b8;
+  pointer-events: none;
+}
+
+.fpm-excel-search input {
+  padding: 5px 26px 5px 28px;
+  font-size: 12px;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  outline: none;
+  width: 170px;
+  transition: all 0.15s ease;
+}
+
+.fpm-excel-search input:focus {
+  border-color: #107c41;
+  box-shadow: 0 0 0 2px rgba(16, 124, 65, 0.15);
+  width: 210px;
+}
+
+.fpm-excel-clear-btn {
+  position: absolute;
+  right: 6px;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.fpm-excel-grid-scroll {
+  flex: 1;
+  overflow: auto;
+  min-height: 0;
+  background: #ffffff;
+}
+
+.fpm-excel-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: max-content;
+  font-size: 12px;
+  font-family: inherit;
+}
+
+.fpm-excel-corner-cell {
+  position: sticky;
+  top: 0;
+  left: 0;
+  z-index: 3;
+  width: 48px;
+  min-width: 48px;
+  background: #e2e8f0;
+  border-right: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
+}
+
+.fpm-excel-col-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 700;
+  text-align: center;
+  padding: 5px 12px;
+  border-right: 1px solid #cbd5e1;
+  border-bottom: 1px solid #cbd5e1;
+  min-width: 90px;
+  user-select: none;
+}
+
+.fpm-excel-row-header {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background: #f1f5f9;
+  color: #475569;
+  font-weight: 700;
+  text-align: center;
+  padding: 4px 8px;
+  border-right: 1px solid #cbd5e1;
+  border-bottom: 1px solid #e2e8f0;
+  width: 48px;
+  min-width: 48px;
+  user-select: none;
+}
+
+.fpm-excel-cell {
+  border-right: 1px solid #edf2f7;
+  border-bottom: 1px solid #edf2f7;
+  padding: 6px 12px;
+  color: #0f172a;
+  white-space: nowrap;
+  max-width: 320px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12px;
+  background: #ffffff;
+}
+
+.fpm-excel-cell:hover {
+  background: #f8fafc;
+}
+
+.fpm-excel-empty {
+  padding: 30px;
+  text-align: center;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.fpm-excel-sheet-tabs {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 12px;
+  background: #e2e8f0;
+  border-top: 1px solid #cbd5e1;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.fpm-excel-tab {
+  border: 1px solid #cbd5e1;
+  border-bottom: none;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 11.5px;
+  font-weight: 700;
+  padding: 5px 14px;
+  border-radius: 6px 6px 0 0;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+}
+
+.fpm-excel-tab:hover {
+  background: #ffffff;
+  color: #0f172a;
+}
+
+.fpm-excel-tab.active {
+  background: #ffffff;
+  color: #107c41;
+  border-top: 2px solid #107c41;
+}
+
+/* ============================================================
+   Interactive Word Document Viewer (.docx)
+   ============================================================ */
+.fpm-docx-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  background: #525659;
+  padding: 24px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.fpm-docx-container {
+  width: 100%;
+  max-width: 900px;
+}
+
+.fpm-docx-container .docx-wrapper {
+  background: transparent !important;
+  padding: 0 !important;
+}
+
+.fpm-docx-container .docx {
+  margin-bottom: 24px !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25) !important;
+  border-radius: 4px !important;
+}
+
+/* Dark mode for Excel viewer */
+:root[data-theme="dark"] .fpm-excel-container,
+:root[data-theme="dark"] .fpm-excel-grid-scroll {
+  background: #111724;
+}
+
+:root[data-theme="dark"] .fpm-excel-toolbar {
+  background: #161e2e;
+  border-bottom-color: #243046;
+}
+
+:root[data-theme="dark"] .fpm-excel-info {
+  color: #e2e8f0;
+}
+
+:root[data-theme="dark"] .fpm-excel-search input {
+  background: #101623;
+  border-color: #2a374e;
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .fpm-excel-corner-cell,
+:root[data-theme="dark"] .fpm-excel-col-header,
+:root[data-theme="dark"] .fpm-excel-row-header {
+  background: #1a2233;
+  color: #94a3b8;
+  border-color: #28364e;
+}
+
+:root[data-theme="dark"] .fpm-excel-cell {
+  background: #111724;
+  color: #e2e8f0;
+  border-color: #1f293d;
+}
+
+:root[data-theme="dark"] .fpm-excel-cell:hover {
+  background: #1a2336;
+}
+
+:root[data-theme="dark"] .fpm-excel-sheet-tabs {
+  background: #0d121c;
+  border-top-color: #243046;
+}
+
+:root[data-theme="dark"] .fpm-excel-tab {
+  background: #161e2e;
+  border-color: #243046;
+  color: #94a3b8;
+}
+
+:root[data-theme="dark"] .fpm-excel-tab.active {
+  background: #1e293b;
+  color: #34d399;
+  border-top-color: #34d399;
+}
+
 /* Mobile responsive */
 @media (max-width: 768px) {
   .fpm-overlay {

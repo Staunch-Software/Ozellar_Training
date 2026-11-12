@@ -2,9 +2,256 @@ import { useState, useEffect, useRef, useMemo } from 'react'
 import {
   X, ExternalLink, Download, ZoomIn, ZoomOut, RotateCw, RotateCcw,
   FileText, Image as ImageIcon, Video, Music, FileSpreadsheet,
-  FileArchive, File, Copy, Check, Table, AlertCircle, FileQuestion, Maximize2
+  FileArchive, File, Copy, Check, Table, AlertCircle, FileQuestion, Maximize2, Search
 } from 'lucide-react'
 import './FilePreviewModal.css'
+
+function colToLetter(colIndex) {
+  let temp, letter = ''
+  let col = colIndex + 1
+  while (col > 0) {
+    temp = (col - 1) % 26
+    letter = String.fromCharCode(65 + temp) + letter
+    col = Math.floor((col - temp) / 26)
+  }
+  return letter
+}
+
+// -------------------------------------------------------------
+// Interactive In-Browser Excel Spreadsheet Viewer (.xlsx, .xls)
+// -------------------------------------------------------------
+function ExcelViewer({ url, displayName, onDownload }) {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [workbook, setWorkbook] = useState(null)
+  const [activeSheet, setActiveSheet] = useState('')
+  const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    setWorkbook(null)
+
+    import('xlsx')
+      .then((XLSX) => {
+        return fetch(url)
+          .then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            return res.arrayBuffer()
+          })
+          .then((buffer) => {
+            if (cancelled) return
+            const wb = XLSX.read(buffer, { type: 'array' })
+            const sheetNames = wb.SheetNames || []
+            if (sheetNames.length === 0) throw new Error('Workbook contains no sheets')
+            const sheetsData = {}
+            sheetNames.forEach((name) => {
+              const ws = wb.Sheets[name]
+              sheetsData[name] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' })
+            })
+            setWorkbook({ sheetNames, sheetsData })
+            setActiveSheet(sheetNames[0])
+            setLoading(false)
+          })
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err.message || 'Could not parse Excel spreadsheet')
+          setLoading(false)
+        }
+      })
+
+    return () => { cancelled = true }
+  }, [url])
+
+  const rows = workbook?.sheetsData?.[activeSheet] || []
+  const maxCols = useMemo(() => {
+    return rows.reduce((max, r) => Math.max(max, Array.isArray(r) ? r.length : 0), 0)
+  }, [rows])
+
+  const filteredRows = useMemo(() => {
+    if (!search.trim()) return rows
+    const q = search.trim().toLowerCase()
+    return rows.filter((row) =>
+      Array.isArray(row) && row.some((cell) => String(cell || '').toLowerCase().includes(q))
+    )
+  }, [rows, search])
+
+  if (loading) {
+    return (
+      <div className="fpm-loading-box">
+        <div className="spinner" />
+        <p>Loading spreadsheet ({displayName})...</p>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="fpm-error-box">
+        <AlertCircle size={28} color="#ef4444" />
+        <p>Unable to preview Excel workbook inline: {error}</p>
+        <button type="button" className="btn sm primary" onClick={onDownload}>
+          <Download size={14} /> Download File
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className="fpm-excel-container">
+      {/* Excel Sheet Toolbar */}
+      <div className="fpm-excel-toolbar">
+        <div className="fpm-excel-info">
+          <FileSpreadsheet size={15} color="#107c41" />
+          <span>{rows.length} rows · {maxCols} columns</span>
+        </div>
+        <div className="fpm-excel-search">
+          <Search size={13} />
+          <input
+            type="text"
+            placeholder="Filter cells..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+          {search && (
+            <button type="button" className="fpm-excel-clear-btn" onClick={() => setSearch('')}>
+              <X size={12} />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Spreadsheet Grid */}
+      <div className="fpm-excel-grid-scroll">
+        <table className="fpm-excel-table">
+          <thead>
+            <tr>
+              <th className="fpm-excel-corner-cell"></th>
+              {Array.from({ length: maxCols }).map((_, cIdx) => (
+                <th key={cIdx} className="fpm-excel-col-header">
+                  {colToLetter(cIdx)}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {filteredRows.length === 0 ? (
+              <tr>
+                <td colSpan={maxCols + 1} className="fpm-excel-empty">
+                  No matching cells found
+                </td>
+              </tr>
+            ) : (
+              filteredRows.map((row, rIdx) => (
+                <tr key={rIdx}>
+                  <td className="fpm-excel-row-header">{rIdx + 1}</td>
+                  {Array.from({ length: maxCols }).map((_, cIdx) => {
+                    const val = Array.isArray(row) ? row[cIdx] : ''
+                    const text = val !== undefined && val !== null ? String(val) : ''
+                    return (
+                      <td key={cIdx} className="fpm-excel-cell" title={text}>
+                        {text}
+                      </td>
+                    )
+                  })}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Sheet Tabs Bar */}
+      {workbook?.sheetNames?.length > 1 && (
+        <div className="fpm-excel-sheet-tabs">
+          {workbook.sheetNames.map((name) => (
+            <button
+              key={name}
+              type="button"
+              className={`fpm-excel-tab ${activeSheet === name ? 'active' : ''}`}
+              onClick={() => { setActiveSheet(name); setSearch('') }}
+            >
+              {name}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// -------------------------------------------------------------
+// Interactive In-Browser Word Document Viewer (.docx)
+// -------------------------------------------------------------
+function DocxViewer({ url, displayName, onDownload }) {
+  const containerRef = useRef(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+
+    import('docx-preview')
+      .then((docx) => {
+        return fetch(url)
+          .then((res) => {
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            return res.arrayBuffer()
+          })
+          .then((buffer) => {
+            if (cancelled || !containerRef.current) return
+            containerRef.current.innerHTML = ''
+            return docx.renderAsync(buffer, containerRef.current, undefined, {
+              className: 'fpm-docx-doc',
+              inWrapper: true,
+              ignoreWidth: false,
+              ignoreHeight: false,
+              breakPages: true,
+            })
+          })
+          .then(() => {
+            if (!cancelled) setLoading(false)
+          })
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(err.message || 'Could not parse Word document')
+          setLoading(false)
+        }
+      })
+
+    return () => { cancelled = true }
+  }, [url])
+
+  return (
+    <div className="fpm-docx-wrapper">
+      {loading && (
+        <div className="fpm-loading-box">
+          <div className="spinner" />
+          <p>Loading and rendering Word document ({displayName})...</p>
+        </div>
+      )}
+      {error && (
+        <div className="fpm-error-box">
+          <AlertCircle size={28} color="#ef4444" />
+          <p>Unable to preview Word document inline: {error}</p>
+          <button type="button" className="btn sm primary" onClick={onDownload}>
+            <Download size={14} /> Download Document
+          </button>
+        </div>
+      )}
+      <div
+        ref={containerRef}
+        className="fpm-docx-container"
+        style={{ display: loading || error ? 'none' : 'block' }}
+      />
+    </div>
+  )
+}
 
 export function detectFileType(url = '', fallbackName = '') {
   const cleanUrl = (url || '').split('?')[0].split('#')[0]
@@ -407,8 +654,26 @@ export default function FilePreviewModal({ url, title, onClose }) {
             </div>
           )}
 
-          {/* 6. Office Documents (Word, Excel, PowerPoint) */}
-          {['word', 'excel', 'powerpoint'].includes(meta.kind) && (
+          {/* 6. Word Document (.docx inline viewer) */}
+          {meta.kind === 'word' && meta.ext === 'docx' && (
+            <DocxViewer
+              url={url}
+              displayName={displayName}
+              onDownload={handleDownload}
+            />
+          )}
+
+          {/* 7. Excel Spreadsheet (.xlsx / .xls inline spreadsheet grid) */}
+          {meta.kind === 'excel' && (
+            <ExcelViewer
+              url={url}
+              displayName={displayName}
+              onDownload={handleDownload}
+            />
+          )}
+
+          {/* 8. Legacy Word (.doc) and PowerPoint (.pptx / .ppt) */}
+          {((meta.kind === 'word' && meta.ext !== 'docx') || meta.kind === 'powerpoint') && (
             <div className="fpm-doc-stage">
               <div className={`fpm-doc-card fpm-doc-card--${meta.kind}`}>
                 <div className="fpm-doc-icon-box">
@@ -418,8 +683,7 @@ export default function FilePreviewModal({ url, title, onClose }) {
                   <div className="fpm-doc-badge">{meta.label}</div>
                   <h4 className="fpm-doc-title">{displayName}</h4>
                   <p className="fpm-doc-desc">
-                    {meta.kind === 'word' && 'Microsoft Word document (.docx / .doc). Complete formatted document with rich text, tables, and attachments.'}
-                    {meta.kind === 'excel' && 'Microsoft Excel spreadsheet (.xlsx / .xls). Structured workbook with financial or operational data tables.'}
+                    {meta.kind === 'word' && 'Legacy Microsoft Word document (.doc). Download to view with full formatting on your workstation.'}
                     {meta.kind === 'powerpoint' && 'Microsoft PowerPoint presentation (.pptx / .ppt). High-impact training slides and briefings.'}
                   </p>
                 </div>
@@ -436,7 +700,7 @@ export default function FilePreviewModal({ url, title, onClose }) {
             </div>
           )}
 
-          {/* 7. Archive & Other File Types */}
+          {/* 9. Archive & Other File Types */}
           {['archive', 'file'].includes(meta.kind) && (
             <div className="fpm-doc-stage">
               <div className="fpm-doc-card fpm-doc-card--generic">
