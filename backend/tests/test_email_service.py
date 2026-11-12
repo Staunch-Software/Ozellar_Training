@@ -257,20 +257,74 @@ def test_send_course_reminder_email():
         subject = kwargs.get("subject") or mock_send.call_args[0][1]
         html = kwargs.get("html_content") or mock_send.call_args[0][2]
         from_email = kwargs.get("from_email")
+        cc_emails = kwargs.get("cc_emails")
         assert to_email == "seafarer@example.com"
         assert from_email == "data@ozellar.com"
         assert "Complete Your Assigned Courses" in subject
         assert "Good day" in html
-        assert "Sudarsan" in html
-        assert "data@ozellar.com" in html
+        # Best regards and Sudarsan sign-off removed
+        html_lower = html.lower()
+        assert "best regards" not in html_lower
+        # Support email updated to techdevops@ozellar.com
+        assert "techdevops@ozellar.com" in html
+        # Default test notification line removed from footer
+        assert "automated training notification sent from" not in html_lower
+        # Green & Orange theme verified
+        assert "#064e3b" in html or "#059669" in html
+        assert "#E07820" in html or "#ea580c" in html or "#f97316" in html
         assert "https://training.ozellar.com" in html
         assert "Engine Room Safety" in html
         assert "Bridge Resource Management" in html
-        html_lower = html.lower()
         assert "access" in html_lower
         assert "seafarer" in html_lower
         assert "passport size photo" in html_lower
         assert "complete the assigned courses" in html_lower
+        # CC verified
+        assert "sudarsan.s@ozellar.com" in cc_emails
+        assert "shweta.s@ozellar.com" in cc_emails
+
+
+def test_send_email_graph_api_cc_payload():
+    with patch.object(email_service, "_get_access_token", return_value="mock-token"):
+        with patch("requests.post") as mock_post:
+            mock_post.return_value.status_code = 202
+            mock_post.return_value.raise_for_status = lambda: None
+
+            ok = email_service._send_email(
+                to_email="candidate@example.com",
+                subject="Test Subject",
+                html_content="<p>Test Content</p>",
+                from_email="data@ozellar.com",
+                cc_emails=["sudarsan.s@ozellar.com", "shweta.s@ozellar.com", "candidate@example.com"]
+            )
+            assert ok is True
+            mock_post.assert_called_once()
+            json_body = mock_post.call_args.kwargs["json"]
+            message = json_body["message"]
+            assert message["toRecipients"] == [{"emailAddress": {"address": "candidate@example.com"}}]
+            # candidate@example.com is deduplicated from CC since it's the primary recipient
+            assert message["ccRecipients"] == [
+                {"emailAddress": {"address": "sudarsan.s@ozellar.com"}},
+                {"emailAddress": {"address": "shweta.s@ozellar.com"}},
+            ]
+
+
+def test_send_approval_email_cc_and_no_best_regards():
+    with patch.object(email_service, "_send_email", return_value=True) as mock_send:
+        email_service.send_approval_email(
+            crew_email="sailor@ozellar.com",
+            crew_name="Sailor Boy",
+            course_title="Sea Survival",
+            cert_pdf=b"%PDF-1.4",
+            cert_id="CERT123"
+        )
+        mock_send.assert_called_once()
+        kwargs = mock_send.call_args.kwargs
+        html = kwargs.get("html_content") or mock_send.call_args[0][2]
+        cc_emails = kwargs.get("cc_emails")
+        assert "best regards" not in html.lower()
+        assert "sudarsan.s@ozellar.com" in cc_emails
+        assert "shweta.s@ozellar.com" in cc_emails
 
 
 def test_send_course_reminder_batch():

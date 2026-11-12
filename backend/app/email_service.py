@@ -12,6 +12,11 @@ CLIENT_SECRET = os.getenv("AZURE_CLIENT_SECRET")
 SMTP_USER = os.getenv("SMTP_USER", "techdevops@ozellar.com")
 # Dedicated separate sender for course assignment & reminder emails:
 COURSE_REMINDER_SENDER = os.getenv("COURSE_REMINDER_SENDER", "data@ozellar.com")
+# CC recipients for course completion reminder emails:
+COURSE_REMINDER_CC_RAW = os.getenv("COURSE_REMINDER_CC", "sudarsan.s@ozellar.com, shweta.s@ozellar.com")
+DEFAULT_COURSE_REMINDER_CC = [
+    c.strip() for c in re.split(r"[,;]", COURSE_REMINDER_CC_RAW) if c.strip()
+]
 PUBLIC_BASE_URL = os.getenv("PUBLIC_BASE_URL", "https://training.ozellar.com")
 PRODUCTION_PORTAL_URL = "https://training.ozellar.com"
 
@@ -36,7 +41,14 @@ def _get_access_token():
         return None
 
 
-def _send_email(to_email: str, subject: str, html_content: str, attachment=None, from_email: str = None) -> bool:
+def _send_email(
+    to_email: str,
+    subject: str,
+    html_content: str,
+    attachment=None,
+    from_email: str = None,
+    cc_emails: list[str] | str | None = None
+) -> bool:
     token = _get_access_token()
     if not token:
         print(f"[email_service] Email sending skipped (missing Graph API credentials or token error). To: {to_email}")
@@ -64,6 +76,23 @@ def _send_email(to_email: str, subject: str, html_content: str, attachment=None,
         ],
         "attachments": []
     }
+
+    if cc_emails:
+        if isinstance(cc_emails, str):
+            raw_ccs = re.split(r"[,;]", cc_emails)
+        else:
+            raw_ccs = cc_emails
+        to_lower = to_email.strip().lower()
+        valid_ccs = []
+        for cc in raw_ccs:
+            cleaned = (cc or "").strip()
+            if cleaned and cleaned.lower() != to_lower and cleaned not in valid_ccs:
+                valid_ccs.append(cleaned)
+        if valid_ccs:
+            message["ccRecipients"] = [
+                {"emailAddress": {"address": cc}}
+                for cc in valid_ccs
+            ]
     
     if attachment:
         filename, content_bytes = attachment
@@ -222,7 +251,7 @@ def send_digest_email(admin_email: str | list[str], approvals: list):
         _send_email(recipient, f"Pending Assessment Approvals ({len(approvals)})", html)
 
 
-def send_approval_email(crew_email: str, crew_name: str, course_title: str, cert_pdf: bytes, cert_id: str):
+def send_approval_email(crew_email: str, crew_name: str, course_title: str, cert_pdf: bytes, cert_id: str, cc_emails: list[str] | str | None = None):
     """Sends the generated certificate to the crew member after admin approval."""
     html = f"""
     <html>
@@ -231,7 +260,7 @@ def send_approval_email(crew_email: str, crew_name: str, course_title: str, cert
         <p>Congratulations! Your final assessment for <b>{course_title}</b> has been approved.</p>
         <p>Your certificate is attached to this email.</p>
         <br>
-        <p>Best regards,<br>Ozellar Marine Training Team</p>
+        <p>Ozellar Marine Training Team</p>
     </body>
     </html>
     """
@@ -239,7 +268,8 @@ def send_approval_email(crew_email: str, crew_name: str, course_title: str, cert
         to_email=crew_email,
         subject=f"Certificate for {course_title}",
         html_content=html,
-        attachment=(f"{cert_id}.pdf", cert_pdf)
+        attachment=(f"{cert_id}.pdf", cert_pdf),
+        cc_emails=cc_emails if cc_emails is not None else DEFAULT_COURSE_REMINDER_CC
     )
 
 
@@ -267,16 +297,19 @@ def send_course_reminder_email(
     crew_email: str,
     crew_name: str,
     pending_courses: list[str] | None = None,
-    from_email: str | None = None
+    from_email: str | None = None,
+    cc_emails: list[str] | str | None = None
 ) -> bool:
     """Sends a professional instruction/reminder email to a seafarer to complete assigned courses."""
     if not crew_email or not crew_email.strip():
         return False
 
     sender = from_email or COURSE_REMINDER_SENDER
+    cc_list = cc_emails if cc_emails is not None else DEFAULT_COURSE_REMINDER_CC
     portal_url = PRODUCTION_PORTAL_URL.rstrip("/")
     portal_host = "training.ozellar.com"
     clean_name = crew_name.strip() if crew_name and crew_name.strip() else "Seafarer"
+    support_email = os.getenv("SUPPORT_EMAIL", "techdevops@ozellar.com")
 
     courses_card = ""
     if pending_courses:
@@ -284,7 +317,7 @@ def send_course_reminder_email(
             f"""
             <tr style="border-bottom: 1px solid #e2e8f0;">
                 <td style="padding: 10px 14px; font-size: 13.5px; color: #0f172a; font-weight: 600;">
-                    <span style="color: #E07820; margin-right: 8px;">●</span> {c}
+                    <span style="color: #059669; margin-right: 8px;">●</span> {c}
                 </td>
                 <td style="padding: 10px 14px; text-align: right; white-space: nowrap;">
                     <span style="display: inline-block; background-color: #fef3c7; color: #b45309; font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 999px; border: 1px solid #fde68a;">Pending</span>
@@ -296,8 +329,8 @@ def send_course_reminder_email(
         courses_card = f"""
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 18px 0 22px 0; background-color: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; border-collapse: separate; border-spacing: 0;">
             <thead>
-                <tr style="background-color: #f1f5f9; border-bottom: 1px solid #cbd5e1;">
-                    <th align="left" style="padding: 10px 14px; font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em;">Assigned Course(s) to Complete ({len(pending_courses)})</th>
+                <tr style="background-color: #f8fafc; border-bottom: 2px solid #059669;">
+                    <th align="left" style="padding: 10px 14px; font-size: 12px; font-weight: 700; color: #065f46; text-transform: uppercase; letter-spacing: 0.04em;">Assigned Course(s) to Complete ({len(pending_courses)})</th>
                     <th align="right" style="padding: 10px 14px; font-size: 12px; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em;">Status</th>
                 </tr>
             </thead>
@@ -321,21 +354,21 @@ def send_course_reminder_email(
             <!-- Main Email Container -->
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width: 620px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 18px rgba(15, 23, 42, 0.08); border: 1px solid #e2e8f0;">
                 
-                <!-- Brand Navy Header -->
+                <!-- Brand Green Header -->
                 <tr>
-                    <td style="background: linear-gradient(135deg, #0b192c 0%, #1e293b 100%); padding: 26px 32px; text-align: left;">
+                    <td style="background: linear-gradient(135deg, #064e3b 0%, #065f46 50%, #047857 100%); padding: 26px 32px; text-align: left;">
                         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
                             <tr>
                                 <td>
                                     <div style="font-size: 20px; font-weight: 800; color: #ffffff; letter-spacing: 0.06em; text-transform: uppercase; margin: 0;">
-                                        OZELLAR <span style="color: #E07820;">MARINE</span>
+                                        OZELLAR <span style="color: #f97316;">MARINE</span>
                                     </div>
-                                    <div style="font-size: 12px; font-weight: 600; color: #94a3b8; letter-spacing: 0.04em; text-transform: uppercase; margin-top: 4px;">
+                                    <div style="font-size: 12px; font-weight: 600; color: #a7f3d0; letter-spacing: 0.04em; text-transform: uppercase; margin-top: 4px;">
                                         Maritime Training &amp; Competency Portal
                                     </div>
                                 </td>
                                 <td align="right" style="vertical-align: middle;">
-                                    <span style="display: inline-block; padding: 4px 12px; background: rgba(224, 120, 32, 0.2); border: 1px solid rgba(224, 120, 32, 0.5); border-radius: 999px; color: #fb923c; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">
+                                    <span style="display: inline-block; padding: 4px 12px; background: rgba(234, 88, 12, 0.2); border: 1px solid rgba(249, 115, 22, 0.6); border-radius: 999px; color: #fed7aa; font-size: 11px; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;">
                                         Official Notice
                                     </span>
                                 </td>
@@ -344,14 +377,14 @@ def send_course_reminder_email(
                     </td>
                 </tr>
 
-                <!-- Amber Accent Strip -->
+                <!-- Green to Orange Accent Strip -->
                 <tr>
-                    <td style="height: 4px; background: linear-gradient(90deg, #E07820 0%, #f59e0b 50%, #E07820 100%);"></td>
+                    <td style="height: 5px; background: linear-gradient(90deg, #10b981 0%, #059669 35%, #f97316 70%, #E07820 100%);"></td>
                 </tr>
 
                 <!-- Body Content -->
                 <tr>
-                    <td style="padding: 32px 32px 24px 32px;">
+                    <td style="padding: 32px 32px 28px 32px;">
                         
                         <p style="margin: 0 0 16px 0; font-size: 16px; font-weight: 700; color: #0f172a;">
                             Good day {clean_name},
@@ -364,15 +397,15 @@ def send_course_reminder_email(
                         {courses_card}
 
                         <!-- Instructions Step Box -->
-                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #fffbf7; border: 1px solid #fed7aa; border-left: 5px solid #E07820; border-radius: 6px;">
+                        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0; background-color: #f0fdf4; border: 1px solid #bbf7d0; border-left: 5px solid #059669; border-radius: 6px;">
                             <tr>
                                 <td style="padding: 18px 22px;">
-                                    <div style="font-size: 13.5px; font-weight: 800; color: #9a3412; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 12px;">
+                                    <div style="font-size: 13.5px; font-weight: 800; color: #ea580c; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 12px;">
                                         Message / Instructions to Complete:
                                     </div>
-                                    <ol style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8; color: #334155;">
+                                    <ol style="margin: 0; padding-left: 20px; font-size: 14px; line-height: 1.8; color: #1e293b;">
                                         <li style="margin-bottom: 6px;">
-                                            Access <a href="{portal_url}" style="color: #c2410c; font-weight: 700; text-decoration: underline;">{portal_host}</a>
+                                            Access <a href="{portal_url}" style="color: #059669; font-weight: 700; text-decoration: underline;">{portal_host}</a>
                                         </li>
                                         <li style="margin-bottom: 6px;">
                                             Click in <strong>Seafarer</strong> &mdash; enter your registered <strong>Name</strong> and <strong>Date of Birth (DOB)</strong>
@@ -395,17 +428,10 @@ def send_course_reminder_email(
                             </a>
                         </div>
 
+                        <!-- Portal & Support Info -->
                         <div style="margin: 18px 0 0 0; padding: 12px 16px; background-color: #f8fafc; border-radius: 8px; border: 1px solid #e2e8f0; font-size: 12.5px; color: #64748b; line-height: 1.5;">
-                            <strong>Portal URL:</strong> <a href="{portal_url}" style="color: #E07820; text-decoration: none;">{portal_url}</a><br>
-                            <strong>Support Email:</strong> <a href="mailto:data@ozellar.com" style="color: #0284c7; text-decoration: none;">data@ozellar.com</a>
-                        </div>
-
-                        <!-- Sign-off -->
-                        <div style="margin-top: 26px; padding-top: 18px; border-top: 1px solid #e2e8f0;">
-                            <p style="margin: 0 0 4px 0; font-size: 13.5px; color: #475569;">best regards,</p>
-                            <p style="margin: 0 0 2px 0; font-size: 15px; font-weight: 700; color: #0f172a;">Sudarsan</p>
-                            <p style="margin: 0 0 2px 0; font-size: 12.5px; color: #64748b;">Training &amp; Quality Management</p>
-                            <p style="margin: 0; font-size: 12.5px; font-weight: 700; color: #E07820;">Ozellar Marine Services</p>
+                            <strong>Portal URL:</strong> <a href="{portal_url}" style="color: #059669; text-decoration: none;">{portal_url}</a><br>
+                            <strong>Support Email:</strong> <a href="mailto:{support_email}" style="color: #ea580c; font-weight: 600; text-decoration: none;">{support_email}</a>
                         </div>
 
                     </td>
@@ -414,11 +440,8 @@ def send_course_reminder_email(
                 <!-- Footer -->
                 <tr>
                     <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 18px 32px; text-align: center;">
-                        <p style="margin: 0 0 6px 0; font-size: 11.5px; color: #64748b;">
-                            This is an automated training notification sent from <strong style="color: #334155;">data@ozellar.com</strong> to <strong style="color: #334155;">{crew_email}</strong>.
-                        </p>
                         <p style="margin: 0; font-size: 11px; color: #94a3b8;">
-                            &copy; Ozellar Marine Services. All rights reserved. &bull; <a href="{portal_url}" style="color: #94a3b8; text-decoration: underline;">training.ozellar.com</a>
+                            &copy; Ozellar Marine Services. All rights reserved. &bull; <a href="{portal_url}" style="color: #059669; text-decoration: underline;">training.ozellar.com</a>
                         </p>
                     </td>
                 </tr>
@@ -438,11 +461,16 @@ def send_course_reminder_email(
         to_email=crew_email.strip(),
         subject=subject,
         html_content=html,
-        from_email=sender
+        from_email=sender,
+        cc_emails=cc_list
     )
 
 
-def send_course_reminder_batch(targets: list[dict], from_email: str | None = None) -> int:
+def send_course_reminder_batch(
+    targets: list[dict],
+    from_email: str | None = None,
+    cc_emails: list[str] | str | None = None
+) -> int:
     """Dispatches course reminder emails to a list of seafarers.
     Each item in targets: {"email": str, "name": str, "pending_courses": list[str]}
     Returns the count of successfully sent emails.
@@ -456,7 +484,7 @@ def send_course_reminder_batch(targets: list[dict], from_email: str | None = Non
         name = t.get("name") or "Seafarer"
         courses = t.get("pending_courses") or []
         try:
-            if send_course_reminder_email(email, name, courses, from_email=sender):
+            if send_course_reminder_email(email, name, courses, from_email=sender, cc_emails=cc_emails):
                 sent_count += 1
         except Exception as e:
             print(f"[email_service] Error auto-sending reminder to {email}: {e}")

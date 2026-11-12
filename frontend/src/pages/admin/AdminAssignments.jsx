@@ -457,7 +457,7 @@ function SendReminderModal({
   busy,
   result
 }) {
-  const [testEmail, setTestEmail] = useState('sujilkumar3003@gmail.com')
+  const [testEmail, setTestEmail] = useState('')
   const [testBusy, setTestBusy] = useState(false)
   const [testFeedback, setTestFeedback] = useState(null)
 
@@ -623,18 +623,18 @@ function SendReminderModal({
               <div style={{
                 padding: '9px 14px', background: 'var(--surface-3, var(--border))',
                 borderBottom: '1px solid var(--border)', fontWeight: 600, color: 'var(--text)',
-                display: 'flex', alignItems: 'center', justifyContent: 'space-between'
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 6
               }}>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <Mail size={13} style={{ color: ACCENT }} />
+                  <Mail size={13} style={{ color: '#059669' }} />
                   <span>Email Content Preview</span>
                 </span>
                 <span style={{ fontSize: 11, color: 'var(--text-mut)' }}>
-                  From: <strong style={{ color: '#E07820' }}>data@ozellar.com</strong>
+                  From: <strong style={{ color: '#059669' }}>data@ozellar.com</strong> &bull; CC: <strong style={{ color: '#ea580c' }}>sudarsan.s@ozellar.com, shweta.s@ozellar.com</strong>
                 </span>
               </div>
               <div style={{ padding: '14px 16px', color: 'var(--text)', lineHeight: 1.6 }}>
-                <div style={{ fontWeight: 700, marginBottom: 8, color: '#E07820', fontSize: 13 }}>
+                <div style={{ fontWeight: 700, marginBottom: 8, color: '#059669', fontSize: 13 }}>
                   Subject: Action Required: Complete Your Assigned Courses - Ozellar Marine Training
                 </div>
                 <p style={{ margin: '0 0 8px 0', fontWeight: 600 }}>Good day &lt;Seafarer Name&gt;,</p>
@@ -645,24 +645,24 @@ function SendReminderModal({
                 {/* Pending Course Preview */}
                 <div style={{
                   padding: '8px 12px', background: 'var(--surface)', borderRadius: 6,
-                  border: '1px solid var(--border)', margin: '8px 0', fontSize: 12
+                  border: '1px solid var(--border)', borderTop: '2px solid #059669', margin: '8px 0', fontSize: 12
                 }}>
-                  <div style={{ fontWeight: 700, color: '#475569', marginBottom: 4, textTransform: 'uppercase', fontSize: 10.5 }}>
+                  <div style={{ fontWeight: 700, color: '#065f46', marginBottom: 4, textTransform: 'uppercase', fontSize: 10.5 }}>
                     Assigned Course(s) to Complete (Only Pending):
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '3px 0' }}>
-                    <span>● &lt;Course Title 1&gt;</span>
+                    <span><span style={{ color: '#059669' }}>●</span> &lt;Course Title 1&gt;</span>
                     <span style={{ background: '#fef3c7', color: '#b45309', padding: '1px 6px', borderRadius: 999, fontSize: 10, fontWeight: 700 }}>Pending</span>
                   </div>
                 </div>
 
                 <div style={{
-                  padding: '10px 14px', background: 'rgba(224, 120, 32, 0.05)', borderRadius: 6,
-                  borderLeft: '4px solid #E07820', border: '1px solid rgba(224, 120, 32, 0.25)', margin: '10px 0'
+                  padding: '10px 14px', background: 'rgba(5, 150, 105, 0.05)', borderRadius: 6,
+                  borderLeft: '4px solid #059669', border: '1px solid rgba(5, 150, 105, 0.25)', margin: '10px 0'
                 }}>
-                  <div style={{ fontWeight: 700, marginBottom: 6, color: '#9a3412', textTransform: 'uppercase', fontSize: 11 }}>Message / Steps to Complete:</div>
+                  <div style={{ fontWeight: 700, marginBottom: 6, color: '#ea580c', textTransform: 'uppercase', fontSize: 11 }}>Message / Steps to Complete:</div>
                   <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.7 }}>
-                    <li>Access <a href="https://training.ozellar.com" target="_blank" rel="noreferrer" style={{ color: '#E07820', fontWeight: 700, textDecoration: 'underline' }}>training.ozellar.com</a></li>
+                    <li>Access <a href="https://training.ozellar.com" target="_blank" rel="noreferrer" style={{ color: '#059669', fontWeight: 700, textDecoration: 'underline' }}>training.ozellar.com</a></li>
                     <li>Click in <b>Seafarer</b> &mdash; enter name and dob</li>
                     <li>Upload passport size photo &mdash; this photo will be used for certification</li>
                     <li>Complete the assigned courses</li>
@@ -671,7 +671,7 @@ function SendReminderModal({
 
                 <div style={{ textAlign: 'center', margin: '12px 0 8px 0' }}>
                   <span style={{
-                    display: 'inline-block', background: ACCENT_GRADIENT, color: '#fff',
+                    display: 'inline-block', background: 'linear-gradient(135deg, #E07820 0%, #ea580c 100%)', color: '#fff',
                     padding: '6px 18px', borderRadius: 6, fontWeight: 700, fontSize: 11.5
                   }}>
                     Access Training Portal &rarr;
@@ -679,14 +679,8 @@ function SendReminderModal({
                 </div>
 
                 <div style={{ margin: '10px 0 0 0', fontSize: 11, color: 'var(--text-mut)' }}>
-                  Portal: <span style={{ color: '#E07820' }}>https://training.ozellar.com</span> &bull; Support: <span style={{ color: 'var(--text)' }}>data@ozellar.com</span>
+                  Portal: <span style={{ color: '#059669' }}>https://training.ozellar.com</span> &bull; Support: <span style={{ color: '#ea580c', fontWeight: 600 }}>techdevops@ozellar.com</span>
                 </div>
-
-                <p style={{ margin: '12px 0 0 0', paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-                  best regards,<br />
-                  <b>Sudarsan</b><br />
-                  <span className="mut" style={{ fontSize: 11.5 }}>Training &amp; Quality Management &bull; Ozellar Marine Services</span>
-                </p>
               </div>
             </div>
           </>
