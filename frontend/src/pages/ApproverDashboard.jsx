@@ -11,6 +11,7 @@ import {
   getApproverSubmissions, verifyOrientationTask, decideOrientationSubmission,
 } from '../api.js'
 import { useConfirm } from '../components/ConfirmDialog.jsx'
+import FilePreviewModal, { detectFileType } from '../components/FilePreviewModal.jsx'
 import NotificationBell from '../NotificationBell.jsx'
 import './ApproverDashboard.css'
 
@@ -38,45 +39,23 @@ function attachmentName(url, i, total) {
   return label
 }
 
-function attachmentKind(url) {
-  const ext = (url.split('?')[0].split('.').pop() || '').toLowerCase()
-  if (['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp'].includes(ext)) return 'image'
-  if (ext === 'pdf') return 'pdf'
-  return 'file'
-}
-
 // Evidence-grid thumbnail, captioned with the
 // task it belongs to — lets the reviewer flash through every attachment in
 // the submission without hunting through 40+ task cards to find them.
 function EvidenceCard({ url, taskTitle, onOpen }) {
-  const kind = attachmentKind(url)
+  const meta = detectFileType(url)
+  const Icon = meta.icon
   return (
-    <button type="button" className="apr-evidence-card" onClick={() => onOpen(url, kind)} title={taskTitle}>
-      <div className={`apr-evidence-thumb apr-evidence-thumb--${kind}`}>
-        {kind === 'image' ? <img src={url} alt={taskTitle} loading="lazy" />
-          : kind === 'pdf' ? <FileText size={22} /> : <Paperclip size={20} />}
+    <button type="button" className="apr-evidence-card" onClick={() => onOpen(url, taskTitle)} title={taskTitle}>
+      <div className={`apr-evidence-thumb apr-evidence-thumb--${meta.kind}`}>
+        {meta.kind === 'image' ? (
+          <img src={url} alt={taskTitle} loading="lazy" />
+        ) : (
+          <Icon size={22} style={{ color: meta.color }} />
+        )}
       </div>
       <span className="apr-evidence-caption">{taskTitle}</span>
     </button>
-  )
-}
-
-function AttachmentViewer({ url, kind, onClose }) {
-  return (
-    <div className="apr-viewer-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="apr-viewer">
-        <div className="apr-viewer-bar">
-          <span className="apr-viewer-bar-icon">{kind === 'pdf' ? <FileText size={14} /> : <ImageIcon size={14} />}</span>
-          <a href={url} target="_blank" rel="noreferrer" className="apr-viewer-open"><ExternalLink size={13} /> Open in new tab</a>
-          <button className="apr-viewer-close" onClick={onClose} aria-label="Close"><X size={16} /></button>
-        </div>
-        <div className="apr-viewer-body">
-          {kind === 'pdf'
-            ? <iframe src={url} title="Attachment preview" />
-            : <img src={url} alt="Attachment preview" />}
-        </div>
-      </div>
-    </div>
   )
 }
 
@@ -87,7 +66,7 @@ function SubmissionDetail({ s, onDecide, onVerifyTask }) {
   const [idx, setIdx] = useState(0)
   const activePipRef = useRef(null)
   const { confirm, dialog } = useConfirm()
-  const openViewer = (url, kind) => setViewer({ url, kind })
+  const openViewer = (url, taskTitle) => setViewer({ url, title: taskTitle })
 
   // Start from the first task whenever a different submission is opened.
   useEffect(() => { setIdx(0) }, [s.id])
@@ -152,7 +131,7 @@ function SubmissionDetail({ s, onDecide, onVerifyTask }) {
   return (
     <div className="apr-detail">
       {dialog}
-      {viewer && <AttachmentViewer url={viewer.url} kind={viewer.kind} onClose={() => setViewer(null)} />}
+      {viewer && <FilePreviewModal url={viewer.url} title={viewer.title} onClose={() => setViewer(null)} />}
       <div className="apr-detail-head">
         <div className="apr-detail-head-info">
           <div className="apr-detail-name">{s.candidateName}</div>

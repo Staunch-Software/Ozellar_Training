@@ -534,6 +534,8 @@ export const adminDeleteOrientationEnrollment = (id) =>
   req(`/admin/orientation/enrollments/${id}`, { method: 'DELETE' })
 export const adminDecideOrientationEnrollment = (id, action) =>
   req(`/admin/orientation/enrollments/${id}/decide`, { method: 'POST', body: JSON.stringify({ action }) })
+export const adminGetOrientationEnrollmentDetail = (id) =>
+  req(`/admin/orientation/enrollments/${id}`)
 
 // Admin — results / monitoring
 export const adminGetOrientationResults = (programId) =>

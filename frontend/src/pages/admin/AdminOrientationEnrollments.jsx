@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../auth.jsx'
-import { ClipboardList, Ship, Cog, Trash2, AlertCircle, Search, UserPlus, X, Anchor, ShieldCheck, ShieldAlert, Users, Check } from 'lucide-react'
+import { ClipboardList, Ship, Cog, Trash2, AlertCircle, Search, UserPlus, X, Anchor, ShieldCheck, ShieldAlert, Users, Check, Eye } from 'lucide-react'
 import {
   adminListOrientationEnrollments, adminListOrientationPrograms,
   adminDeleteOrientationEnrollment, adminListOrientationCandidates,
@@ -344,6 +345,7 @@ function EnrollModal({ programs, vessels, onClose, onDone }) {
 
 // ---- Main Page ----
 export default function AdminOrientationEnrollments() {
+  const navigate = useNavigate()
   const { user: me } = useAuth()
   const isSuperAdmin = me?.role === 'super_admin'
   const [enrollments, setEnrollments] = useState(null)
@@ -531,12 +533,17 @@ export default function AdminOrientationEnrollments() {
                   return (
                     <tr key={e.id}>
                       <td>
-                        <div className="orn-table-name">
+                        <div
+                          className="orn-table-name"
+                          style={{ cursor: 'pointer' }}
+                          onClick={() => navigate(`/admin/orientation/review/${e.id}`)}
+                          title="Click to review completed tasks & attachments"
+                        >
                           <div className={`orn-avatar orn-avatar-sm${dept ? ` orn-avatar-dept-${e.department}` : ''}`}>
                             {initials(e.learnerName)}
                           </div>
                           <div>
-                            <div className="orn-table-name-text">{e.learnerName}</div>
+                            <div className="orn-table-name-text" style={{ color: 'var(--accent, #E07820)' }}>{e.learnerName}</div>
                             <div className="orn-table-name-sub" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                               {e.rank || '-'}
                               {dept && DeptIcon && (
@@ -560,22 +567,26 @@ export default function AdminOrientationEnrollments() {
                         {e.createdAt ? fmtDate(e.createdAt) : '-'}
                       </td>
                       <td>
-                        {e.status === 'master_approved' && isSuperAdmin ? (
-                          <div style={{ display: 'flex', gap: 6 }}>
-                            <button className="btn sm primary" title="Final Approve" disabled={busyId === e.id}
-                              onClick={() => decide(e.id, 'approve')}>
-                              <Check size={13} /> Approve
-                            </button>
-                            <button className="btn sm danger" title="Reject" disabled={busyId === e.id}
-                              onClick={() => decide(e.id, 'reject')}>
-                              <X size={13} /> Reject
-                            </button>
-                          </div>
-                        ) : (
-                          <button className="btn sm" title="Remove enrollment" disabled={busyId === e.id} onClick={() => remove(e.id, e.learnerName)}>
-                            <Trash2 size={13} />
+                        <div style={{ display: 'flex', gap: 6, alignItems: 'center', justifyContent: 'flex-end' }}>
+                          <button
+                            type="button"
+                            className={`btn sm ${e.status === 'master_approved' ? 'primary' : ''}`}
+                            title="Review completed task details and attachments to decide"
+                            onClick={() => navigate(`/admin/orientation/review/${e.id}`)}
+                          >
+                            <Eye size={13} /> {e.status === 'master_approved' ? 'Review & Approve' : 'Review'}
                           </button>
-                        )}
+                          {isSuperAdmin && (
+                            <button
+                              className="btn sm"
+                              title="Remove enrollment"
+                              disabled={busyId === e.id}
+                              onClick={() => remove(e.id, e.learnerName)}
+                            >
+                              <Trash2 size={13} />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   )

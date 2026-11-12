@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Download, BarChart3, Ship, Search } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Download, BarChart3, Ship, Search, Eye } from 'lucide-react'
 import { adminGetOrientationResults, adminListOrientationPrograms, adminListOrientationVessels, adminDownloadOrientationResultsXlsx } from '../../api.js'
 import CardSelect from '../../components/CardSelect.jsx'
 
@@ -34,6 +35,7 @@ function ProgressBar({ pct }) {
 }
 
 export default function AdminOrientationResults() {
+  const navigate = useNavigate()
   const [rows, setRows] = useState(null)
   const [programs, setPrograms] = useState([])
   const [vessels, setVessels] = useState([])
@@ -158,16 +160,22 @@ export default function AdminOrientationResults() {
                   <th>Progress</th>
                   <th>Submitted</th>
                   <th>Decided</th>
+                  <th></th>
                 </tr>
               </thead>
               <tbody>
                 {visible.map((r) => (
                   <tr key={r.enrollmentId}>
                     <td>
-                      <div className="orn-table-name">
+                      <div
+                        className="orn-table-name"
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => navigate(`/admin/orientation/review/${r.enrollmentId}`)}
+                        title="Click to review completed tasks & attachments"
+                      >
                         <div className="orn-avatar orn-avatar-sm">{initials(r.learnerName)}</div>
                         <div>
-                          <div className="orn-table-name-text">{r.learnerName}</div>
+                          <div className="orn-table-name-text" style={{ color: 'var(--accent, #E07820)' }}>{r.learnerName}</div>
                           <div className="orn-table-name-sub">{r.rank || '—'}</div>
                         </div>
                       </div>
@@ -180,6 +188,16 @@ export default function AdminOrientationResults() {
                     <td><ProgressBar pct={r.progressPct} /></td>
                     <td className="orn-table-muted orn-table-nowrap">{fmt(r.submittedAt)}</td>
                     <td className="orn-table-muted orn-table-nowrap">{fmt(r.decidedAt)}</td>
+                    <td>
+                      <button
+                        type="button"
+                        className={`btn sm ${r.status === 'master_approved' ? 'primary' : ''}`}
+                        title="Review completed task details & attachments"
+                        onClick={() => navigate(`/admin/orientation/review/${r.enrollmentId}`)}
+                      >
+                        <Eye size={13} /> {r.status === 'master_approved' ? 'Review & Approve' : 'Review'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

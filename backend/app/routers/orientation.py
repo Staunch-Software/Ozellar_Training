@@ -517,6 +517,15 @@ def admin_create_orientation_enrollment(req: OrientationEnrollRequest,
     return {"ok": True, "enrollmentId": enrollment.id}
 
 
+@router.get("/api/admin/orientation/enrollments/{enrollment_id}")
+def admin_get_orientation_enrollment(enrollment_id: str,
+                                     admin: models.User = Depends(require_module("orientation")), db: Session = Depends(get_db)):
+    enrollment = db.get(models.OrientationEnrollment, enrollment_id)
+    if not enrollment:
+        raise HTTPException(404, "Enrollment not found")
+    return orientation_submission_detail(db, enrollment)
+
+
 @router.delete("/api/admin/orientation/enrollments/{enrollment_id}")
 def admin_delete_orientation_enrollment(enrollment_id: str,
                                         admin: models.User = Depends(require_module("orientation")), db: Session = Depends(get_db)):
@@ -899,6 +908,10 @@ def orientation_submission_detail(db, enrollment):
     else:
         computed_status = "waiting_on_crew"
     
+    completed_tasks = sum(1 for c in enrollment.completions if c.is_completed)
+    attachments_count = sum(len(c.proof_paths or []) for c in enrollment.completions)
+    pct = round((completed_tasks / total_tasks * 100)) if total_tasks else 0
+
     return {
         "id": enrollment.id,
         "enrollmentId": enrollment.id,
@@ -907,6 +920,12 @@ def orientation_submission_detail(db, enrollment):
         "department": enrollment.program.department if enrollment.program else "",
         "submittedAt": to_ist_iso(enrollment.created_at),
         "status": computed_status,
+        "enrollmentStatus": enrollment.status,
+        "masterName": enrollment.master_name,
+        "completedCount": completed_tasks,
+        "totalTasks": total_tasks,
+        "progressPct": pct,
+        "attachmentsCount": attachments_count,
         "decidedAt": to_ist_iso(enrollment.created_at) if computed_status != "pending" else None,
         "candidateName": learner.full_name if learner else "Unknown",
         "candidateRank": learner.rank if learner else "Unknown",

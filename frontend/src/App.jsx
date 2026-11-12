@@ -28,6 +28,7 @@ import AdminOrientationManagement from './pages/admin/AdminOrientationManagement
 import AdminOrientationPrograms from './pages/admin/AdminOrientationPrograms.jsx'
 import AdminOrientationBuilder from './pages/admin/AdminOrientationBuilder.jsx'
 import AdminOrientationPreview from './pages/admin/AdminOrientationPreview.jsx'
+import AdminOrientationReviewPage from './pages/admin/AdminOrientationReviewPage.jsx'
 import AdminOrientationCandidates from './pages/admin/AdminOrientationCandidates.jsx'
 import AdminOrientationEnrollments from './pages/admin/AdminOrientationEnrollments.jsx'
 import AdminOrientationResults from './pages/admin/AdminOrientationResults.jsx'
@@ -247,6 +248,8 @@ export default function App() {
 
         <Route path="/admin/courses/:id/preview" element={<AdminRoute module="courses"><AdminCoursePreview /></AdminRoute>} />
         <Route path="/admin/orientation/:id/preview" element={<AdminRoute module="orientation"><AdminOrientationPreview /></AdminRoute>} />
+        <Route path="/admin/orientation/review/:id" element={<AdminRoute module="orientation"><AdminOrientationReviewPage /></AdminRoute>} />
+        <Route path="/admin/orientation-review/:id" element={<AdminRoute module="orientation"><AdminOrientationReviewPage /></AdminRoute>} />
         <Route path="/admin/screening/:id/preview" element={<AdminRoute module="assessment"><AdminScreeningPreview /></AdminRoute>} />
         <Route path="/admin/screening/results/:id" element={<AdminRoute module="assessment"><AdminScreeningResultReview /></AdminRoute>} />
         <Route path="/admin" element={<AdminRoute><AdminLayout /></AdminRoute>}>
@@ -281,6 +284,9 @@ export default function App() {
           </Route>
           {/* Keep builder at /admin/orientation/:id, same reasoning as the course builder */}
           <Route path="orientation/:id" element={<AdminRoute module="orientation"><AdminOrientationBuilder /></AdminRoute>} />
+          <Route path="orientation-review/:id" element={<AdminRoute module="orientation"><AdminOrientationReviewPage /></AdminRoute>} />
+          <Route path="orientation/review/:id" element={<AdminRoute module="orientation"><AdminOrientationReviewPage /></AdminRoute>} />
+          <Route path="orientation-program/enrollments/:id" element={<AdminRoute module="orientation"><AdminOrientationReviewPage /></AdminRoute>} />
 
           <Route path="screening" element={<AdminRoute module="assessment"><AdminScreening /></AdminRoute>} />
           <Route path="user-management" element={<AdminRoute module="user_management"><AdminUserManagement /></AdminRoute>} />

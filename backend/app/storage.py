@@ -63,7 +63,7 @@ def get_size(course_id: str, filename: str) -> Optional[int]:
         try:
             return blob_client.get_blob_properties().size
         except Exception:
-            return None
+            pass
     path = _local_path(course_id, filename)
     return os.path.getsize(path) if os.path.isfile(path) else None
 
@@ -111,31 +111,39 @@ def stream_range(course_id: str, filename: str, start: int, end: int, chunk_size
     """Yield bytes [start, end] inclusive."""
     length = end - start + 1
     if _USE_AZURE:
-        blob_client = _container_client.get_blob_client(_blob_name(course_id, filename))
-        downloader = blob_client.download_blob(offset=start, length=length)
-        for chunk in downloader.chunks():
-            yield chunk
-    else:
-        with open(_local_path(course_id, filename), "rb") as f:
-            f.seek(start)
-            remaining = length
-            while remaining > 0:
-                data = f.read(min(chunk_size_bytes, remaining))
-                if not data:
-                    break
-                remaining -= len(data)
-                yield data
+        try:
+            blob_client = _container_client.get_blob_client(_blob_name(course_id, filename))
+            downloader = blob_client.download_blob(offset=start, length=length)
+            for chunk in downloader.chunks():
+                yield chunk
+            return
+        except Exception:
+            pass
+
+    with open(_local_path(course_id, filename), "rb") as f:
+        f.seek(start)
+        remaining = length
+        while remaining > 0:
+            data = f.read(min(chunk_size_bytes, remaining))
+            if not data:
+                break
+            remaining -= len(data)
+            yield data
 
 
 def stream_full(course_id: str, filename: str, chunk_size_bytes: int = 65536) -> Iterator[bytes]:
     if _USE_AZURE:
-        blob_client = _container_client.get_blob_client(_blob_name(course_id, filename))
-        for chunk in blob_client.download_blob().chunks():
-            yield chunk
-    else:
-        with open(_local_path(course_id, filename), "rb") as f:
-            while True:
-                data = f.read(chunk_size_bytes)
-                if not data:
-                    break
-                yield data
+        try:
+            blob_client = _container_client.get_blob_client(_blob_name(course_id, filename))
+            for chunk in blob_client.download_blob().chunks():
+                yield chunk
+            return
+        except Exception:
+            pass
+
+    with open(_local_path(course_id, filename), "rb") as f:
+        while True:
+            data = f.read(chunk_size_bytes)
+            if not data:
+                break
+            yield data
