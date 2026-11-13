@@ -794,9 +794,14 @@ def submit_multiple_orientation_tasks(req: SubmitMultipleTasksRequest, user: mod
             
         completion.status = "pending_review"
         completion.rejection_note = None
+        completion.verified = False
+        completion.verified_at = None
+        completion.verified_by = None
         count += 1
         
     if count > 0:
+        if enrollment.status in ("master_approved", "approved", "rejected"):
+            enrollment.status = "in_progress"
         department = enrollment.program.department
         program_title = enrollment.program.title if enrollment.program else "Orientation Program"
         task_word = "tasks" if count > 1 else "task"
@@ -830,6 +835,12 @@ def submit_orientation_task(task_id: str, user: models.User = Depends(get_curren
     
     completion.status = "pending_review"
     completion.rejection_note = None
+    completion.verified = False
+    completion.verified_at = None
+    completion.verified_by = None
+    
+    if enrollment.status in ("master_approved", "approved", "rejected"):
+        enrollment.status = "in_progress"
     
     department = enrollment.program.department
     program_title = enrollment.program.title if enrollment.program else "Orientation Program"
@@ -900,15 +911,22 @@ def orientation_submission_detail(db, enrollment):
         })
         
     has_pending_tasks = any(c.status == "pending_review" for c in enrollment.completions)
+    has_rejected_tasks = any(c.status == "rejected" for c in enrollment.completions)
     approved_tasks = sum(1 for c in enrollment.completions if c.status == "approved")
     total_tasks = len(enrollment.program.tasks) if enrollment.program else 0
     
-    if enrollment.status in ("approved", "rejected"):
-        computed_status = enrollment.status
+    if enrollment.status == "approved":
+        computed_status = "approved"
+    elif has_pending_tasks:
+        computed_status = "pending"
     elif enrollment.status == "master_approved":
         computed_status = "approved"
-    elif has_pending_tasks or (total_tasks > 0 and approved_tasks == total_tasks):
+    elif total_tasks > 0 and approved_tasks == total_tasks:
         computed_status = "pending"
+    elif has_rejected_tasks or not all(c.is_completed for c in enrollment.completions):
+        computed_status = "waiting_on_crew"
+    elif enrollment.status == "rejected":
+        computed_status = "rejected"
     else:
         computed_status = "waiting_on_crew"
     
@@ -978,6 +996,8 @@ def approver_verify_task(submission_id: str, task_id: str, req: OrientationVerif
         raise HTTPException(404, "Task not found")
         
     if req.action == 'approve':
+        if completion.status == "rejected":
+            raise HTTPException(400, "Cannot approve a task that is currently marked for revision. Crew member must re-submit first.")
         completion.status = "approved"
         completion.verified = True
         completion.verified_at = datetime.now(timezone.utc)
@@ -1091,6 +1111,8 @@ def admin_verify_orientation_task(
         db.add(completion)
 
     if req.action == 'approve':
+        if completion.status == "rejected":
+            raise HTTPException(400, "Cannot approve a task that is currently marked for revision. Crew member must re-submit first.")
         completion.status = "approved"
         completion.verified = True
         completion.verified_at = datetime.now(timezone.utc)
@@ -1130,15 +1152,6 @@ def admin_verify_orientation_task(
                     notify(db, appr.id, "orientation_task_rejected", f"Task Revision Requested: {task.title}",
                            body=f"Admin {admin.full_name} requested revision on '{task.title}' for {learner.full_name} on {enrollment.vessel_name}. Remark: {completion.rejection_note}",
                            link="/approvals")
-
-    # If all tasks are approved and enrollment is in_progress/submitted, auto-advance to master_approved
-    all_tasks = enrollment.program.tasks if enrollment.program else []
-    completions = {c.task_id: c for c in enrollment.completions}
-    all_approved = len(all_tasks) > 0 and all(
-        completions.get(t.id) and completions[t.id].status == "approved" for t in all_tasks
-    )
-    if all_approved and enrollment.status in ("in_progress", "submitted"):
-        enrollment.status = "master_approved"
 
     db.commit()
     return orientation_submission_detail(db, enrollment)

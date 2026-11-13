@@ -392,10 +392,15 @@ def test_admin_decide_orientation_enrollment(client, db, tokens):
     enrollment = db.query(OrientationEnrollment).first()
     assert enrollment is not None
 
-    # First verify task so enrollment can advance to master_approved
+    # Master verifies task and signs off program -> advances to master_approved
     client.post(
-        f"/api/admin/orientation/enrollments/{enrollment.id}/tasks/task_1/verify",
-        headers={"Authorization": f"Bearer {tokens['admin']}"},
+        f"/api/approver/submissions/{enrollment.id}/tasks/task_1/verify",
+        headers={"Authorization": f"Bearer {tokens['approver']}"},
+        json={"action": "approve"}
+    )
+    client.post(
+        f"/api/approver/submissions/{enrollment.id}/decide",
+        headers={"Authorization": f"Bearer {tokens['approver']}"},
         json={"action": "approve"}
     )
     db.refresh(enrollment)
@@ -417,12 +422,19 @@ def test_admin_cannot_modify_or_reject_after_final_approval(client, db, tokens):
     enrollment = db.query(OrientationEnrollment).first()
     assert enrollment is not None
 
-    # Approve task and give final approval
+    # Master approves task and decides
     client.post(
-        f"/api/admin/orientation/enrollments/{enrollment.id}/tasks/task_1/verify",
-        headers={"Authorization": f"Bearer {tokens['admin']}"},
+        f"/api/approver/submissions/{enrollment.id}/tasks/task_1/verify",
+        headers={"Authorization": f"Bearer {tokens['approver']}"},
         json={"action": "approve"}
     )
+    client.post(
+        f"/api/approver/submissions/{enrollment.id}/decide",
+        headers={"Authorization": f"Bearer {tokens['approver']}"},
+        json={"action": "approve"}
+    )
+
+    # Admin gives final approval
     client.post(
         f"/api/admin/orientation/enrollments/{enrollment.id}/decide",
         headers={"Authorization": f"Bearer {tokens['admin']}"},
@@ -467,6 +479,30 @@ def test_admin_cannot_final_approve_if_tasks_not_all_approved(client, db, tokens
     )
     assert resp.status_code == 400
     assert "All tasks must be approved" in resp.json()["detail"]
+
+
+def test_admin_cannot_approve_rejected_task_directly(client, db, tokens):
+    setup_program(db)
+    enrollment = db.query(OrientationEnrollment).first()
+    assert enrollment is not None
+
+    # First admin rejects task_1
+    resp_reject = client.post(
+        f"/api/admin/orientation/enrollments/{enrollment.id}/tasks/task_1/verify",
+        headers={"Authorization": f"Bearer {tokens['admin']}"},
+        json={"action": "reject", "note": "Missing certificate stamp"}
+    )
+    assert resp_reject.status_code == 200
+
+    # Directly trying to approve while rejected must fail
+    resp_approve = client.post(
+        f"/api/admin/orientation/enrollments/{enrollment.id}/tasks/task_1/verify",
+        headers={"Authorization": f"Bearer {tokens['admin']}"},
+        json={"action": "approve"}
+    )
+    assert resp_approve.status_code == 400
+    assert "Cannot approve a task that is currently marked for revision" in resp_approve.json()["detail"]
+
 
 
 

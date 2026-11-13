@@ -725,15 +725,6 @@ export default function AdminOrientationReviewPage() {
                         <div className="orp-task-action-btns">
                           <button
                             type="button"
-                            className="orp-task-btn orp-task-btn--approve"
-                            disabled={taskBusyId === task.id}
-                            onClick={() => handleApproveTask(task.id)}
-                            title="Approve this task"
-                          >
-                            <CheckCircle2 size={13} /> Approve Task
-                          </button>
-                          <button
-                            type="button"
                             className="orp-task-btn orp-task-btn--subtle-reject"
                             disabled={taskBusyId === task.id}
                             onClick={() => openRejectModal(task)}
