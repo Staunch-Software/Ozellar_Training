@@ -230,4 +230,51 @@ test.describe('Admin Orientation - Dedicated Approver-Style Review Page & File P
       await expect(verifyBar.locator('.orp-master-banner--verified')).toBeVisible()
     }
   })
+
+  test('admin reject task opens dedicated revision modal with suggestion chips and validation', async ({ page }) => {
+    await page.goto('/admin/orientation-program/enrollments')
+    await page.waitForLoadState('networkidle')
+
+    const reviewBtn = page.locator('button').filter({ hasText: /Review/i }).first()
+    await reviewBtn.click()
+    await expect(page).toHaveURL(/\/admin\/orientation(\/|-)?review\//)
+
+    const verifyBar = page.locator('.orp-task-verify-bar')
+    await expect(verifyBar).toBeVisible({ timeout: 8000 })
+
+    // Find Reject or Subtle Reject button on the task
+    const rejectTaskBtn = verifyBar.locator('.orp-task-btn--reject, .orp-task-btn--subtle-reject').first()
+    await expect(rejectTaskBtn).toBeVisible()
+    await rejectTaskBtn.click()
+
+    // Dedicated modal opens
+    const modal = page.locator('.orp-reject-modal')
+    await expect(modal).toBeVisible({ timeout: 5000 })
+    await expect(modal.locator('.orp-reject-modal-title')).toContainText('Task Revision Required')
+
+    // Context box shows task title and candidate
+    await expect(modal.locator('.orp-reject-context-box')).toBeVisible()
+
+    // Suggestion chips exist
+    const chips = modal.locator('.orp-reject-chip')
+    expect(await chips.count()).toBeGreaterThan(0)
+
+    // Textarea exists
+    const textarea = modal.locator('.orp-reject-textarea')
+    await expect(textarea).toBeVisible()
+
+    // Clear textarea and try to submit empty to verify validation
+    await textarea.fill('')
+    await modal.locator('.orp-reject-btn-submit').click()
+    await expect(modal.locator('.orp-reject-error-msg')).toBeVisible()
+
+    // Click a suggestion chip
+    await chips.first().click()
+    const textVal = await textarea.inputValue()
+    expect(textVal.length).toBeGreaterThan(10)
+
+    // Cancel modal
+    await modal.locator('.orp-reject-btn-cancel').click()
+    await expect(modal).not.toBeVisible()
+  })
 })

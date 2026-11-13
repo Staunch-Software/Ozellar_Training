@@ -90,6 +90,7 @@ class OrientationDecideRequest(BaseModel):
 
 class AdminOrientationDecideRequest(BaseModel):
     action: str  # 'approve' | 'reject'
+    note: str | None = None
 
 
 # --- Admin Orientation Programs ---
@@ -982,13 +983,15 @@ def approver_verify_task(submission_id: str, task_id: str, req: OrientationVerif
         completion.verified_at = datetime.now(timezone.utc)
         completion.verified_by = approver.id
     elif req.action == 'reject':
-        if not req.note:
+        if not req.note or not req.note.strip():
             raise HTTPException(400, "Rejection note is required")
         completion.status = "rejected"
-        completion.rejection_note = req.note
+        completion.rejection_note = req.note.strip()
         completion.verified = False
         completion.verified_at = None
         completion.verified_by = None
+        if enrollment.status in ("master_approved", "approved"):
+            enrollment.status = "in_progress"
     else:
         raise HTTPException(400, "Invalid action")
         
@@ -996,12 +999,12 @@ def approver_verify_task(submission_id: str, task_id: str, req: OrientationVerif
     task = db.get(models.OrientationTask, task_id)
     if learner and task:
         if req.action == 'approve':
-            notify(db, learner.id, "orientation_task_approved", "Task approved",
-                   body=f"Your task '{task.title}' was approved by {approver.full_name}.",
+            notify(db, learner.id, "orientation_task_approved", f"Task Verified: {task.title}",
+                   body=f"Your task '{task.title}' was verified by {approver.full_name}.",
                    link="/orientation")
         else:
-            notify(db, learner.id, "orientation_task_rejected", "Task rejected",
-                   body=f"Your task '{task.title}' was rejected by {approver.full_name}. Note: {req.note}",
+            notify(db, learner.id, "orientation_task_rejected", f"Task Revision Required: {task.title}",
+                   body=f"Your task '{task.title}' was rejected by {approver.full_name}. Remark: {completion.rejection_note}",
                    link="/orientation")
                    
     db.commit()
@@ -1095,11 +1098,16 @@ def admin_verify_orientation_task(
         if not completion.completed_at:
             completion.completed_at = datetime.now(timezone.utc)
     elif req.action == 'reject':
+        if not req.note or not req.note.strip():
+            raise HTTPException(400, "Rejection remark is required")
         completion.status = "rejected"
-        completion.rejection_note = req.note or "Revision requested by admin"
+        completion.rejection_note = req.note.strip()
         completion.verified = False
         completion.verified_at = None
         completion.verified_by = None
+        # Revert enrollment status if it was in master_approved or approved
+        if enrollment.status in ("master_approved", "approved"):
+            enrollment.status = "in_progress"
     else:
         raise HTTPException(400, "Invalid action")
 
@@ -1107,13 +1115,19 @@ def admin_verify_orientation_task(
     task = db.get(models.OrientationTask, task_id)
     if learner and task:
         if req.action == 'approve':
-            notify(db, learner.id, "orientation_task_approved", "Task approved",
-                   body=f"Your task '{task.title}' was approved by Admin ({admin.full_name}).",
+            notify(db, learner.id, "orientation_task_approved", f"Task Approved: {task.title}",
+                   body=f"Your task '{task.title}' was reviewed and approved by Admin ({admin.full_name}).",
                    link="/orientation")
         else:
-            notify(db, learner.id, "orientation_task_rejected", "Task rejected",
-                   body=f"Your task '{task.title}' was rejected by Admin ({admin.full_name}). Note: {req.note or ''}",
+            notify(db, learner.id, "orientation_task_rejected", f"Task Revision Required: {task.title}",
+                   body=f"Admin {admin.full_name} requested revision on '{task.title}'. Remark: {completion.rejection_note}. Please review and update your attachment/note.",
                    link="/orientation")
+            # Also notify Vessel Approver (Master/CE) on that vessel so they are aware
+            if enrollment.vessel_name and enrollment.program:
+                for appr in find_vessel_approvers(db, enrollment.vessel_name, enrollment.program.department):
+                    notify(db, appr.id, "orientation_task_rejected", f"Task Revision Requested: {task.title}",
+                           body=f"Admin {admin.full_name} requested revision on '{task.title}' for {learner.full_name} on {enrollment.vessel_name}. Remark: {completion.rejection_note}",
+                           link="/approvals")
 
     # If all tasks are approved and enrollment is in_progress/submitted, auto-advance to master_approved
     all_tasks = enrollment.program.tasks if enrollment.program else []
@@ -1142,20 +1156,34 @@ def admin_decide_orientation_enrollment(
     if enrollment.status != "master_approved":
         raise HTTPException(400, "Enrollment is not awaiting admin approval")
 
+    learner = db.get(models.User, enrollment.learner_id)
+    learner_name = learner.full_name if learner else "Candidate"
+
     if req.action == 'approve':
         enrollment.status = "approved"
         db.commit()
         if enrollment.learner_id:
-            notify(db, enrollment.learner_id, "orientation_approved", "Orientation fully approved!",
-                   body=f"Congratulations! Your {enrollment.program.title} has been fully approved by the admin. You are now promoted!",
+            notify(db, enrollment.learner_id, "orientation_approved", "Orientation Fully Approved!",
+                   body=f"Congratulations! Your {enrollment.program.title} has received final approval from Admin ({admin.full_name}). You are now cleared for promotion!",
                    link="/orientation")
+        if enrollment.vessel_name and enrollment.program:
+            for appr in find_vessel_approvers(db, enrollment.vessel_name, enrollment.program.department):
+                notify(db, appr.id, "orientation_fully_approved", f"Orientation Approved: {learner_name}",
+                       body=f"Admin {admin.full_name} has granted final approval for {learner_name}'s {enrollment.program.title}.",
+                       link="/approvals")
     elif req.action == 'reject':
         enrollment.status = "rejected"
         db.commit()
+        remark_text = f" Remark: {req.note.strip()}." if req.note and req.note.strip() else ""
         if enrollment.learner_id:
-            notify(db, enrollment.learner_id, "orientation_rejected", "Orientation rejected",
-                   body=f"Your {enrollment.program.title} was rejected by the admin. Please contact your training officer.",
+            notify(db, enrollment.learner_id, "orientation_rejected", "Orientation Program Rejected",
+                   body=f"Your {enrollment.program.title} was rejected by Admin ({admin.full_name}).{remark_text} Please contact your training officer.",
                    link="/orientation")
+        if enrollment.vessel_name and enrollment.program:
+            for appr in find_vessel_approvers(db, enrollment.vessel_name, enrollment.program.department):
+                notify(db, appr.id, "orientation_rejected", f"Orientation Rejected: {learner_name}",
+                       body=f"Admin {admin.full_name} rejected {learner_name}'s {enrollment.program.title}.{remark_text}",
+                       link="/approvals")
     else:
         raise HTTPException(400, "Invalid action")
 

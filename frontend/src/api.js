@@ -532,8 +532,8 @@ export const adminCreateOrientationEnrollment = (learnerId, programId, vesselNam
   req('/admin/orientation/enrollments', { method: 'POST', body: JSON.stringify({ learnerId, programId, vesselName, masterName }) })
 export const adminDeleteOrientationEnrollment = (id) =>
   req(`/admin/orientation/enrollments/${id}`, { method: 'DELETE' })
-export const adminDecideOrientationEnrollment = (id, action) =>
-  req(`/admin/orientation/enrollments/${id}/decide`, { method: 'POST', body: JSON.stringify({ action }) })
+export const adminDecideOrientationEnrollment = (id, action, note = null) =>
+  req(`/admin/orientation/enrollments/${id}/decide`, { method: 'POST', body: JSON.stringify({ action, note }) })
 export const adminVerifyOrientationTask = (enrollmentId, taskId, action, note = null) =>
   req(`/admin/orientation/enrollments/${enrollmentId}/tasks/${taskId}/verify`, {
     method: 'POST',

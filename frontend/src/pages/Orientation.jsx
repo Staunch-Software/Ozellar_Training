@@ -131,8 +131,12 @@ function TaskCard({ task, onToggle, onSaveNote, onAddFiles, onRemoveFile, onSubm
         </div>
         
         {isRejected && task.rejectionNote && (
-          <div className="cnd-task-rejection-note" style={{ marginTop: 8, padding: 10, background: '#fee2e2', color: '#991b1b', borderRadius: 4, fontSize: 13 }}>
-            <strong>Master's Note:</strong> {task.rejectionNote}
+          <div className="cnd-task-rejection-note" style={{ marginTop: 8, padding: '10px 14px', background: '#fee2e2', color: '#991b1b', borderRadius: 6, fontSize: 13, border: '1px solid rgba(153, 27, 27, 0.25)' }}>
+            <div style={{ fontWeight: 700, marginBottom: 3 }}>⚠️ Revision Required by Reviewer / Admin:</div>
+            <div style={{ lineHeight: 1.5 }}>{task.rejectionNote}</div>
+            <div style={{ fontSize: 11.5, opacity: 0.85, marginTop: 5 }}>
+              Please update your notes or attachments above, then click <strong>Submit Task</strong> for review.
+            </div>
           </div>
         )}
       </div>

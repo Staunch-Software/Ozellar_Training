@@ -4,7 +4,7 @@ import {
   ArrowLeft, Check, AlertCircle, ShieldCheck, Clock, FileText, Paperclip,
   Eye, Search, Ship, Cog, MessageSquare, CheckCircle2, XCircle,
   ExternalLink, X, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, ShieldQuestion,
-  FileSpreadsheet, Image as ImageIcon, Music, Video, FileArchive, Download
+  FileSpreadsheet, Image as ImageIcon, Music, Video, FileArchive, Download, Send
 } from 'lucide-react'
 import {
   adminGetOrientationEnrollmentDetail,
@@ -240,6 +240,14 @@ function TaskJumpDropdown({ tasks, currentIndex, onSelect }) {
   )
 }
 
+const REJECTION_CHIPS = [
+  { label: '📷 Blurry / Illegible Document', text: 'Document is blurry or illegible. Please upload a clear, readable scan or photo.' },
+  { label: '📅 Expired Certificate', text: 'Uploaded certificate is expired. Please provide a current, valid certificate with valid expiration date.' },
+  { label: '📝 Incomplete Checklist Note', text: 'Checklist details in the officer note are incomplete. Please specify equipment serials, dates, and drill notes.' },
+  { label: '❌ Incorrect Document', text: 'Incorrect document uploaded for this task. Please refer to the requirement and upload the proper document.' },
+  { label: '✍️ Missing Endorsement', text: 'Missing required Master or Chief Engineer signature / vessel stamp on the checklist document.' },
+]
+
 export default function AdminOrientationReviewPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -254,6 +262,19 @@ export default function AdminOrientationReviewPage() {
   const [viewer, setViewer] = useState(null) // { items, index, taskTitle }
   const [deciding, setDeciding] = useState(false)
   const [taskBusyId, setTaskBusyId] = useState(null)
+  const [rejectModal, setRejectModal] = useState({
+    open: false,
+    task: null,
+    remark: '',
+    error: '',
+    submitting: false,
+  })
+  const [programRejectModal, setProgramRejectModal] = useState({
+    open: false,
+    remark: '',
+    error: '',
+    submitting: false,
+  })
   const activePipRef = useRef(null)
   const { confirm, dialog } = useConfirm()
 
@@ -325,20 +346,22 @@ export default function AdminOrientationReviewPage() {
   const handleDecide = async (action) => {
     if (!data) return
     const isApprove = action === 'approve'
-    const title = isApprove ? 'Final Approve Program?' : 'Reject Program?'
-    const msg = isApprove
-      ? `This will grant final admin approval for ${data.candidateName}'s promotion checklist and notify the crew member.`
-      : `This will reject ${data.candidateName}'s orientation program.`
+    if (!isApprove) {
+      setProgramRejectModal({ open: true, remark: '', error: '', submitting: false })
+      return
+    }
+    const title = 'Final Approve Program?'
+    const msg = `This will grant final admin approval for ${data.candidateName}'s promotion checklist and notify the crew member.`
     const ok = await confirm(msg, {
       title,
-      confirmLabel: isApprove ? 'Final Approve' : 'Reject',
-      danger: !isApprove,
+      confirmLabel: 'Final Approve',
+      danger: false,
     })
     if (!ok) return
 
     setDeciding(true)
     try {
-      await adminDecideOrientationEnrollment(data.id, action)
+      await adminDecideOrientationEnrollment(data.id, 'approve')
       loadData()
     } catch (e) {
       setError(e.message || 'Failed to update program status.')
@@ -347,28 +370,81 @@ export default function AdminOrientationReviewPage() {
     }
   }
 
-  const handleVerifyTask = async (taskId, action) => {
-    if (!data || !taskId) return
-    const targetTask = tasks.find((t) => t.id === taskId)
-    const isApprove = action === 'approve'
-    let note = null
-
-    if (!isApprove) {
-      const inputNote = window.prompt(
-        `Specify rejection feedback for "${targetTask?.title || 'this task'}":`,
-        targetTask?.rejectionNote || 'Attachment or note needs revision.'
-      )
-      if (inputNote === null) return // user canceled
-      note = inputNote.trim() || 'Revision requested by admin'
+  const handleConfirmProgramReject = async () => {
+    setProgramRejectModal((prev) => ({ ...prev, submitting: true, error: '' }))
+    try {
+      await adminDecideOrientationEnrollment(data.id, 'reject', programRejectModal.remark)
+      setProgramRejectModal({ open: false, remark: '', error: '', submitting: false })
+      loadData()
+    } catch (e) {
+      setProgramRejectModal((prev) => ({ ...prev, submitting: false, error: e.message || 'Failed to reject program.' }))
     }
+  }
 
+  const handleApproveTask = async (taskId) => {
+    if (!data || !taskId) return
     setTaskBusyId(taskId)
     setError(null)
     try {
-      const updated = await adminVerifyOrientationTask(data.id, taskId, action, note)
+      const updated = await adminVerifyOrientationTask(data.id, taskId, 'approve')
       setData(updated)
     } catch (e) {
-      setError(e.message || 'Failed to update task status.')
+      setError(e.message || 'Failed to approve task.')
+    } finally {
+      setTaskBusyId(null)
+    }
+  }
+
+  const openRejectModal = (t) => {
+    setRejectModal({
+      open: true,
+      task: t,
+      remark: t?.rejectionNote || '',
+      error: '',
+      submitting: false,
+    })
+  }
+
+  const closeRejectModal = () => {
+    setRejectModal({
+      open: false,
+      task: null,
+      remark: '',
+      error: '',
+      submitting: false,
+    })
+  }
+
+  const handleApplyChip = (chipText) => {
+    setRejectModal((prev) => {
+      const current = (prev.remark || '').trim()
+      if (!current) {
+        return { ...prev, remark: chipText, error: '' }
+      }
+      if (current.includes(chipText)) {
+        return prev
+      }
+      return { ...prev, remark: `${current}\n${chipText}`, error: '' }
+    })
+  }
+
+  const handleConfirmTaskReject = async () => {
+    const { task, remark } = rejectModal
+    if (!task) return
+    const trimmed = (remark || '').trim()
+    if (!trimmed) {
+      setRejectModal((prev) => ({ ...prev, error: 'Please enter a remark explaining what the seafarer must do.' }))
+      return
+    }
+
+    setRejectModal((prev) => ({ ...prev, submitting: true, error: '' }))
+    setTaskBusyId(task.id)
+    try {
+      const updated = await adminVerifyOrientationTask(data.id, task.id, 'reject', trimmed)
+      setData(updated)
+      closeRejectModal()
+    } catch (e) {
+      setRejectModal((prev) => ({ ...prev, submitting: false, error: e.message || 'Failed to reject task.' }))
     } finally {
       setTaskBusyId(null)
     }
@@ -597,7 +673,7 @@ export default function AdminOrientationReviewPage() {
                           type="button"
                           className="orp-task-btn orp-task-btn--subtle-reject"
                           disabled={taskBusyId === task.id}
-                          onClick={() => handleVerifyTask(task.id, 'reject')}
+                          onClick={() => openRejectModal(task)}
                           title="Reject this task and request revision"
                         >
                           <XCircle size={13} /> Reject
@@ -611,15 +687,26 @@ export default function AdminOrientationReviewPage() {
                             Revision Requested {task.rejectionNote ? ` · Note: ${task.rejectionNote}` : ''}
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          className="orp-task-btn orp-task-btn--subtle-approve"
-                          disabled={taskBusyId === task.id}
-                          onClick={() => handleVerifyTask(task.id, 'approve')}
-                          title="Approve this task"
-                        >
-                          <CheckCircle2 size={13} /> Approve Task
-                        </button>
+                        <div className="orp-task-action-btns">
+                          <button
+                            type="button"
+                            className="orp-task-btn orp-task-btn--subtle-reject"
+                            disabled={taskBusyId === task.id}
+                            onClick={() => openRejectModal(task)}
+                            title="Edit rejection remark"
+                          >
+                            Edit Remark
+                          </button>
+                          <button
+                            type="button"
+                            className="orp-task-btn orp-task-btn--subtle-approve"
+                            disabled={taskBusyId === task.id}
+                            onClick={() => handleApproveTask(task.id)}
+                            title="Approve this task"
+                          >
+                            <CheckCircle2 size={13} /> Approve Task
+                          </button>
+                        </div>
                       </div>
                     ) : (
                       <div className="orp-task-pending-bar">
@@ -632,7 +719,7 @@ export default function AdminOrientationReviewPage() {
                             type="button"
                             className="orp-task-btn orp-task-btn--reject"
                             disabled={taskBusyId === task.id}
-                            onClick={() => handleVerifyTask(task.id, 'reject')}
+                            onClick={() => openRejectModal(task)}
                             title="Reject this task with feedback"
                           >
                             <XCircle size={14} /> Reject Task
@@ -641,7 +728,7 @@ export default function AdminOrientationReviewPage() {
                             type="button"
                             className="orp-task-btn orp-task-btn--approve"
                             disabled={taskBusyId === task.id}
-                            onClick={() => handleVerifyTask(task.id, 'approve')}
+                            onClick={() => handleApproveTask(task.id)}
                             title="Approve this task"
                           >
                             <CheckCircle2 size={14} /> Approve Task
@@ -719,6 +806,197 @@ export default function AdminOrientationReviewPage() {
           </div>
         )}
       </div>
+
+      {/* Dedicated Task Rejection Modal */}
+      {rejectModal.open && rejectModal.task && (
+        <div className="orp-modal-overlay" onClick={closeRejectModal}>
+          <div
+            className="orp-reject-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="orp-reject-modal-title"
+          >
+            <div className="orp-reject-modal-header">
+              <div className="orp-reject-modal-header-icon">
+                <AlertCircle size={22} />
+              </div>
+              <div className="orp-reject-modal-header-text">
+                <h3 id="orp-reject-modal-title" className="orp-reject-modal-title">
+                  Task Revision Required
+                </h3>
+                <p className="orp-reject-modal-subtitle">
+                  Reject task and specify what the seafarer must correct or upload
+                </p>
+              </div>
+              <button
+                type="button"
+                className="orp-reject-modal-close"
+                onClick={closeRejectModal}
+                aria-label="Close dialog"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="orp-reject-context-box">
+              <div className="orp-reject-context-badge">Task #{idx + 1}</div>
+              <div className="orp-reject-context-info">
+                <div className="orp-reject-context-title">{rejectModal.task.title}</div>
+                <div className="orp-reject-context-meta">
+                  <span>Candidate: <strong>{data?.candidateName}</strong></span>
+                  <span className="orp-reject-sep">·</span>
+                  <span>{(data?.candidateRank || 'Officer').toUpperCase()}</span>
+                  <span className="orp-reject-sep">·</span>
+                  <span>{data?.vessel || data?.vesselName || 'Vessel'}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="orp-reject-form-group">
+              <label htmlFor="orp-reject-input" className="orp-reject-label">
+                <span>Reason for Rejection & Required Action</span>
+                <span className="orp-reject-req">*</span>
+              </label>
+
+              <div className="orp-reject-chips-label">Quick suggestions:</div>
+              <div className="orp-reject-chips">
+                {REJECTION_CHIPS.map((chip, cIdx) => (
+                  <button
+                    key={cIdx}
+                    type="button"
+                    className="orp-reject-chip"
+                    onClick={() => handleApplyChip(chip.text)}
+                    title={`Click to add: "${chip.text}"`}
+                  >
+                    {chip.label}
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                id="orp-reject-input"
+                className="orp-reject-textarea"
+                rows={4}
+                placeholder="Explain clearly why this task cannot be approved and specify what the officer needs to do or re-upload before resubmitting (e.g. Please upload a clear photo of the certified checklist with signature)."
+                value={rejectModal.remark}
+                onChange={(e) => setRejectModal((prev) => ({ ...prev, remark: e.target.value, error: '' }))}
+                autoFocus
+              />
+
+              {rejectModal.error && (
+                <div className="orp-reject-error-msg">
+                  <AlertCircle size={13} />
+                  <span>{rejectModal.error}</span>
+                </div>
+              )}
+
+              <p className="orp-reject-hint">
+                This remark will be sent immediately via in-app notification to <strong>{data?.candidateName}</strong> and highlighted on their Orientation checklist.
+              </p>
+            </div>
+
+            <div className="orp-reject-modal-footer">
+              <button
+                type="button"
+                className="orp-reject-btn-cancel"
+                onClick={closeRejectModal}
+                disabled={rejectModal.submitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="orp-reject-btn-submit"
+                onClick={handleConfirmTaskReject}
+                disabled={rejectModal.submitting}
+              >
+                {rejectModal.submitting ? (
+                  <>
+                    <RefreshCw size={14} className="orp-spin" /> Submitting...
+                  </>
+                ) : (
+                  <>
+                    <XCircle size={14} /> Confirm Rejection & Notify Seafarer
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Program Rejection Modal */}
+      {programRejectModal.open && (
+        <div className="orp-modal-overlay" onClick={() => setProgramRejectModal({ open: false, remark: '', error: '', submitting: false })}>
+          <div
+            className="orp-reject-modal"
+            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+          >
+            <div className="orp-reject-modal-header">
+              <div className="orp-reject-modal-header-icon">
+                <AlertCircle size={22} />
+              </div>
+              <div className="orp-reject-modal-header-text">
+                <h3 className="orp-reject-modal-title">Reject Orientation Program</h3>
+                <p className="orp-reject-modal-subtitle">
+                  Reject {data?.candidateName}'s promotion checklist and notify the candidate
+                </p>
+              </div>
+              <button
+                type="button"
+                className="orp-reject-modal-close"
+                onClick={() => setProgramRejectModal({ open: false, remark: '', error: '', submitting: false })}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="orp-reject-form-group">
+              <label className="orp-reject-label">
+                <span>Rejection Reason / Administrative Feedback</span>
+              </label>
+              <textarea
+                className="orp-reject-textarea"
+                rows={3}
+                placeholder="Optional feedback for candidate and vessel master explaining why the program was rejected..."
+                value={programRejectModal.remark}
+                onChange={(e) => setProgramRejectModal((prev) => ({ ...prev, remark: e.target.value, error: '' }))}
+                autoFocus
+              />
+            </div>
+
+            <div className="orp-reject-modal-footer">
+              <button
+                type="button"
+                className="orp-reject-btn-cancel"
+                onClick={() => setProgramRejectModal({ open: false, remark: '', error: '', submitting: false })}
+                disabled={programRejectModal.submitting}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="orp-reject-btn-submit"
+                onClick={handleConfirmProgramReject}
+                disabled={programRejectModal.submitting}
+              >
+                {programRejectModal.submitting ? (
+                  <>
+                    <RefreshCw size={14} className="orp-spin" /> Rejecting...
+                  </>
+                ) : (
+                  <>
+                    <XCircle size={14} /> Reject Program & Notify
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

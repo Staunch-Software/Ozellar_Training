@@ -1472,3 +1472,388 @@
   border-color: #2d3748;
   color: #e2e8f0;
 }
+
+/* ============================================================
+   Task Rejection & Revision Modal
+   ============================================================ */
+.orp-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(5px);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: orpFadeIn 0.16s ease-out;
+}
+
+@keyframes orpFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.orp-reject-modal {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 560px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: orpModalScaleIn 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+@keyframes orpModalScaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.orp-reject-modal-header {
+  padding: 18px 22px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  border-bottom: 1px solid #f1f5f9;
+  position: relative;
+}
+
+.orp-reject-modal-header-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #fee2e2;
+  color: #dc2626;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.orp-reject-modal-header-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.orp-reject-modal-title {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.01em;
+}
+
+.orp-reject-modal-subtitle {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.orp-reject-modal-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 6px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: all 0.12s ease;
+  flex-shrink: 0;
+}
+
+.orp-reject-modal-close:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.orp-reject-context-box {
+  margin: 14px 22px 0;
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.orp-reject-context-badge {
+  font-size: 11px;
+  font-weight: 800;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(224, 120, 32, 0.14);
+  color: #E07820;
+  flex-shrink: 0;
+}
+
+.orp-reject-context-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.orp-reject-context-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.orp-reject-context-meta {
+  font-size: 11.5px;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.orp-reject-sep {
+  opacity: 0.5;
+}
+
+.orp-reject-form-group {
+  padding: 14px 22px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.orp-reject-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.orp-reject-req {
+  color: #dc2626;
+  font-weight: 800;
+}
+
+.orp-reject-chips-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.orp-reject-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.orp-reject-chip {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  border-radius: 16px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  text-align: left;
+}
+
+.orp-reject-chip:hover {
+  background: #e2e8f0;
+  border-color: #94a3b8;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.orp-reject-chip:active {
+  transform: translateY(0);
+}
+
+.orp-reject-textarea {
+  width: 100%;
+  border-radius: 10px;
+  border: 1.5px solid #cbd5e1;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.5;
+  font-family: inherit;
+  color: #0f172a;
+  background: #ffffff;
+  resize: vertical;
+  min-height: 95px;
+  box-sizing: border-box;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.orp-reject-textarea:focus {
+  outline: none;
+  border-color: #dc2626;
+  box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.12);
+}
+
+.orp-reject-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #dc2626;
+  padding: 6px 10px;
+  border-radius: 6px;
+  background: #fef2f2;
+}
+
+.orp-reject-hint {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.orp-reject-modal-footer {
+  padding: 14px 22px;
+  background: #f8fafc;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.orp-reject-btn-cancel {
+  padding: 8px 16px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #475569;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  font-family: inherit;
+}
+
+.orp-reject-btn-cancel:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.orp-reject-btn-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 18px;
+  border-radius: 8px;
+  border: 1px solid #dc2626;
+  background: #dc2626;
+  color: #ffffff;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  font-family: inherit;
+  box-shadow: 0 2px 6px rgba(220, 38, 38, 0.25);
+}
+
+.orp-reject-btn-submit:hover:not(:disabled) {
+  background: #b91c1c;
+  border-color: #b91c1c;
+  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.35);
+}
+
+.orp-reject-btn-submit:disabled,
+.orp-reject-btn-cancel:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Dark Mode Overrides for Rejection Modal */
+:root[data-theme="dark"] .orp-reject-modal {
+  background: #1a2234;
+  border-color: #2b3952;
+}
+
+:root[data-theme="dark"] .orp-reject-modal-header {
+  border-bottom-color: #243046;
+}
+
+:root[data-theme="dark"] .orp-reject-modal-title {
+  color: #f1f5f9;
+}
+
+:root[data-theme="dark"] .orp-reject-modal-subtitle {
+  color: #94a3b8;
+}
+
+:root[data-theme="dark"] .orp-reject-modal-close:hover {
+  background: #243046;
+  color: #f1f5f9;
+}
+
+:root[data-theme="dark"] .orp-reject-context-box {
+  background: #131926;
+  border-color: #243046;
+}
+
+:root[data-theme="dark"] .orp-reject-context-title {
+  color: #f1f5f9;
+}
+
+:root[data-theme="dark"] .orp-reject-context-meta {
+  color: #94a3b8;
+}
+
+:root[data-theme="dark"] .orp-reject-label {
+  color: #f1f5f9;
+}
+
+:root[data-theme="dark"] .orp-reject-chip {
+  background: #243046;
+  border-color: #334460;
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .orp-reject-chip:hover {
+  background: #2d3c56;
+  border-color: #485c80;
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .orp-reject-textarea {
+  background: #131926;
+  border-color: #334460;
+  color: #f1f5f9;
+}
+
+:root[data-theme="dark"] .orp-reject-modal-footer {
+  background: #131926;
+  border-top-color: #243046;
+}
+
+:root[data-theme="dark"] .orp-reject-btn-cancel {
+  background: #1a2234;
+  border-color: #334460;
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .orp-reject-btn-cancel:hover:not(:disabled) {
+  background: #243046;
+  color: #ffffff;
+}
