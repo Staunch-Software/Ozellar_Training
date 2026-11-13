@@ -1039,6 +1039,19 @@
   box-shadow: 0 2px 6px rgba(22, 163, 74, 0.35);
 }
 
+.orp-task-btn--approved-badge {
+  background: #15803d;
+  color: #ffffff;
+  border-color: #166534;
+  box-shadow: 0 1px 3px rgba(21, 128, 61, 0.3);
+  font-weight: 800;
+}
+
+.orp-task-btn--approved-badge:hover:not(:disabled) {
+  background: #166534;
+  box-shadow: 0 2px 6px rgba(21, 128, 61, 0.4);
+}
+
 .orp-task-btn--reject {
   background: #ffffff;
   color: #dc2626;

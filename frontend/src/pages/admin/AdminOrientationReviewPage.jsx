@@ -343,6 +343,14 @@ export default function AdminOrientationReviewPage() {
   const enrollmentStatus = data?.enrollmentStatus || data?.status || 'in_progress'
   const isMasterApproved = enrollmentStatus === 'master_approved'
 
+  const isAdminApproved = Boolean(
+    (task?.status === 'approved' || task?.verified) &&
+    (
+      ['admin', 'super_admin', 'office_admin'].includes(task?.verifiedByRole) ||
+      (task?.verifiedBy && task.verifiedBy.toLowerCase().includes('admin'))
+    )
+  )
+
   const handleDecide = async (action) => {
     if (!data) return
     const isApprove = action === 'approve'
@@ -663,31 +671,65 @@ export default function AdminOrientationReviewPage() {
                         <div className="orp-master-banner-text">
                           <ShieldCheck size={16} />
                           <span>
-                            {task.verifiedBy
-                              ? `Approved by ${task.verifiedBy}`
-                              : `Verified by Vessel Approver (${data.masterName || 'Capt. Suresh Sharma'})`}
+                            {isAdminApproved
+                              ? `Approved by Admin (${task.verifiedBy || me?.full_name || 'Fleet Admin'})`
+                              : task.verifiedBy
+                                ? `Verified by Vessel Approver (${task.verifiedBy})`
+                                : `Verified by Vessel Approver (${data.masterName || 'Capt. Suresh Sharma'})`}
                             {task.verifiedAt ? ` · ${fmt(task.verifiedAt)}` : ''}
                           </span>
                         </div>
-                        <button
-                          type="button"
-                          className="orp-task-btn orp-task-btn--subtle-reject"
-                          disabled={taskBusyId === task.id}
-                          onClick={() => openRejectModal(task)}
-                          title="Reject this task and request revision"
-                        >
-                          <XCircle size={13} /> Reject
-                        </button>
+                        <div className="orp-task-action-btns">
+                          {isAdminApproved ? (
+                            <button
+                              type="button"
+                              className="orp-task-btn orp-task-btn--approved-badge"
+                              disabled={taskBusyId === task.id}
+                              onClick={() => handleApproveTask(task.id)}
+                              title="Task is approved by Admin. Click to re-verify approval."
+                            >
+                              <CheckCircle2 size={13} /> Approved
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              className="orp-task-btn orp-task-btn--approve"
+                              disabled={taskBusyId === task.id}
+                              onClick={() => handleApproveTask(task.id)}
+                              title="Approve this task as Admin"
+                            >
+                              <CheckCircle2 size={13} /> Approve Task
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            className="orp-task-btn orp-task-btn--subtle-reject"
+                            disabled={taskBusyId === task.id}
+                            onClick={() => openRejectModal(task)}
+                            title="Reject this task and request revision"
+                          >
+                            <XCircle size={13} /> Reject
+                          </button>
+                        </div>
                       </div>
                     ) : task.status === 'rejected' ? (
                       <div className="orp-master-banner orp-master-banner--rejected">
                         <div className="orp-master-banner-text">
                           <XCircle size={16} />
                           <span>
-                            Revision Requested {task.rejectionNote ? ` · Note: ${task.rejectionNote}` : ''}
+                            Revision Requested {task.rejectionNote ? ` · Remark: ${task.rejectionNote}` : ''}
                           </span>
                         </div>
                         <div className="orp-task-action-btns">
+                          <button
+                            type="button"
+                            className="orp-task-btn orp-task-btn--approve"
+                            disabled={taskBusyId === task.id}
+                            onClick={() => handleApproveTask(task.id)}
+                            title="Approve this task"
+                          >
+                            <CheckCircle2 size={13} /> Approve Task
+                          </button>
                           <button
                             type="button"
                             className="orp-task-btn orp-task-btn--subtle-reject"
@@ -696,15 +738,6 @@ export default function AdminOrientationReviewPage() {
                             title="Edit rejection remark"
                           >
                             Edit Remark
-                          </button>
-                          <button
-                            type="button"
-                            className="orp-task-btn orp-task-btn--subtle-approve"
-                            disabled={taskBusyId === task.id}
-                            onClick={() => handleApproveTask(task.id)}
-                            title="Approve this task"
-                          >
-                            <CheckCircle2 size={13} /> Approve Task
                           </button>
                         </div>
                       </div>
@@ -717,21 +750,21 @@ export default function AdminOrientationReviewPage() {
                         <div className="orp-task-action-btns">
                           <button
                             type="button"
-                            className="orp-task-btn orp-task-btn--reject"
-                            disabled={taskBusyId === task.id}
-                            onClick={() => openRejectModal(task)}
-                            title="Reject this task with feedback"
-                          >
-                            <XCircle size={14} /> Reject Task
-                          </button>
-                          <button
-                            type="button"
                             className="orp-task-btn orp-task-btn--approve"
                             disabled={taskBusyId === task.id}
                             onClick={() => handleApproveTask(task.id)}
                             title="Approve this task"
                           >
                             <CheckCircle2 size={14} /> Approve Task
+                          </button>
+                          <button
+                            type="button"
+                            className="orp-task-btn orp-task-btn--reject"
+                            disabled={taskBusyId === task.id}
+                            onClick={() => openRejectModal(task)}
+                            title="Reject this task with feedback"
+                          >
+                            <XCircle size={14} /> Reject Task
                           </button>
                         </div>
                       </div>
