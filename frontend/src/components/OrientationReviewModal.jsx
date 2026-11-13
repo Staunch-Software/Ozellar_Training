@@ -147,6 +147,14 @@ export default function OrientationReviewModal({ enrollmentId, isOpen, onClose, 
   const isMasterApproved = enrollmentStatus === 'master_approved'
   const isApproved = enrollmentStatus === 'approved'
   const isRejected = enrollmentStatus === 'rejected'
+  const allTasksAdminApproved = allTasks.length > 0 && allTasks.every((t) =>
+    (t.status === 'approved' || t.verified) &&
+    (
+      t.isAdminApproved === true ||
+      ['admin', 'super_admin', 'office_admin'].includes(t.verifiedByRole) ||
+      (t.verifiedBy && t.verifiedBy.toLowerCase().includes('admin'))
+    )
+  )
 
   const dept = data?.department === 'engine' ? 'Engine' : 'Deck'
   const DeptIcon = data?.department === 'engine' ? Cog : Ship
@@ -565,8 +573,9 @@ export default function OrientationReviewModal({ enrollmentId, isOpen, onClose, 
                         <button
                           type="button"
                           className="orm-btn-approve"
-                          disabled={deciding}
+                          disabled={deciding || !allTasksAdminApproved}
                           onClick={() => handleDecide('approve')}
+                          title={!allTasksAdminApproved ? 'All tasks must be approved by Admin first' : 'Grant Final Approval'}
                         >
                           <Check size={14} /> Grant Final Approval
                         </button>

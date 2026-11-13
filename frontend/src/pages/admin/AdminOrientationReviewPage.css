@@ -305,6 +305,46 @@
   color: #10b981;
 }
 
+.orp-stepper-pip--admin-verified {
+  border-color: #059669;
+  color: #ffffff;
+  background: #10b981;
+}
+
+.orp-stepper-pip--admin-verified.orp-stepper-pip--active {
+  background: #047857 !important;
+  border-color: #047857 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(4, 120, 87, 0.4);
+}
+
+.orp-approve-all-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-left: 6px;
+  transition: all 0.12s ease;
+}
+
+.orp-approve-all-btn:hover:not(:disabled) {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #10b981;
+}
+
+.orp-approve-all-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Center Stepper Nav */
 .orp-stepper-center {
   display: flex;
@@ -1236,9 +1276,13 @@
   box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
 }
 
-.orp-action-btn:disabled {
-  opacity: 0.45;
-  cursor: not-allowed;
+.orp-action-btn:disabled,
+.orp-action-btn--approve:disabled {
+  background: #cbd5e1 !important;
+  color: #64748b !important;
+  border: 1px solid #cbd5e1 !important;
+  opacity: 0.7 !important;
+  cursor: not-allowed !important;
   box-shadow: none !important;
   transform: none !important;
 }

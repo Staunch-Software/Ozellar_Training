@@ -890,9 +890,15 @@ def orientation_submission_detail(db, enrollment):
     completions_map = {c.task_id: c for c in enrollment.completions} if enrollment else {}
     
     tasks_out = []
+    admin_approved_count = 0
     for t in tasks:
         c = completions_map.get(t.id)
         verifier = db.get(models.User, c.verified_by) if c and c.verified_by else None
+        is_admin_approved = bool(
+            c and c.status == "approved" and verifier and verifier.role in ("super_admin", "admin", "office_admin")
+        )
+        if is_admin_approved:
+            admin_approved_count += 1
         tasks_out.append({
             "id": t.id,
             "title": t.title,
@@ -908,6 +914,7 @@ def orientation_submission_detail(db, enrollment):
             "verifiedAt": to_ist_iso(c.verified_at) if c and c.verified_at else None,
             "verifiedBy": verifier.full_name if verifier else None,
             "verifiedByRole": verifier.role if verifier else None,
+            "isAdminApproved": is_admin_approved,
         })
         
     has_pending_tasks = any(c.status == "pending_review" for c in enrollment.completions)
@@ -945,6 +952,8 @@ def orientation_submission_detail(db, enrollment):
         "enrollmentStatus": enrollment.status,
         "masterName": enrollment.master_name,
         "completedCount": completed_tasks,
+        "verifiedCount": approved_tasks,
+        "adminApprovedCount": admin_approved_count,
         "totalTasks": total_tasks,
         "progressPct": pct,
         "attachmentsCount": attachments_count,
@@ -1157,6 +1166,49 @@ def admin_verify_orientation_task(
     return orientation_submission_detail(db, enrollment)
 
 
+@router.post("/api/admin/orientation/enrollments/{enrollment_id}/approve-all-tasks")
+def admin_approve_all_orientation_tasks(
+    enrollment_id: str,
+    admin: models.User = Depends(require_module("orientation")),
+    db: Session = Depends(get_db)
+):
+    """Admin approves all tasks for this enrollment in bulk."""
+    enrollment = db.get(models.OrientationEnrollment, enrollment_id)
+    if not enrollment:
+        raise HTTPException(404, "Enrollment not found")
+    if enrollment.status == "approved":
+        raise HTTPException(400, "Orientation program is already fully approved and cannot be modified.")
+
+    tasks = enrollment.program.tasks if enrollment.program else []
+    now = datetime.now(timezone.utc)
+    for task in tasks:
+        completion = (db.query(models.OrientationTaskCompletion)
+                      .filter_by(enrollment_id=enrollment.id, task_id=task.id).first())
+        if not completion:
+            completion = models.OrientationTaskCompletion(
+                enrollment_id=enrollment.id,
+                task_id=task.id,
+                is_completed=True,
+                completed_at=now
+            )
+            db.add(completion)
+
+        if completion.status == "rejected":
+            continue
+
+        completion.status = "approved"
+        completion.verified = True
+        completion.verified_at = now
+        completion.verified_by = admin.id
+        completion.rejection_note = None
+        completion.is_completed = True
+        if not completion.completed_at:
+            completion.completed_at = now
+
+    db.commit()
+    return orientation_submission_detail(db, enrollment)
+
+
 @router.post("/api/admin/orientation/enrollments/{enrollment_id}/decide")
 def admin_decide_orientation_enrollment(
     enrollment_id: str,
@@ -1175,11 +1227,21 @@ def admin_decide_orientation_enrollment(
 
     all_tasks = enrollment.program.tasks if enrollment.program else []
     completions = {c.task_id: c for c in enrollment.completions}
-    all_approved = len(all_tasks) > 0 and all(
-        completions.get(t.id) and completions[t.id].status == "approved" for t in all_tasks
-    )
-    if req.action == 'approve' and not all_approved:
-        raise HTTPException(400, "All tasks must be approved before granting final program approval.")
+
+    def _is_task_admin_approved(t_id):
+        c = completions.get(t_id)
+        if not c or c.status != "approved" or not c.verified_by:
+            return False
+        verifier = db.get(models.User, c.verified_by)
+        return bool(verifier and verifier.role in ("super_admin", "admin", "office_admin"))
+
+    all_admin_approved = len(all_tasks) > 0 and all(_is_task_admin_approved(t.id) for t in all_tasks)
+    if req.action == 'approve' and not all_admin_approved:
+        admin_count = sum(1 for t in all_tasks if _is_task_admin_approved(t.id))
+        raise HTTPException(
+            400,
+            f"All tasks must be approved by the Admin before granting final program approval ({admin_count}/{len(all_tasks)} approved)."
+        )
 
     learner = db.get(models.User, enrollment.learner_id)
     learner_name = learner.full_name if learner else "Candidate"
