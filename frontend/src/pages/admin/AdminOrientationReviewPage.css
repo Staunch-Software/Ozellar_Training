@@ -937,17 +937,34 @@
   font-style: normal;
 }
 
-/* Master Verification Banner */
-.orp-master-banner {
-  border-radius: 9px;
-  padding: 10px 14px;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12.5px;
-  font-weight: 700;
+/* Task Verification & Decision Bar */
+.orp-task-verify-bar {
   margin-top: auto;
   flex-shrink: 0;
+  width: 100%;
+}
+
+.orp-master-banner {
+  border-radius: 9px;
+  padding: 8px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 12.5px;
+  font-weight: 700;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.orp-master-banner-text {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .orp-master-banner--verified {
@@ -960,6 +977,136 @@
   background: #fee2e2;
   color: #991b1b;
   border: 1px solid rgba(153, 27, 27, 0.25);
+}
+
+.orp-task-pending-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 14px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 9px;
+  gap: 12px;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.orp-task-pending-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+}
+
+.orp-task-action-btns {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.orp-task-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.14s ease;
+  font-family: inherit;
+  border: 1px solid transparent;
+}
+
+.orp-task-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.orp-task-btn--approve {
+  background: #16a34a;
+  color: #ffffff;
+  border-color: #15803d;
+  box-shadow: 0 1px 3px rgba(22, 163, 74, 0.25);
+}
+
+.orp-task-btn--approve:hover:not(:disabled) {
+  background: #15803d;
+  box-shadow: 0 2px 6px rgba(22, 163, 74, 0.35);
+}
+
+.orp-task-btn--reject {
+  background: #ffffff;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.orp-task-btn--reject:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #dc2626;
+}
+
+.orp-task-btn--subtle-reject {
+  background: rgba(220, 38, 38, 0.12);
+  color: #991b1b;
+  border-color: rgba(220, 38, 38, 0.25);
+  padding: 4px 10px;
+  font-size: 11.5px;
+}
+
+.orp-task-btn--subtle-reject:hover:not(:disabled) {
+  background: rgba(220, 38, 38, 0.2);
+  color: #7f1d1d;
+}
+
+.orp-task-btn--subtle-approve {
+  background: rgba(22, 163, 74, 0.15);
+  color: #166534;
+  border-color: rgba(22, 163, 74, 0.3);
+  padding: 4px 10px;
+  font-size: 11.5px;
+}
+
+.orp-task-btn--subtle-approve:hover:not(:disabled) {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+/* Dark mode overrides for task verification bar */
+:root[data-theme="dark"] .orp-task-pending-bar {
+  background: #141926;
+  border-color: #263147;
+}
+
+:root[data-theme="dark"] .orp-task-pending-hint {
+  color: #94a3b8;
+}
+
+:root[data-theme="dark"] .orp-task-btn--reject {
+  background: #1f1519;
+  color: #f87171;
+  border-color: #7f1d1d;
+}
+
+:root[data-theme="dark"] .orp-task-btn--reject:hover:not(:disabled) {
+  background: #36171b;
+  border-color: #ef4444;
+}
+
+:root[data-theme="dark"] .orp-master-banner--verified {
+  background: #0f281e;
+  color: #4ade80;
+  border-color: #166534;
+}
+
+:root[data-theme="dark"] .orp-master-banner--rejected {
+  background: #2a1215;
+  color: #f87171;
+  border-color: #7f1d1d;
 }
 
 /* Card Nav Row (Prev / Next under card) */

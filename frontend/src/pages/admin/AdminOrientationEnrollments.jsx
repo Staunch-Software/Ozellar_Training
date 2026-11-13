@@ -348,6 +348,7 @@ export default function AdminOrientationEnrollments() {
   const navigate = useNavigate()
   const { user: me } = useAuth()
   const isSuperAdmin = me?.role === 'super_admin'
+  const isAdmin = me?.role === 'admin' || me?.role === 'office_admin' || isSuperAdmin
   const [enrollments, setEnrollments] = useState(null)
   const [programs, setPrograms] = useState([])
   const [vessels, setVessels] = useState([])
@@ -530,7 +531,7 @@ export default function AdminOrientationEnrollments() {
                   const dept = e.department ? DEPT_LABEL[e.department] : null
                   const DeptIcon = dept?.icon
                   const sl = STATUS_LABEL[e.status] || { label: e.status, cls: '' }
-                  const canApprove = isSuperAdmin && e.status === 'master_approved'
+                  const canApprove = (isAdmin || isSuperAdmin) && e.status === 'master_approved'
                   return (
                     <tr key={e.id}>
                       <td>

@@ -39,6 +39,7 @@ export default function AdminOrientationResults() {
   const navigate = useNavigate()
   const { user: me } = useAuth()
   const isSuperAdmin = me?.role === 'super_admin'
+  const isAdmin = me?.role === 'admin' || me?.role === 'office_admin' || isSuperAdmin
   const [rows, setRows] = useState(null)
   const [programs, setPrograms] = useState([])
   const [vessels, setVessels] = useState([])
@@ -193,7 +194,7 @@ export default function AdminOrientationResults() {
                     <td className="orn-table-muted orn-table-nowrap">{fmt(r.decidedAt)}</td>
                     <td>
                       {(() => {
-                        const canApprove = isSuperAdmin && r.status === 'master_approved'
+                        const canApprove = (isAdmin || isSuperAdmin) && r.status === 'master_approved'
                         return (
                           <button
                             type="button"

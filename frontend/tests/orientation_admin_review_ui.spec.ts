@@ -206,4 +206,28 @@ test.describe('Admin Orientation - Dedicated Approver-Style Review Page & File P
     await expect(approveBtn).toBeVisible()
     await expect(approveBtn).toContainText(/Approve/i)
   })
+
+  test('admin can approve and verify orientation task directly on review card', async ({ page }) => {
+    await page.goto('/admin/orientation-program/enrollments')
+    await page.waitForLoadState('networkidle')
+
+    const reviewBtn = page.locator('button').filter({ hasText: /Review/i }).first()
+    await reviewBtn.click()
+    await expect(page).toHaveURL(/\/admin\/orientation(\/|-)?review\//)
+
+    // Check task verification bar exists on review card
+    const verifyBar = page.locator('.orp-task-verify-bar')
+    await expect(verifyBar).toBeVisible({ timeout: 8000 })
+
+    // Check if task has Approve Task button or is already verified
+    const approveTaskBtn = verifyBar.locator('.orp-task-btn--approve, .orp-task-btn--subtle-approve').first()
+    if (await approveTaskBtn.isVisible().catch(() => false)) {
+      await approveTaskBtn.click()
+      // Banner updates to verified
+      await expect(verifyBar.locator('.orp-master-banner--verified')).toBeVisible({ timeout: 5000 })
+    } else {
+      // It's already verified, banner is visible
+      await expect(verifyBar.locator('.orp-master-banner--verified')).toBeVisible()
+    }
+  })
 })

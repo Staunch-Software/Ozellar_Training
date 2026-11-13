@@ -6,7 +6,11 @@ import {
   ExternalLink, X, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, ShieldQuestion,
   FileSpreadsheet, Image as ImageIcon, Music, Video, FileArchive, Download
 } from 'lucide-react'
-import { adminGetOrientationEnrollmentDetail, adminDecideOrientationEnrollment } from '../../api.js'
+import {
+  adminGetOrientationEnrollmentDetail,
+  adminDecideOrientationEnrollment,
+  adminVerifyOrientationTask
+} from '../../api.js'
 import { useAuth } from '../../auth.jsx'
 import { useConfirm } from '../../components/ConfirmDialog.jsx'
 import FilePreviewModal, { detectFileType, cleanFileName } from '../../components/FilePreviewModal.jsx'
@@ -241,6 +245,7 @@ export default function AdminOrientationReviewPage() {
   const navigate = useNavigate()
   const { user: me } = useAuth()
   const isSuperAdmin = me?.role === 'super_admin'
+  const isAdmin = me?.role === 'admin' || me?.role === 'office_admin' || isSuperAdmin
 
   const [data, setData] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -248,6 +253,7 @@ export default function AdminOrientationReviewPage() {
   const [idx, setIdx] = useState(0)
   const [viewer, setViewer] = useState(null) // { items, index, taskTitle }
   const [deciding, setDeciding] = useState(false)
+  const [taskBusyId, setTaskBusyId] = useState(null)
   const activePipRef = useRef(null)
   const { confirm, dialog } = useConfirm()
 
@@ -338,6 +344,33 @@ export default function AdminOrientationReviewPage() {
       setError(e.message || 'Failed to update program status.')
     } finally {
       setDeciding(false)
+    }
+  }
+
+  const handleVerifyTask = async (taskId, action) => {
+    if (!data || !taskId) return
+    const targetTask = tasks.find((t) => t.id === taskId)
+    const isApprove = action === 'approve'
+    let note = null
+
+    if (!isApprove) {
+      const inputNote = window.prompt(
+        `Specify rejection feedback for "${targetTask?.title || 'this task'}":`,
+        targetTask?.rejectionNote || 'Attachment or note needs revision.'
+      )
+      if (inputNote === null) return // user canceled
+      note = inputNote.trim() || 'Revision requested by admin'
+    }
+
+    setTaskBusyId(taskId)
+    setError(null)
+    try {
+      const updated = await adminVerifyOrientationTask(data.id, taskId, action, note)
+      setData(updated)
+    } catch (e) {
+      setError(e.message || 'Failed to update task status.')
+    } finally {
+      setTaskBusyId(null)
     }
   }
 
@@ -547,25 +580,76 @@ export default function AdminOrientationReviewPage() {
                     )}
                   </div>
 
-                  {/* Master Verification Banner */}
-                  {(task.status === 'approved' || task.verified) && (
-                    <div className="orp-master-banner orp-master-banner--verified">
-                      <ShieldCheck size={16} />
-                      <span>
-                        Verified by Vessel Approver ({data.masterName || 'Capt. Suresh Sharma'})
-                        {task.verifiedAt ? ` · ${fmt(task.verifiedAt)}` : ''}
-                      </span>
-                    </div>
-                  )}
-
-                  {task.status === 'rejected' && (
-                    <div className="orp-master-banner orp-master-banner--rejected">
-                      <XCircle size={16} />
-                      <span>
-                        Vessel Revision Requested {task.rejectionNote ? ` · Note: ${task.rejectionNote}` : ''}
-                      </span>
-                    </div>
-                  )}
+                  {/* Task Verification / Decision Bar */}
+                  <div className="orp-task-verify-bar">
+                    {(task.status === 'approved' || task.verified) ? (
+                      <div className="orp-master-banner orp-master-banner--verified">
+                        <div className="orp-master-banner-text">
+                          <ShieldCheck size={16} />
+                          <span>
+                            {task.verifiedBy
+                              ? `Approved by ${task.verifiedBy}`
+                              : `Verified by Vessel Approver (${data.masterName || 'Capt. Suresh Sharma'})`}
+                            {task.verifiedAt ? ` · ${fmt(task.verifiedAt)}` : ''}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="orp-task-btn orp-task-btn--subtle-reject"
+                          disabled={taskBusyId === task.id}
+                          onClick={() => handleVerifyTask(task.id, 'reject')}
+                          title="Reject this task and request revision"
+                        >
+                          <XCircle size={13} /> Reject
+                        </button>
+                      </div>
+                    ) : task.status === 'rejected' ? (
+                      <div className="orp-master-banner orp-master-banner--rejected">
+                        <div className="orp-master-banner-text">
+                          <XCircle size={16} />
+                          <span>
+                            Revision Requested {task.rejectionNote ? ` · Note: ${task.rejectionNote}` : ''}
+                          </span>
+                        </div>
+                        <button
+                          type="button"
+                          className="orp-task-btn orp-task-btn--subtle-approve"
+                          disabled={taskBusyId === task.id}
+                          onClick={() => handleVerifyTask(task.id, 'approve')}
+                          title="Approve this task"
+                        >
+                          <CheckCircle2 size={13} /> Approve Task
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="orp-task-pending-bar">
+                        <div className="orp-task-pending-hint">
+                          <Clock size={15} />
+                          <span>Awaiting Admin / Approver Verification</span>
+                        </div>
+                        <div className="orp-task-action-btns">
+                          <button
+                            type="button"
+                            className="orp-task-btn orp-task-btn--reject"
+                            disabled={taskBusyId === task.id}
+                            onClick={() => handleVerifyTask(task.id, 'reject')}
+                            title="Reject this task with feedback"
+                          >
+                            <XCircle size={14} /> Reject Task
+                          </button>
+                          <button
+                            type="button"
+                            className="orp-task-btn orp-task-btn--approve"
+                            disabled={taskBusyId === task.id}
+                            onClick={() => handleVerifyTask(task.id, 'approve')}
+                            title="Approve this task"
+                          >
+                            <CheckCircle2 size={14} /> Approve Task
+                          </button>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <div className="orp-review-card orp-empty-card">
@@ -605,7 +689,7 @@ export default function AdminOrientationReviewPage() {
               </button>
 
               <div className="orp-footer-actions">
-                {isMasterApproved && isSuperAdmin ? (
+                {isMasterApproved && (isAdmin || isSuperAdmin) ? (
                   <>
                     <button
                       type="button"

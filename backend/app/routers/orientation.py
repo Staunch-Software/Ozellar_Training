@@ -880,6 +880,7 @@ def orientation_submission_detail(db, enrollment):
     tasks_out = []
     for t in tasks:
         c = completions_map.get(t.id)
+        verifier = db.get(models.User, c.verified_by) if c and c.verified_by else None
         tasks_out.append({
             "id": t.id,
             "title": t.title,
@@ -893,6 +894,8 @@ def orientation_submission_detail(db, enrollment):
             "rejectionNote": c.rejection_note if c else None,
             "verified": (c.status == "approved") if c else False,
             "verifiedAt": to_ist_iso(c.verified_at) if c and c.verified_at else None,
+            "verifiedBy": verifier.full_name if verifier else None,
+            "verifiedByRole": verifier.role if verifier else None,
         })
         
     has_pending_tasks = any(c.status == "pending_review" for c in enrollment.completions)
@@ -1058,14 +1061,81 @@ def approver_decide_submission(submission_id: str, req: OrientationDecideRequest
     return orientation_submission_detail(db, enrollment)
 
 
+@router.post("/api/admin/orientation/enrollments/{enrollment_id}/tasks/{task_id}/verify")
+def admin_verify_orientation_task(
+    enrollment_id: str,
+    task_id: str,
+    req: OrientationVerifyTaskRequest,
+    admin: models.User = Depends(require_module("orientation")),
+    db: Session = Depends(get_db)
+):
+    """Admin approves or rejects an individual orientation task."""
+    enrollment = db.get(models.OrientationEnrollment, enrollment_id)
+    if not enrollment:
+        raise HTTPException(404, "Enrollment not found")
+
+    completion = (db.query(models.OrientationTaskCompletion)
+                  .filter_by(enrollment_id=enrollment.id, task_id=task_id).first())
+    if not completion:
+        completion = models.OrientationTaskCompletion(
+            enrollment_id=enrollment.id,
+            task_id=task_id,
+            is_completed=True,
+            completed_at=datetime.now(timezone.utc)
+        )
+        db.add(completion)
+
+    if req.action == 'approve':
+        completion.status = "approved"
+        completion.verified = True
+        completion.verified_at = datetime.now(timezone.utc)
+        completion.verified_by = admin.id
+        completion.rejection_note = None
+        completion.is_completed = True
+        if not completion.completed_at:
+            completion.completed_at = datetime.now(timezone.utc)
+    elif req.action == 'reject':
+        completion.status = "rejected"
+        completion.rejection_note = req.note or "Revision requested by admin"
+        completion.verified = False
+        completion.verified_at = None
+        completion.verified_by = None
+    else:
+        raise HTTPException(400, "Invalid action")
+
+    learner = db.get(models.User, enrollment.learner_id)
+    task = db.get(models.OrientationTask, task_id)
+    if learner and task:
+        if req.action == 'approve':
+            notify(db, learner.id, "orientation_task_approved", "Task approved",
+                   body=f"Your task '{task.title}' was approved by Admin ({admin.full_name}).",
+                   link="/orientation")
+        else:
+            notify(db, learner.id, "orientation_task_rejected", "Task rejected",
+                   body=f"Your task '{task.title}' was rejected by Admin ({admin.full_name}). Note: {req.note or ''}",
+                   link="/orientation")
+
+    # If all tasks are approved and enrollment is in_progress/submitted, auto-advance to master_approved
+    all_tasks = enrollment.program.tasks if enrollment.program else []
+    completions = {c.task_id: c for c in enrollment.completions}
+    all_approved = len(all_tasks) > 0 and all(
+        completions.get(t.id) and completions[t.id].status == "approved" for t in all_tasks
+    )
+    if all_approved and enrollment.status in ("in_progress", "submitted"):
+        enrollment.status = "master_approved"
+
+    db.commit()
+    return orientation_submission_detail(db, enrollment)
+
+
 @router.post("/api/admin/orientation/enrollments/{enrollment_id}/decide")
 def admin_decide_orientation_enrollment(
     enrollment_id: str,
     req: AdminOrientationDecideRequest,
-    admin: models.User = Depends(require_super_admin),
+    admin: models.User = Depends(require_module("orientation")),
     db: Session = Depends(get_db)
 ):
-    """Super Admin gives the final approval (or rejection) after the Master/CE has approved."""
+    """Admin gives the final approval (or rejection) after tasks have been approved."""
     enrollment = db.get(models.OrientationEnrollment, enrollment_id)
     if not enrollment:
         raise HTTPException(404, "Enrollment not found")
