@@ -1076,6 +1076,8 @@ def admin_verify_orientation_task(
     enrollment = db.get(models.OrientationEnrollment, enrollment_id)
     if not enrollment:
         raise HTTPException(404, "Enrollment not found")
+    if enrollment.status == "approved":
+        raise HTTPException(400, "Orientation program is already fully approved. Tasks cannot be modified or rejected.")
 
     completion = (db.query(models.OrientationTaskCompletion)
                   .filter_by(enrollment_id=enrollment.id, task_id=task_id).first())
@@ -1153,8 +1155,18 @@ def admin_decide_orientation_enrollment(
     enrollment = db.get(models.OrientationEnrollment, enrollment_id)
     if not enrollment:
         raise HTTPException(404, "Enrollment not found")
+    if enrollment.status == "approved":
+        raise HTTPException(400, "Orientation program is already fully approved and cannot be modified.")
     if enrollment.status != "master_approved":
         raise HTTPException(400, "Enrollment is not awaiting admin approval")
+
+    all_tasks = enrollment.program.tasks if enrollment.program else []
+    completions = {c.task_id: c for c in enrollment.completions}
+    all_approved = len(all_tasks) > 0 and all(
+        completions.get(t.id) and completions[t.id].status == "approved" for t in all_tasks
+    )
+    if req.action == 'approve' and not all_approved:
+        raise HTTPException(400, "All tasks must be approved before granting final program approval.")
 
     learner = db.get(models.User, enrollment.learner_id)
     learner_name = learner.full_name if learner else "Candidate"

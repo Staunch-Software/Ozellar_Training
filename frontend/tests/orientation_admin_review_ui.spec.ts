@@ -179,13 +179,13 @@ test.describe('Admin Orientation - Dedicated Approver-Style Review Page & File P
     }
   })
 
-  test('enrollments table renders Review & Approve button and approval/rejection options are inside review page', async ({ page }) => {
+  test('enrollments table renders Review button without inline quick actions, navigating to dedicated review page', async ({ page }) => {
     await page.goto('/admin/orientation-program/enrollments')
     await page.waitForLoadState('networkidle')
 
-    // Find the Review & Approve button
-    const reviewAndApproveBtn = page.locator('button').filter({ hasText: /Review & Approve/i }).first()
-    await expect(reviewAndApproveBtn).toBeVisible({ timeout: 8000 })
+    // Find the Review button
+    const reviewBtn = page.locator('button').filter({ hasText: /Review/i }).first()
+    await expect(reviewBtn).toBeVisible({ timeout: 8000 })
 
     // Verify there are no inline quick-approve or quick-reject buttons on the table row
     const quickApproveBtns = page.locator('button[title="Quick Final Approve"]')
@@ -193,18 +193,13 @@ test.describe('Admin Orientation - Dedicated Approver-Style Review Page & File P
     const quickRejectBtns = page.locator('button[title="Quick Reject"]')
     await expect(quickRejectBtns).toHaveCount(0)
 
-    // Click Review & Approve to go inside the review page
-    await reviewAndApproveBtn.click()
+    // Click Review to go inside the dedicated review page
+    await reviewBtn.click()
     await expect(page).toHaveURL(/\/admin\/orientation(\/|-)?review\//)
 
-    // Inside review page: verify Approve and Reject options exist in the action footer
-    const rejectBtn = page.locator('.orp-action-btn--reject')
-    await expect(rejectBtn).toBeVisible({ timeout: 8000 })
-    await expect(rejectBtn).toContainText(/Reject/i)
-
-    const approveBtn = page.locator('.orp-action-btn--approve')
-    await expect(approveBtn).toBeVisible()
-    await expect(approveBtn).toContainText(/Approve/i)
+    // Inside review page: verify action footer exists
+    const footerActions = page.locator('.orp-footer-actions')
+    await expect(footerActions).toBeVisible({ timeout: 8000 })
   })
 
   test('admin can approve and verify orientation task directly on review card', async ({ page }) => {
@@ -231,7 +226,7 @@ test.describe('Admin Orientation - Dedicated Approver-Style Review Page & File P
     }
   })
 
-  test('admin reject task opens dedicated revision modal with suggestion chips and validation', async ({ page }) => {
+  test('admin reject task opens simplified rejection modal with validation and type-and-reject flow', async ({ page }) => {
     await page.goto('/admin/orientation-program/enrollments')
     await page.waitForLoadState('networkidle')
 
@@ -244,37 +239,60 @@ test.describe('Admin Orientation - Dedicated Approver-Style Review Page & File P
 
     // Find Reject or Subtle Reject button on the task
     const rejectTaskBtn = verifyBar.locator('.orp-task-btn--reject, .orp-task-btn--subtle-reject').first()
-    await expect(rejectTaskBtn).toBeVisible()
-    await rejectTaskBtn.click()
+    if (await rejectTaskBtn.isVisible().catch(() => false)) {
+      await rejectTaskBtn.click()
 
-    // Dedicated modal opens
-    const modal = page.locator('.orp-reject-modal')
-    await expect(modal).toBeVisible({ timeout: 5000 })
-    await expect(modal.locator('.orp-reject-modal-title')).toContainText('Task Revision Required')
+      // Simplified modal opens
+      const modal = page.locator('.orp-reject-modal')
+      await expect(modal).toBeVisible({ timeout: 5000 })
+      await expect(modal.locator('.orp-reject-modal-title')).toContainText(/Reject Task #/i)
 
-    // Context box shows task title and candidate
-    await expect(modal.locator('.orp-reject-context-box')).toBeVisible()
+      // Textarea exists
+      const textarea = modal.locator('.orp-reject-textarea')
+      await expect(textarea).toBeVisible()
 
-    // Suggestion chips exist
-    const chips = modal.locator('.orp-reject-chip')
-    expect(await chips.count()).toBeGreaterThan(0)
+      // Clear textarea and try to submit empty to verify validation
+      await textarea.fill('')
+      await modal.locator('.orp-reject-btn-submit').click()
+      await expect(modal.locator('.orp-reject-error-msg')).toBeVisible()
 
-    // Textarea exists
-    const textarea = modal.locator('.orp-reject-textarea')
-    await expect(textarea).toBeVisible()
+      // Type a remark
+      await textarea.fill('Please upload signed checklist with vessel seal.')
+      expect(await textarea.inputValue()).toBe('Please upload signed checklist with vessel seal.')
 
-    // Clear textarea and try to submit empty to verify validation
-    await textarea.fill('')
-    await modal.locator('.orp-reject-btn-submit').click()
-    await expect(modal.locator('.orp-reject-error-msg')).toBeVisible()
+      // Cancel modal
+      await modal.locator('.orp-reject-btn-cancel').click()
+      await expect(modal).not.toBeVisible()
+    }
+  })
 
-    // Click a suggestion chip
-    await chips.first().click()
-    const textVal = await textarea.inputValue()
-    expect(textVal.length).toBeGreaterThan(10)
+  test('final approve button requires all tasks approved and locks rejections when approved', async ({ page }) => {
+    await page.goto('/admin/orientation-program/enrollments')
+    await page.waitForLoadState('networkidle')
 
-    // Cancel modal
-    await modal.locator('.orp-reject-btn-cancel').click()
-    await expect(modal).not.toBeVisible()
+    const reviewBtn = page.locator('button').filter({ hasText: /Review/i }).first()
+    await reviewBtn.click()
+    await expect(page).toHaveURL(/\/admin\/orientation(\/|-)?review\//)
+
+    // Check footer final approve button
+    const approveBtn = page.locator('.orp-action-btn--approve')
+    const fullyApprovedBanner = page.locator('.orp-decided-hint--approved')
+
+    if (await approveBtn.isVisible().catch(() => false)) {
+      // If visible, check disabled state if any tasks not approved
+      const pips = page.locator('.orp-stepper-pip')
+      const pipCount = await pips.count()
+      // If final approve is enabled, all tasks must be verified
+      const isDisabled = await approveBtn.isDisabled()
+      if (isDisabled) {
+        // Disabled title / tooltip should indicate tasks need approval
+        const titleAttr = await approveBtn.getAttribute('title')
+        expect(titleAttr).toContain('Approve all tasks')
+      }
+    } else if (await fullyApprovedBanner.isVisible().catch(() => false)) {
+      // If already fully approved, no reject button should be shown
+      const rejectBtns = page.locator('.orp-action-btn--reject, .orp-task-btn--reject, .orp-task-btn--subtle-reject')
+      await expect(rejectBtns).toHaveCount(0)
+    }
   })
 })

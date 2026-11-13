@@ -240,14 +240,6 @@ function TaskJumpDropdown({ tasks, currentIndex, onSelect }) {
   )
 }
 
-const REJECTION_CHIPS = [
-  { label: '📷 Blurry / Illegible Document', text: 'Document is blurry or illegible. Please upload a clear, readable scan or photo.' },
-  { label: '📅 Expired Certificate', text: 'Uploaded certificate is expired. Please provide a current, valid certificate with valid expiration date.' },
-  { label: '📝 Incomplete Checklist Note', text: 'Checklist details in the officer note are incomplete. Please specify equipment serials, dates, and drill notes.' },
-  { label: '❌ Incorrect Document', text: 'Incorrect document uploaded for this task. Please refer to the requirement and upload the proper document.' },
-  { label: '✍️ Missing Endorsement', text: 'Missing required Master or Chief Engineer signature / vessel stamp on the checklist document.' },
-]
-
 export default function AdminOrientationReviewPage() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -341,7 +333,11 @@ export default function AdminOrientationReviewPage() {
   const evidenceCount = (task?.proofUrls || []).length
   const verifiedCount = data?.verifiedCount ?? tasks.filter((t) => t.status === 'approved' || t.verified).length
   const enrollmentStatus = data?.enrollmentStatus || data?.status || 'in_progress'
+  const isFinalApproved = enrollmentStatus === 'approved'
   const isMasterApproved = enrollmentStatus === 'master_approved'
+
+  const allTasksApproved = total > 0 && tasks.every((t) => t.status === 'approved' || t.verified)
+  const approvedTasksCount = tasks.filter((t) => t.status === 'approved' || t.verified).length
 
   const isAdminApproved = Boolean(
     (task?.status === 'approved' || task?.verified) &&
@@ -356,6 +352,10 @@ export default function AdminOrientationReviewPage() {
     const isApprove = action === 'approve'
     if (!isApprove) {
       setProgramRejectModal({ open: true, remark: '', error: '', submitting: false })
+      return
+    }
+    if (!allTasksApproved) {
+      alert(`Cannot final approve: please approve all tasks first (${approvedTasksCount}/${total} tasks approved).`)
       return
     }
     const title = 'Final Approve Program?'
@@ -420,19 +420,6 @@ export default function AdminOrientationReviewPage() {
       remark: '',
       error: '',
       submitting: false,
-    })
-  }
-
-  const handleApplyChip = (chipText) => {
-    setRejectModal((prev) => {
-      const current = (prev.remark || '').trim()
-      if (!current) {
-        return { ...prev, remark: chipText, error: '' }
-      }
-      if (current.includes(chipText)) {
-        return prev
-      }
-      return { ...prev, remark: `${current}\n${chipText}`, error: '' }
     })
   }
 
@@ -666,7 +653,22 @@ export default function AdminOrientationReviewPage() {
 
                   {/* Task Verification / Decision Bar */}
                   <div className="orp-task-verify-bar">
-                    {(task.status === 'approved' || task.verified) ? (
+                    {isFinalApproved ? (
+                      <div className="orp-master-banner orp-master-banner--verified">
+                        <div className="orp-master-banner-text">
+                          <ShieldCheck size={16} />
+                          <span>
+                            Approved by Admin ({task.verifiedBy || me?.full_name || 'Fleet Admin'})
+                            {task.verifiedAt ? ` · ${fmt(task.verifiedAt)}` : ''}
+                          </span>
+                        </div>
+                        <div className="orp-task-action-btns">
+                          <span className="orp-task-approved-badge">
+                            <CheckCircle2 size={13} /> Approved
+                          </span>
+                        </div>
+                      </div>
+                    ) : (task.status === 'approved' || task.verified) ? (
                       <div className="orp-master-banner orp-master-banner--verified">
                         <div className="orp-master-banner-text">
                           <ShieldCheck size={16} />
@@ -809,7 +811,11 @@ export default function AdminOrientationReviewPage() {
               </button>
 
               <div className="orp-footer-actions">
-                {isMasterApproved && (isAdmin || isSuperAdmin) ? (
+                {isFinalApproved ? (
+                  <span className="orp-decided-hint orp-decided-hint--approved">
+                    <ShieldCheck size={16} /> Program Fully Approved{data.decidedAt ? ` · Decided ${fmt(data.decidedAt)}` : ''}
+                  </span>
+                ) : isMasterApproved && (isAdmin || isSuperAdmin) ? (
                   <>
                     <button
                       type="button"
@@ -822,8 +828,9 @@ export default function AdminOrientationReviewPage() {
                     <button
                       type="button"
                       className="orp-action-btn orp-action-btn--approve"
-                      disabled={deciding || loading}
+                      disabled={!allTasksApproved || deciding || loading}
                       onClick={() => handleDecide('approve')}
+                      title={!allTasksApproved ? `Approve all tasks (${approvedTasksCount}/${total}) to enable Final Approval` : 'Final Approve Program'}
                     >
                       <CheckCircle2 size={15} /> Final Approve Program
                     </button>
@@ -840,7 +847,7 @@ export default function AdminOrientationReviewPage() {
         )}
       </div>
 
-      {/* Dedicated Task Rejection Modal */}
+      {/* Simplified Task Rejection Modal */}
       {rejectModal.open && rejectModal.task && (
         <div className="orp-modal-overlay" onClick={closeRejectModal}>
           <div
@@ -852,14 +859,14 @@ export default function AdminOrientationReviewPage() {
           >
             <div className="orp-reject-modal-header">
               <div className="orp-reject-modal-header-icon">
-                <AlertCircle size={22} />
+                <AlertCircle size={20} />
               </div>
               <div className="orp-reject-modal-header-text">
                 <h3 id="orp-reject-modal-title" className="orp-reject-modal-title">
-                  Task Revision Required
+                  Reject Task #{tasks.findIndex((t) => t.id === rejectModal.task.id) + 1 || idx + 1}
                 </h3>
                 <p className="orp-reject-modal-subtitle">
-                  Reject task and specify what the seafarer must correct or upload
+                  {rejectModal.task.title}
                 </p>
               </div>
               <button
@@ -872,46 +879,17 @@ export default function AdminOrientationReviewPage() {
               </button>
             </div>
 
-            <div className="orp-reject-context-box">
-              <div className="orp-reject-context-badge">Task #{idx + 1}</div>
-              <div className="orp-reject-context-info">
-                <div className="orp-reject-context-title">{rejectModal.task.title}</div>
-                <div className="orp-reject-context-meta">
-                  <span>Candidate: <strong>{data?.candidateName}</strong></span>
-                  <span className="orp-reject-sep">·</span>
-                  <span>{(data?.candidateRank || 'Officer').toUpperCase()}</span>
-                  <span className="orp-reject-sep">·</span>
-                  <span>{data?.vessel || data?.vesselName || 'Vessel'}</span>
-                </div>
-              </div>
-            </div>
-
             <div className="orp-reject-form-group">
               <label htmlFor="orp-reject-input" className="orp-reject-label">
-                <span>Reason for Rejection & Required Action</span>
+                <span>Reason for Rejection</span>
                 <span className="orp-reject-req">*</span>
               </label>
-
-              <div className="orp-reject-chips-label">Quick suggestions:</div>
-              <div className="orp-reject-chips">
-                {REJECTION_CHIPS.map((chip, cIdx) => (
-                  <button
-                    key={cIdx}
-                    type="button"
-                    className="orp-reject-chip"
-                    onClick={() => handleApplyChip(chip.text)}
-                    title={`Click to add: "${chip.text}"`}
-                  >
-                    {chip.label}
-                  </button>
-                ))}
-              </div>
 
               <textarea
                 id="orp-reject-input"
                 className="orp-reject-textarea"
-                rows={4}
-                placeholder="Explain clearly why this task cannot be approved and specify what the officer needs to do or re-upload before resubmitting (e.g. Please upload a clear photo of the certified checklist with signature)."
+                rows={3}
+                placeholder="Type rejection remark (what needs to be fixed)..."
                 value={rejectModal.remark}
                 onChange={(e) => setRejectModal((prev) => ({ ...prev, remark: e.target.value, error: '' }))}
                 autoFocus
@@ -923,10 +901,6 @@ export default function AdminOrientationReviewPage() {
                   <span>{rejectModal.error}</span>
                 </div>
               )}
-
-              <p className="orp-reject-hint">
-                This remark will be sent immediately via in-app notification to <strong>{data?.candidateName}</strong> and highlighted on their Orientation checklist.
-              </p>
             </div>
 
             <div className="orp-reject-modal-footer">
@@ -946,11 +920,11 @@ export default function AdminOrientationReviewPage() {
               >
                 {rejectModal.submitting ? (
                   <>
-                    <RefreshCw size={14} className="orp-spin" /> Submitting...
+                    <RefreshCw size={14} className="orp-spin" /> Rejecting...
                   </>
                 ) : (
                   <>
-                    <XCircle size={14} /> Confirm Rejection & Notify Seafarer
+                    <XCircle size={14} /> Reject Task
                   </>
                 )}
               </button>
@@ -959,7 +933,7 @@ export default function AdminOrientationReviewPage() {
         </div>
       )}
 
-      {/* Program Rejection Modal */}
+      {/* Simplified Program Rejection Modal */}
       {programRejectModal.open && (
         <div className="orp-modal-overlay" onClick={() => setProgramRejectModal({ open: false, remark: '', error: '', submitting: false })}>
           <div
@@ -970,18 +944,19 @@ export default function AdminOrientationReviewPage() {
           >
             <div className="orp-reject-modal-header">
               <div className="orp-reject-modal-header-icon">
-                <AlertCircle size={22} />
+                <AlertCircle size={20} />
               </div>
               <div className="orp-reject-modal-header-text">
-                <h3 className="orp-reject-modal-title">Reject Orientation Program</h3>
+                <h3 className="orp-reject-modal-title">Reject Program</h3>
                 <p className="orp-reject-modal-subtitle">
-                  Reject {data?.candidateName}'s promotion checklist and notify the candidate
+                  {data?.candidateName} · {data?.programTitle}
                 </p>
               </div>
               <button
                 type="button"
                 className="orp-reject-modal-close"
                 onClick={() => setProgramRejectModal({ open: false, remark: '', error: '', submitting: false })}
+                aria-label="Close dialog"
               >
                 <X size={18} />
               </button>
@@ -989,16 +964,22 @@ export default function AdminOrientationReviewPage() {
 
             <div className="orp-reject-form-group">
               <label className="orp-reject-label">
-                <span>Rejection Reason / Administrative Feedback</span>
+                <span>Reason for Rejection</span>
               </label>
               <textarea
                 className="orp-reject-textarea"
                 rows={3}
-                placeholder="Optional feedback for candidate and vessel master explaining why the program was rejected..."
+                placeholder="Type rejection reason..."
                 value={programRejectModal.remark}
                 onChange={(e) => setProgramRejectModal((prev) => ({ ...prev, remark: e.target.value, error: '' }))}
                 autoFocus
               />
+              {programRejectModal.error && (
+                <div className="orp-reject-error-msg">
+                  <AlertCircle size={13} />
+                  <span>{programRejectModal.error}</span>
+                </div>
+              )}
             </div>
 
             <div className="orp-reject-modal-footer">
@@ -1022,7 +1003,7 @@ export default function AdminOrientationReviewPage() {
                   </>
                 ) : (
                   <>
-                    <XCircle size={14} /> Reject Program & Notify
+                    <XCircle size={14} /> Reject Program
                   </>
                 )}
               </button>

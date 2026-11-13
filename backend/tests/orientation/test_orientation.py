@@ -412,6 +412,64 @@ def test_admin_decide_orientation_enrollment(client, db, tokens):
     assert enrollment.status == "approved"
 
 
+def test_admin_cannot_modify_or_reject_after_final_approval(client, db, tokens):
+    setup_program(db)
+    enrollment = db.query(OrientationEnrollment).first()
+    assert enrollment is not None
+
+    # Approve task and give final approval
+    client.post(
+        f"/api/admin/orientation/enrollments/{enrollment.id}/tasks/task_1/verify",
+        headers={"Authorization": f"Bearer {tokens['admin']}"},
+        json={"action": "approve"}
+    )
+    client.post(
+        f"/api/admin/orientation/enrollments/{enrollment.id}/decide",
+        headers={"Authorization": f"Bearer {tokens['admin']}"},
+        json={"action": "approve"}
+    )
+    db.refresh(enrollment)
+    assert enrollment.status == "approved"
+
+    # Attempt to reject task after final approval -> MUST FAIL (400)
+    resp = client.post(
+        f"/api/admin/orientation/enrollments/{enrollment.id}/tasks/task_1/verify",
+        headers={"Authorization": f"Bearer {tokens['admin']}"},
+        json={"action": "reject", "note": "Late rejection"}
+    )
+    assert resp.status_code == 400
+    assert "already fully approved" in resp.json()["detail"]
+
+    # Attempt to decide enrollment after final approval -> MUST FAIL (400)
+    resp_decide = client.post(
+        f"/api/admin/orientation/enrollments/{enrollment.id}/decide",
+        headers={"Authorization": f"Bearer {tokens['admin']}"},
+        json={"action": "reject", "reason": "Late rejection"}
+    )
+    assert resp_decide.status_code == 400
+    assert "already fully approved" in resp_decide.json()["detail"]
+
+
+def test_admin_cannot_final_approve_if_tasks_not_all_approved(client, db, tokens):
+    setup_program(db)
+    enrollment = db.query(OrientationEnrollment).first()
+    assert enrollment is not None
+
+    # Set enrollment to master_approved without approving task_1
+    enrollment.status = "master_approved"
+    db.commit()
+
+    # Attempt to final approve -> MUST FAIL (400) because task_1 is not approved
+    resp = client.post(
+        f"/api/admin/orientation/enrollments/{enrollment.id}/decide",
+        headers={"Authorization": f"Bearer {tokens['admin']}"},
+        json={"action": "approve"}
+    )
+    assert resp.status_code == 400
+    assert "All tasks must be approved" in resp.json()["detail"]
+
+
+
 
 
 
