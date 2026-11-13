@@ -4,13 +4,12 @@ import {
   ArrowLeft, Check, AlertCircle, ShieldCheck, Clock, FileText, Paperclip,
   Eye, Search, Ship, Cog, MessageSquare, CheckCircle2, XCircle,
   ExternalLink, X, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, ShieldQuestion,
-  FileSpreadsheet, Image as ImageIcon, Music, Video, FileArchive, Download, Send, CheckCheck
+  FileSpreadsheet, Image as ImageIcon, Music, Video, FileArchive, Download, Send
 } from 'lucide-react'
 import {
   adminGetOrientationEnrollmentDetail,
   adminDecideOrientationEnrollment,
-  adminVerifyOrientationTask,
-  adminApproveAllOrientationTasks
+  adminVerifyOrientationTask
 } from '../../api.js'
 import { useAuth } from '../../auth.jsx'
 import { useConfirm } from '../../components/ConfirmDialog.jsx'
@@ -268,7 +267,6 @@ export default function AdminOrientationReviewPage() {
     error: '',
     submitting: false,
   })
-  const [bulkApproving, setBulkApproving] = useState(false)
   const activePipRef = useRef(null)
   const { confirm, dialog } = useConfirm()
 
@@ -354,29 +352,6 @@ export default function AdminOrientationReviewPage() {
   const allTasksApproved = total > 0 && tasks.every((t) => isTaskAdminApproved(t))
   const approvedTasksCount = tasks.filter((t) => isTaskAdminApproved(t)).length
   const isAdminApproved = isTaskAdminApproved(task)
-
-  const handleApproveAll = async () => {
-    if (!data || bulkApproving) return
-    const ok = await confirm(
-      `Approve all ${total} tasks as Admin for ${data.candidateName}? This will verify all checklist tasks and enable Final Approval.`,
-      {
-        title: 'Approve All Tasks?',
-        confirmLabel: 'Approve All',
-        danger: false,
-      }
-    )
-    if (!ok) return
-    setBulkApproving(true)
-    setError(null)
-    try {
-      const updated = await adminApproveAllOrientationTasks(data.id)
-      setData(updated)
-    } catch (e) {
-      setError(e.message || 'Failed to approve all tasks.')
-    } finally {
-      setBulkApproving(false)
-    }
-  }
 
   const handleDecide = async (action) => {
     if (!data) return
@@ -589,18 +564,6 @@ export default function AdminOrientationReviewPage() {
                     {approvedTasksCount} of {total} tasks approved by Admin
                     {verifiedCount > 0 && ` (${verifiedCount} verified by Master)`}
                   </span>
-                  {approvedTasksCount < total && isMasterApproved && (isAdmin || isSuperAdmin) && (
-                    <button
-                      type="button"
-                      className="orp-approve-all-btn"
-                      onClick={handleApproveAll}
-                      disabled={bulkApproving || loading}
-                      title="Approve all remaining tasks as Admin"
-                    >
-                      <CheckCheck size={13} />
-                      {bulkApproving ? 'Approving...' : 'Approve All Tasks'}
-                    </button>
-                  )}
                 </div>
               </div>
 

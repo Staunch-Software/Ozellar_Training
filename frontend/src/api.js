@@ -539,10 +539,6 @@ export const adminVerifyOrientationTask = (enrollmentId, taskId, action, note = 
     method: 'POST',
     body: JSON.stringify({ action, note }),
   })
-export const adminApproveAllOrientationTasks = (enrollmentId) =>
-  req(`/admin/orientation/enrollments/${enrollmentId}/approve-all-tasks`, {
-    method: 'POST',
-  })
 export const adminGetOrientationEnrollmentDetail = (id) =>
   req(`/admin/orientation/enrollments/${id}`)
 

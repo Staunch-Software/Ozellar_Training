@@ -1166,49 +1166,6 @@ def admin_verify_orientation_task(
     return orientation_submission_detail(db, enrollment)
 
 
-@router.post("/api/admin/orientation/enrollments/{enrollment_id}/approve-all-tasks")
-def admin_approve_all_orientation_tasks(
-    enrollment_id: str,
-    admin: models.User = Depends(require_module("orientation")),
-    db: Session = Depends(get_db)
-):
-    """Admin approves all tasks for this enrollment in bulk."""
-    enrollment = db.get(models.OrientationEnrollment, enrollment_id)
-    if not enrollment:
-        raise HTTPException(404, "Enrollment not found")
-    if enrollment.status == "approved":
-        raise HTTPException(400, "Orientation program is already fully approved and cannot be modified.")
-
-    tasks = enrollment.program.tasks if enrollment.program else []
-    now = datetime.now(timezone.utc)
-    for task in tasks:
-        completion = (db.query(models.OrientationTaskCompletion)
-                      .filter_by(enrollment_id=enrollment.id, task_id=task.id).first())
-        if not completion:
-            completion = models.OrientationTaskCompletion(
-                enrollment_id=enrollment.id,
-                task_id=task.id,
-                is_completed=True,
-                completed_at=now
-            )
-            db.add(completion)
-
-        if completion.status == "rejected":
-            continue
-
-        completion.status = "approved"
-        completion.verified = True
-        completion.verified_at = now
-        completion.verified_by = admin.id
-        completion.rejection_note = None
-        completion.is_completed = True
-        if not completion.completed_at:
-            completion.completed_at = now
-
-    db.commit()
-    return orientation_submission_detail(db, enrollment)
-
-
 @router.post("/api/admin/orientation/enrollments/{enrollment_id}/decide")
 def admin_decide_orientation_enrollment(
     enrollment_id: str,

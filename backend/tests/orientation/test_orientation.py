@@ -528,46 +528,6 @@ def test_admin_cannot_approve_rejected_task_directly(client, db, tokens):
     assert "Cannot approve a task that is currently marked for revision" in resp_approve.json()["detail"]
 
 
-def test_admin_approve_all_tasks_bulk(client, db, tokens):
-    setup_program(db)
-    enrollment = db.query(OrientationEnrollment).first()
-    assert enrollment is not None
-
-    # Master verifies task and signs off program -> master_approved
-    client.post(
-        f"/api/approver/submissions/{enrollment.id}/tasks/task_1/verify",
-        headers={"Authorization": f"Bearer {tokens['approver']}"},
-        json={"action": "approve"}
-    )
-    client.post(
-        f"/api/approver/submissions/{enrollment.id}/decide",
-        headers={"Authorization": f"Bearer {tokens['approver']}"},
-        json={"action": "approve"}
-    )
-    db.refresh(enrollment)
-    assert enrollment.status == "master_approved"
-
-    # Use bulk approve all tasks endpoint
-    resp_bulk = client.post(
-        f"/api/admin/orientation/enrollments/{enrollment.id}/approve-all-tasks",
-        headers={"Authorization": f"Bearer {tokens['admin']}"}
-    )
-    assert resp_bulk.status_code == 200
-    data = resp_bulk.json()
-    assert data["adminApprovedCount"] >= 1
-    assert all(t["isAdminApproved"] for t in data["tasks"])
-
-    # Now final approval succeeds
-    resp_decide = client.post(
-        f"/api/admin/orientation/enrollments/{enrollment.id}/decide",
-        headers={"Authorization": f"Bearer {tokens['admin']}"},
-        json={"action": "approve"}
-    )
-    assert resp_decide.status_code == 200
-    db.refresh(enrollment)
-    assert enrollment.status == "approved"
-
-
 
 
 
