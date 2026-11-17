@@ -361,6 +361,30 @@ def test_admin_verify_orientation_task_approve(client, db, tokens):
     assert comp.verified is True
     assert comp.status == "approved"
     assert comp.verified_by == "admin_1"
+    assert comp.approval_note is None
+
+
+def test_admin_verify_orientation_task_approve_with_optional_remark(client, db, tokens):
+    setup_program(db)
+    enrollment = db.query(OrientationEnrollment).first()
+    assert enrollment is not None
+
+    resp = client.post(
+        f"/api/admin/orientation/enrollments/{enrollment.id}/tasks/task_1/verify",
+        headers={"Authorization": f"Bearer {tokens['admin']}"},
+        json={"action": "approve", "note": "Well documented evidence."}
+    )
+    assert resp.status_code == 200
+    data = resp.json()
+    task1 = next((t for t in data["tasks"] if t["id"] == "task_1"), None)
+    assert task1 is not None
+    assert task1["verified"] is True
+    assert task1["status"] == "approved"
+    assert task1["approvalNote"] == "Well documented evidence."
+
+    # Verify DB
+    comp = db.query(OrientationTaskCompletion).filter_by(enrollment_id=enrollment.id, task_id="task_1").first()
+    assert comp.approval_note == "Well documented evidence."
 
 
 def test_admin_verify_orientation_task_reject(client, db, tokens):
@@ -484,6 +508,16 @@ def test_admin_cannot_modify_or_reject_after_final_approval(client, db, tokens):
     )
     assert resp_decide.status_code == 400
     assert "already fully approved" in resp_decide.json()["detail"]
+
+    # Admin CAN add or update remark on an approved task
+    resp_remark = client.post(
+        f"/api/admin/orientation/enrollments/{enrollment.id}/tasks/task_1/verify",
+        headers={"Authorization": f"Bearer {tokens['admin']}"},
+        json={"action": "approve", "note": "Post-approval verified remark"}
+    )
+    assert resp_remark.status_code == 200
+    comp = db.query(OrientationTaskCompletion).filter_by(enrollment_id=enrollment.id, task_id="task_1").first()
+    assert comp.approval_note == "Post-approval verified remark"
 
 
 def test_admin_cannot_final_approve_if_tasks_not_all_approved(client, db, tokens):

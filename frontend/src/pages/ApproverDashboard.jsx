@@ -220,7 +220,7 @@ function SubmissionDetail({ s, onDecide, onVerifyTask }) {
           )}
           {task.status === 'approved' && (
             <div className="apr-task-status-banner" style={{ marginTop: 16, padding: 10, background: '#dcfce7', color: '#166534', borderRadius: 4, display: 'flex', alignItems: 'center', gap: 6, fontSize: 13 }}>
-              <ShieldCheck size={15} /> Verified {task.verifiedAt ? ` · ${fmt(task.verifiedAt)}` : ''}
+              <ShieldCheck size={15} /> Verified {task.verifiedAt ? ` · ${fmt(task.verifiedAt)}` : ''}{task.approvalNote ? ` · Remark: ${task.approvalNote}` : ''}
             </div>
           )}
           {task.status === 'rejected' && (

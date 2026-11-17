@@ -4,7 +4,8 @@ import {
   ArrowLeft, Check, AlertCircle, ShieldCheck, Clock, FileText, Paperclip,
   Eye, Search, Ship, Cog, MessageSquare, CheckCircle2, XCircle,
   ExternalLink, X, RefreshCw, ChevronLeft, ChevronRight, ChevronDown, ShieldQuestion,
-  FileSpreadsheet, Image as ImageIcon, Music, Video, FileArchive, Download, Send
+  FileSpreadsheet, Image as ImageIcon, Music, Video, FileArchive, Download, Send,
+  Edit3, Plus
 } from 'lucide-react'
 import {
   adminGetOrientationEnrollmentDetail,
@@ -254,11 +255,20 @@ export default function AdminOrientationReviewPage() {
   const [viewer, setViewer] = useState(null) // { items, index, taskTitle }
   const [deciding, setDeciding] = useState(false)
   const [taskBusyId, setTaskBusyId] = useState(null)
+  const [taskRemarks, setTaskRemarks] = useState({})
+  const [editingRemarkTaskId, setEditingRemarkTaskId] = useState(null)
+  const [remarkSavedToast, setRemarkSavedToast] = useState(false)
   const [rejectModal, setRejectModal] = useState({
     open: false,
     task: null,
     remark: '',
     error: '',
+    submitting: false,
+  })
+  const [approveModal, setApproveModal] = useState({
+    open: false,
+    task: null,
+    remark: '',
     submitting: false,
   })
   const [programRejectModal, setProgramRejectModal] = useState({
@@ -309,7 +319,10 @@ export default function AdminOrientationReviewPage() {
   const tasks = data?.tasks || []
   const total = tasks.length
   const task = tasks[Math.min(idx, Math.max(0, total - 1))] || null
-  const goTo = (i) => setIdx(Math.max(0, Math.min(total - 1, i)))
+  const goTo = (i) => {
+    setIdx(Math.max(0, Math.min(total - 1, i)))
+    setEditingRemarkTaskId(null)
+  }
 
   // Scroll active pip into view
   useEffect(() => {
@@ -395,15 +408,98 @@ export default function AdminOrientationReviewPage() {
     }
   }
 
-  const handleApproveTask = async (taskId) => {
+  const handleApproveTask = async (taskId, remark = null) => {
     if (!data || !taskId) return
     setTaskBusyId(taskId)
     setError(null)
     try {
-      const updated = await adminVerifyOrientationTask(data.id, taskId, 'approve')
+      const updated = await adminVerifyOrientationTask(data.id, taskId, 'approve', remark)
       setData(updated)
     } catch (e) {
       setError(e.message || 'Failed to approve task.')
+    } finally {
+      setTaskBusyId(null)
+    }
+  }
+
+  const handleInlineApprove = async (taskId) => {
+    if (!data || !taskId) return
+    setTaskBusyId(taskId)
+    setError(null)
+    try {
+      const inlineRemark = (taskRemarks[taskId] !== undefined ? taskRemarks[taskId] : (task?.approvalNote || '')).trim() || null
+      const updated = await adminVerifyOrientationTask(data.id, taskId, 'approve', inlineRemark)
+      setData(updated)
+      setTaskRemarks((prev) => {
+        const next = { ...prev }
+        delete next[taskId]
+        return next
+      })
+      setEditingRemarkTaskId(null)
+      setRemarkSavedToast(true)
+      setTimeout(() => setRemarkSavedToast(false), 2500)
+    } catch (e) {
+      setError(e.message || 'Failed to approve task.')
+    } finally {
+      setTaskBusyId(null)
+    }
+  }
+
+  const handleSaveInlineRemark = async (taskId) => {
+    if (!data || !taskId) return
+    setTaskBusyId(taskId)
+    setError(null)
+    try {
+      const inlineRemark = (taskRemarks[taskId] !== undefined ? taskRemarks[taskId] : (task?.approvalNote || '')).trim() || null
+      const updated = await adminVerifyOrientationTask(data.id, taskId, 'approve', inlineRemark)
+      setData(updated)
+      setTaskRemarks((prev) => {
+        const next = { ...prev }
+        delete next[taskId]
+        return next
+      })
+      setEditingRemarkTaskId(null)
+      setRemarkSavedToast(true)
+      setTimeout(() => setRemarkSavedToast(false), 2500)
+    } catch (e) {
+      setError(e.message || 'Failed to save remark.')
+    } finally {
+      setTaskBusyId(null)
+    }
+  }
+
+  const openApproveModal = (t) => {
+    setApproveModal({
+      open: true,
+      task: t,
+      remark: t?.approvalNote || '',
+      submitting: false,
+    })
+  }
+
+  const closeApproveModal = () => {
+    setApproveModal({
+      open: false,
+      task: null,
+      remark: '',
+      submitting: false,
+    })
+  }
+
+  const handleConfirmTaskApprove = async () => {
+    const { task, remark } = approveModal
+    if (!task) return
+    setApproveModal((prev) => ({ ...prev, submitting: true }))
+    setTaskBusyId(task.id)
+    setError(null)
+    try {
+      const trimmed = (remark || '').trim() || null
+      const updated = await adminVerifyOrientationTask(data.id, task.id, 'approve', trimmed)
+      setData(updated)
+      closeApproveModal()
+    } catch (e) {
+      setError(e.message || 'Failed to update approval remark.')
+      setApproveModal((prev) => ({ ...prev, submitting: false }))
     } finally {
       setTaskBusyId(null)
     }
@@ -665,115 +761,278 @@ export default function AdminOrientationReviewPage() {
 
                   {/* Task Verification / Decision Bar */}
                   <div className="orp-task-verify-bar">
-                    {isFinalApproved ? (
-                      <div className="orp-master-banner orp-master-banner--verified">
-                        <div className="orp-master-banner-text">
-                          <ShieldCheck size={16} />
-                          <span>
-                            Approved by Admin ({task.verifiedBy || me?.full_name || 'Fleet Admin'})
-                            {task.verifiedAt ? ` · ${fmt(task.verifiedAt)}` : ''}
-                          </span>
-                        </div>
-                        <div className="orp-task-action-btns">
-                          <span className="orp-task-approved-badge">
-                            <CheckCircle2 size={13} /> Approved
-                          </span>
-                        </div>
-                      </div>
-                    ) : (task.status === 'approved' || task.verified) ? (
-                      <div className="orp-master-banner orp-master-banner--verified">
-                        <div className="orp-master-banner-text">
-                          <ShieldCheck size={16} />
-                          <span>
-                            {isAdminApproved
-                              ? `Approved by Admin (${task.verifiedBy || me?.full_name || 'Fleet Admin'})`
-                              : task.verifiedBy
+                    {/* Status Banner */}
+                    <div className={`orp-master-banner ${
+                      isFinalApproved || isAdminApproved ? 'orp-master-banner--verified orp-master-banner--admin' :
+                      (task.status === 'approved' || task.verified) ? 'orp-master-banner--verified' :
+                      task.status === 'rejected' ? 'orp-master-banner--rejected' :
+                      'orp-master-banner--pending'
+                    }`}>
+                      <div className="orp-master-banner-text">
+                        {task.status === 'rejected' ? (
+                          <>
+                            <XCircle size={16} />
+                            <span>Revision Requested by Reviewer · Needs crew re-submission</span>
+                          </>
+                        ) : isFinalApproved || isAdminApproved ? (
+                          <>
+                            <ShieldCheck size={16} />
+                            <span>
+                              Approved by Admin ({task.verifiedBy || me?.full_name || 'Fleet Admin'})
+                              {task.verifiedAt ? ` · ${fmt(task.verifiedAt)}` : ''}
+                            </span>
+                          </>
+                        ) : (task.status === 'approved' || task.verified) ? (
+                          <>
+                            <ShieldCheck size={16} />
+                            <span>
+                              {task.verifiedBy
                                 ? `Verified by Vessel Approver (${task.verifiedBy})`
                                 : `Verified by Vessel Approver (${data.masterName || 'Capt. Suresh Sharma'})`}
-                            {task.verifiedAt ? ` · ${fmt(task.verifiedAt)}` : ''}
-                          </span>
+                              {task.verifiedAt ? ` · ${fmt(task.verifiedAt)}` : ''}
+                            </span>
+                          </>
+                        ) : (
+                          <>
+                            <Clock size={16} />
+                            <span>Awaiting Admin Verification · Pending Approval</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Dedicated Remark Section Below ("Show remork in below") */}
+                    {(() => {
+                      const currentRemark = taskRemarks[task.id] !== undefined
+                        ? taskRemarks[task.id]
+                        : (task.approvalNote || '')
+                      const hasRemark = Boolean(currentRemark && currentRemark.trim().length > 0)
+                      const isEditingRemark = editingRemarkTaskId === task.id
+
+                      return (
+                        <div className="orp-section-box orp-task-remark-box">
+                          <div className="orp-box-header-row">
+                            <div className="orp-box-label orp-remark-label">
+                              <MessageSquare size={12} />
+                              <span>
+                                {task.status === 'rejected'
+                                  ? 'REVISION REMARK'
+                                  : isAdminApproved
+                                    ? 'ADMIN APPROVAL REMARK'
+                                    : 'APPROVAL REMARK'}
+                              </span>
+                              {!isAdminApproved && task.status !== 'rejected' && (
+                                <span className="orp-optional-pill">OPTIONAL</span>
+                              )}
+                              {remarkSavedToast && (
+                                <span className="orp-remark-saved-badge">
+                                  <Check size={11} /> Saved
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Top 1st Button Place: Add Remark, Edit Remark, or Save / Cancel */}
+                            <div className="orp-remark-actions-top">
+                              {task.status === 'rejected' ? (
+                                <button
+                                  type="button"
+                                  className="orp-edit-remark-btn"
+                                  onClick={() => openRejectModal(task)}
+                                  title="Edit rejection remark"
+                                >
+                                  <Edit3 size={11} /> Edit Remark
+                                </button>
+                              ) : isEditingRemark ? (
+                                <>
+                                  <button
+                                    type="button"
+                                    className="orp-btn-save-inline-remark"
+                                    disabled={taskBusyId === task.id}
+                                    onClick={() => handleSaveInlineRemark(task.id)}
+                                    title="Save remark for this task"
+                                  >
+                                    {taskBusyId === task.id ? (
+                                      <><RefreshCw size={11} className="orp-spin" /> Saving...</>
+                                    ) : (
+                                      <><Check size={11} /> Save Remark</>
+                                    )}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className="orp-btn-cancel-inline-remark"
+                                    disabled={taskBusyId === task.id}
+                                    onClick={() => {
+                                      setTaskRemarks((prev) => ({ ...prev, [task.id]: task.approvalNote || '' }))
+                                      setEditingRemarkTaskId(null)
+                                    }}
+                                    title="Cancel"
+                                  >
+                                    <X size={11} /> Cancel
+                                  </button>
+                                </>
+                              ) : hasRemark ? (
+                                <button
+                                  type="button"
+                                  className="orp-btn-edit-inline-remark"
+                                  onClick={() => setEditingRemarkTaskId(task.id)}
+                                  title="Edit remark for this task"
+                                >
+                                  <Edit3 size={11} /> Edit Remark
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  className="orp-btn-add-inline-remark"
+                                  onClick={() => setEditingRemarkTaskId(task.id)}
+                                  title="Add optional remark for this task"
+                                >
+                                  <Plus size={11} /> Add Remark
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Body: Once saved or not editing, shown as text (doesn't show like input box) */}
+                          {task.status === 'rejected' ? (
+                            <div className="orp-remark-display-text orp-remark-display-text--rejected">
+                              {task.rejectionNote || 'No remark entered.'}
+                            </div>
+                          ) : isEditingRemark ? (
+                            <div className="orp-remark-input-wrap">
+                              <input
+                                type="text"
+                                id="orp-inline-task-remark"
+                                className="orp-task-inline-remark-input"
+                                autoFocus
+                                placeholder={
+                                  isAdminApproved
+                                    ? "Enter or update remark for this approved task..."
+                                    : "Type optional remark or observation here before approving..."
+                                }
+                                value={currentRemark}
+                                onChange={(e) =>
+                                  setTaskRemarks((prev) => ({ ...prev, [task.id]: e.target.value }))
+                                }
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    handleSaveInlineRemark(task.id)
+                                  } else if (e.key === 'Escape') {
+                                    setEditingRemarkTaskId(null)
+                                  }
+                                }}
+                              />
+                            </div>
+                          ) : hasRemark ? (
+                            <div className="orp-remark-display-text orp-remark-display-text--approved">
+                              {currentRemark}
+                            </div>
+                          ) : (
+                            <div className="orp-remark-empty-text">
+                              No remark added. (Optional)
+                            </div>
+                          )}
                         </div>
-                        <div className="orp-task-action-btns">
-                          {isAdminApproved ? (
+                      )
+                    })()}
+
+                    {/* Transferred Task Action Buttons Below ("transfer all that button to that place below") */}
+                    <div className="orp-task-action-toolbar">
+                      <div className="orp-task-toolbar-nav">
+                        <button
+                          type="button"
+                          className="orp-card-nav-btn"
+                          disabled={idx === 0}
+                          onClick={() => goTo(idx - 1)}
+                          title="Previous Task"
+                        >
+                          <ChevronLeft size={14} /> Previous
+                        </button>
+                        <span className="orp-task-counter-pill">
+                          Task {idx + 1} of {total}
+                        </span>
+                        <button
+                          type="button"
+                          className="orp-card-nav-btn orp-card-nav-btn--next"
+                          disabled={idx === total - 1}
+                          onClick={() => goTo(idx + 1)}
+                          title="Next Task"
+                        >
+                          Next <ChevronRight size={14} />
+                        </button>
+                      </div>
+
+                      {/* Always show both Approve and Reject buttons for Task */}
+                      <div className="orp-task-action-btns">
+                        {isAdminApproved ? (
+                          <>
                             <button
                               type="button"
-                              className="orp-task-btn orp-task-btn--approved-badge"
-                              disabled={taskBusyId === task.id}
-                              onClick={() => handleApproveTask(task.id)}
-                              title="Task is approved by Admin. Click to re-verify approval."
+                              className="orp-task-btn orp-task-btn--subtle-reject"
+                              disabled={taskBusyId === task.id || isFinalApproved}
+                              onClick={() => openRejectModal(task)}
+                              title="Reject this task and request revision"
                             >
-                              <CheckCircle2 size={13} /> Approved
+                              <XCircle size={13} /> Reject
                             </button>
-                          ) : (
+                            <span className="orp-task-approved-badge">
+                              <CheckCircle2 size={13} /> Approved
+                            </span>
+                          </>
+                        ) : task.status === 'rejected' ? (
+                          <>
+                            <span className="orp-task-rejected-badge">
+                              <XCircle size={13} /> Rejected
+                            </span>
+                            <button
+                              type="button"
+                              className="orp-task-btn orp-task-btn--approve"
+                              disabled={taskBusyId === task.id || isFinalApproved}
+                              onClick={() => handleInlineApprove(task.id)}
+                              title="Approve this task"
+                            >
+                              {taskBusyId === task.id ? (
+                                <>
+                                  <RefreshCw size={14} className="orp-spin" /> Approving...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 size={14} /> Approve Task
+                                </>
+                              )}
+                            </button>
+                          </>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              className="orp-task-btn orp-task-btn--reject"
+                              disabled={taskBusyId === task.id}
+                              onClick={() => openRejectModal(task)}
+                              title="Reject this task with feedback"
+                            >
+                              <XCircle size={14} /> Reject Task
+                            </button>
                             <button
                               type="button"
                               className="orp-task-btn orp-task-btn--approve"
                               disabled={taskBusyId === task.id}
-                              onClick={() => handleApproveTask(task.id)}
-                              title="Approve this task as Admin"
+                              onClick={() => handleInlineApprove(task.id)}
+                              title="Approve this task"
                             >
-                              <CheckCircle2 size={13} /> Approve Task
+                              {taskBusyId === task.id ? (
+                                <>
+                                  <RefreshCw size={14} className="orp-spin" /> Approving...
+                                </>
+                              ) : (
+                                <>
+                                  <CheckCircle2 size={14} /> Approve Task
+                                </>
+                              )}
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            className="orp-task-btn orp-task-btn--subtle-reject"
-                            disabled={taskBusyId === task.id}
-                            onClick={() => openRejectModal(task)}
-                            title="Reject this task and request revision"
-                          >
-                            <XCircle size={13} /> Reject
-                          </button>
-                        </div>
+                          </>
+                        )}
                       </div>
-                    ) : task.status === 'rejected' ? (
-                      <div className="orp-master-banner orp-master-banner--rejected">
-                        <div className="orp-master-banner-text">
-                          <XCircle size={16} />
-                          <span>
-                            Revision Requested {task.rejectionNote ? ` · Remark: ${task.rejectionNote}` : ''}
-                          </span>
-                        </div>
-                        <div className="orp-task-action-btns">
-                          <button
-                            type="button"
-                            className="orp-task-btn orp-task-btn--subtle-reject"
-                            disabled={taskBusyId === task.id}
-                            onClick={() => openRejectModal(task)}
-                            title="Edit rejection remark"
-                          >
-                            Edit Remark
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="orp-task-pending-bar">
-                        <div className="orp-task-pending-hint">
-                          <Clock size={15} />
-                          <span>Awaiting Admin / Approver Verification</span>
-                        </div>
-                        <div className="orp-task-action-btns">
-                          <button
-                            type="button"
-                            className="orp-task-btn orp-task-btn--approve"
-                            disabled={taskBusyId === task.id}
-                            onClick={() => handleApproveTask(task.id)}
-                            title="Approve this task"
-                          >
-                            <CheckCircle2 size={14} /> Approve Task
-                          </button>
-                          <button
-                            type="button"
-                            className="orp-task-btn orp-task-btn--reject"
-                            disabled={taskBusyId === task.id}
-                            onClick={() => openRejectModal(task)}
-                            title="Reject this task with feedback"
-                          >
-                            <XCircle size={14} /> Reject Task
-                          </button>
-                        </div>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 </div>
               ) : (
@@ -781,26 +1040,6 @@ export default function AdminOrientationReviewPage() {
                   <span>No task selected.</span>
                 </div>
               )}
-
-              {/* Prev / Next Buttons directly under card */}
-              <div className="orp-card-nav-row">
-                <button
-                  type="button"
-                  className="orp-card-nav-btn"
-                  disabled={idx === 0}
-                  onClick={() => goTo(idx - 1)}
-                >
-                  <ChevronLeft size={14} /> Previous
-                </button>
-                <button
-                  type="button"
-                  className="orp-card-nav-btn orp-card-nav-btn--next"
-                  disabled={idx === total - 1}
-                  onClick={() => goTo(idx + 1)}
-                >
-                  Next <ChevronRight size={14} />
-                </button>
-              </div>
             </div>
 
             {/* 4. Bottom Action Bar — Less and Small */}
@@ -814,36 +1053,31 @@ export default function AdminOrientationReviewPage() {
               </button>
 
               <div className="orp-footer-actions">
-                {isFinalApproved ? (
-                  <span className="orp-decided-hint orp-decided-hint--approved">
-                    <ShieldCheck size={16} /> Program Fully Approved{data.decidedAt ? ` · Decided ${fmt(data.decidedAt)}` : ''}
-                  </span>
-                ) : isMasterApproved && (isAdmin || isSuperAdmin) ? (
-                  <>
-                    <button
-                      type="button"
-                      className="orp-action-btn orp-action-btn--reject"
-                      disabled={deciding || loading}
-                      onClick={() => handleDecide('reject')}
-                    >
-                      <XCircle size={15} /> Reject
-                    </button>
-                    <button
-                      type="button"
-                      className="orp-action-btn orp-action-btn--approve"
-                      disabled={!allTasksApproved || deciding || loading}
-                      onClick={() => handleDecide('approve')}
-                      title={!allTasksApproved ? `Approve all tasks as Admin (${approvedTasksCount}/${total}) to enable Final Approval` : 'Final Approve Program'}
-                    >
-                      <CheckCircle2 size={15} /> Final Approve Program
-                    </button>
-                  </>
-                ) : (
-                  <span className="orp-decided-hint">
-                    Status: <strong>{enrollmentStatus === 'master_approved' ? 'Pending Admin Approval' : enrollmentStatus.replace('_', ' ')}</strong>
-                    {data.decidedAt ? ` · Decided ${fmt(data.decidedAt)}` : ''}
-                  </span>
-                )}
+                <button
+                  type="button"
+                  className="orp-action-btn orp-action-btn--reject"
+                  disabled={deciding || loading || isFinalApproved}
+                  onClick={() => handleDecide('reject')}
+                  title={isFinalApproved ? 'Program is already finalized' : 'Reject Program'}
+                >
+                  <XCircle size={15} /> Reject
+                </button>
+                <button
+                  type="button"
+                  className={`orp-action-btn orp-action-btn--approve${isFinalApproved ? ' orp-action-btn--final-approved' : ''}`}
+                  disabled={!allTasksApproved || deciding || loading || isFinalApproved}
+                  onClick={() => handleDecide('approve')}
+                  title={
+                    isFinalApproved
+                      ? `Program Fully Approved${data.decidedAt ? ` · Decided ${fmt(data.decidedAt)}` : ''}`
+                      : !allTasksApproved
+                        ? `Approve all tasks as Admin (${approvedTasksCount}/${total}) to enable Final Approval`
+                        : 'Final Approve Program'
+                  }
+                >
+                  <CheckCircle2 size={15} />
+                  {isFinalApproved ? 'Program Fully Approved' : 'Final Approve Program'}
+                </button>
               </div>
             </div>
           </div>

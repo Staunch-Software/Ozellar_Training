@@ -130,6 +130,15 @@ function TaskCard({ task, onToggle, onSaveNote, onAddFiles, onRemoveFile, onSubm
           )}
         </div>
         
+        {isApproved && task.approvalNote && (
+          <div className="cnd-task-approval-note" style={{ marginTop: 8, padding: '8px 12px', background: '#f0fdf4', color: '#166534', borderRadius: 6, fontSize: 12.5, border: '1px solid rgba(22, 101, 52, 0.2)' }}>
+            <div style={{ fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Check size={13} /> Reviewer Remark:
+            </div>
+            <div style={{ lineHeight: 1.4, marginTop: 2 }}>{task.approvalNote}</div>
+          </div>
+        )}
+
         {isRejected && task.rejectionNote && (
           <div className="cnd-task-rejection-note" style={{ marginTop: 8, padding: '10px 14px', background: '#fee2e2', color: '#991b1b', borderRadius: 6, fontSize: 13, border: '1px solid rgba(153, 27, 27, 0.25)' }}>
             <div style={{ fontWeight: 700, marginBottom: 3, display: 'flex', alignItems: 'center', gap: 6 }}><AlertCircle size={14} /> Revision Required by Reviewer / Admin:</div>

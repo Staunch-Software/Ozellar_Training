@@ -676,9 +676,9 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
-  height: 70vh;
-  padding: 14px 22px;
-  gap: 10px;
+  height: auto;
+  padding: 8px 18px;
+  gap: 8px;
   background: #fdfefe;
   overflow: hidden;
   box-sizing: border-box;
@@ -690,12 +690,12 @@
   min-height: 0;
   overflow-y: auto;
   border: 1px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 18px 22px;
+  border-radius: 12px;
+  padding: 12px 18px;
   background: #ffffff;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.02);
   box-sizing: border-box;
 }
@@ -816,8 +816,8 @@
 
 /* Premium Evidence Card */
 .orp-evidence-card {
-  width: 130px;
-  border-radius: 12px;
+  width: 110px;
+  border-radius: 9px;
   border: 1px solid #e2e8f0;
   background: #ffffff;
   overflow: hidden;
@@ -825,19 +825,19 @@
   display: flex;
   flex-direction: column;
   transition: all 0.16s ease;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.03);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
 }
 
 .orp-evidence-card:hover {
   border-color: #E07820;
   transform: translateY(-2px);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .orp-evidence-thumb {
   position: relative;
   width: 100%;
-  height: 90px;
+  height: 55px;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -955,17 +955,19 @@
   margin-top: auto;
   flex-shrink: 0;
   width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
 .orp-master-banner {
   border-radius: 9px;
-  padding: 8px 14px;
+  padding: 10px 14px;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  font-size: 12.5px;
-  font-weight: 700;
+  gap: 10px;
+  font-size: 13px;
+  font-weight: 600;
   box-sizing: border-box;
   width: 100%;
 }
@@ -973,23 +975,325 @@
 .orp-master-banner-text {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: 9px;
   min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  flex: 1;
+  line-height: 1.4;
 }
 
 .orp-master-banner--verified {
-  background: #dcfce7;
+  background: #f0fdf4;
   color: #166534;
-  border: 1px solid rgba(22, 101, 52, 0.25);
+  border: 1px solid #bbf7d0;
+}
+
+.orp-master-banner--admin {
+  background: #ecfdf5;
+  color: #065f46;
+  border: 1px solid #a7f3d0;
 }
 
 .orp-master-banner--rejected {
-  background: #fee2e2;
+  background: #fef2f2;
   color: #991b1b;
-  border: 1px solid rgba(153, 27, 27, 0.25);
+  border: 1px solid #fecaca;
+}
+
+.orp-master-banner--pending {
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+/* Dedicated Remark Box Below */
+.orp-task-remark-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.orp-box-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.orp-remark-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.orp-optional-pill {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: #e2e8f0;
+  color: #64748b;
+  margin-left: 4px;
+  letter-spacing: normal;
+}
+
+.orp-btn-save-inline-remark {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #0284c7;
+  color: #ffffff;
+  border: 1px solid #0284c7;
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(2, 132, 199, 0.2);
+}
+
+.orp-btn-save-inline-remark:hover:not(:disabled) {
+  background: #0369a1;
+  border-color: #0369a1;
+}
+
+.orp-btn-save-inline-remark:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.orp-btn-save-inline-remark--toolbar {
+  padding: 7px 14px;
+  font-size: 12.5px;
+  border-radius: 7px;
+}
+
+.orp-remark-actions-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.orp-btn-add-inline-remark,
+.orp-btn-edit-inline-remark {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  color: #0284c7;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.orp-btn-add-inline-remark:hover,
+.orp-btn-edit-inline-remark:hover {
+  background: #f0f9ff;
+  border-color: #0284c7;
+  color: #0369a1;
+}
+
+.orp-btn-cancel-inline-remark {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: #ffffff;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.orp-btn-cancel-inline-remark:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.orp-remark-empty-text {
+  font-size: 12.5px;
+  color: #94a3b8;
+  font-style: italic;
+  padding: 2px 0;
+}
+
+.orp-task-rejected-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fca5a5;
+  padding: 5px 12px;
+  border-radius: 6px;
+}
+
+.orp-action-btn--final-approved,
+.orp-action-btn--final-approved:disabled {
+  background: #10b981 !important;
+  color: #ffffff !important;
+  border: none !important;
+  opacity: 0.9 !important;
+  cursor: default !important;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.3) !important;
+}
+
+.orp-remark-saved-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #16a34a;
+  background: #dcfce7;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 6px;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.orp-edit-remark-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 5px;
+  padding: 3px 8px;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.orp-edit-remark-btn:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.orp-remark-display-text {
+  font-size: 13px;
+  color: #1e293b;
+  line-height: 1.45;
+  word-break: break-word;
+  font-style: italic;
+  padding: 2px 0;
+}
+
+.orp-remark-display-text--approved {
+  color: #14532d;
+  font-weight: 500;
+}
+
+.orp-remark-display-text--rejected {
+  color: #991b1b;
+  font-style: normal;
+  font-weight: 500;
+}
+
+.orp-no-remark-text {
+  font-size: 12.5px;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.orp-remark-input-wrap {
+  width: 100%;
+}
+
+.orp-task-inline-remark-input {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  padding: 8px 10px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #0f172a;
+  background: #ffffff;
+  box-sizing: border-box;
+  resize: vertical;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.orp-task-inline-remark-input:focus {
+  outline: none;
+  border-color: #0284c7;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
+}
+
+/* Transferred Task Action Toolbar */
+.orp-task-action-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-top: 4px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.orp-task-toolbar-nav {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.orp-task-counter-pill {
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  padding: 5px 10px;
+  background: #f1f5f9;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+
+.orp-card-nav-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 14px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 7px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #334155;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.orp-card-nav-btn:hover:not(:disabled) {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.orp-card-nav-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .orp-task-pending-bar {
@@ -1025,9 +1329,9 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: 7px;
-  font-size: 12px;
+  padding: 7px 15px;
+  border-radius: 8px;
+  font-size: 13px;
   font-weight: 700;
   cursor: pointer;
   transition: all 0.14s ease;
@@ -1043,7 +1347,7 @@
 .orp-task-btn--approve {
   background: #16a34a;
   color: #ffffff;
-  border-color: #15803d;
+  border-color: #16a34a;
   box-shadow: 0 1px 3px rgba(22, 163, 74, 0.25);
 }
 
@@ -1372,6 +1676,30 @@
     flex: 1;
     justify-content: center;
   }
+
+  .orp-task-action-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .orp-task-toolbar-nav {
+    justify-content: space-between;
+    width: 100%;
+  }
+
+  .orp-task-action-btns {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .orp-task-action-btns button,
+  .orp-task-action-btns .orp-task-approved-badge,
+  .orp-task-action-btns .orp-task-rejected-badge {
+    flex: 1;
+    justify-content: center;
+    text-align: center;
+  }
 }
 
 @media (min-width: 1920px) {
@@ -1393,6 +1721,96 @@
 
   .orp-evidence-thumb {
     height: 106px;
+  }
+}
+
+@media (min-width: 2560px) {
+  .orp-frame {
+    max-width: 2400px;
+  }
+
+  .orp-candidate-name {
+    font-size: 22px;
+  }
+
+  .orp-task-title {
+    font-size: 24px;
+  }
+
+  .orp-task-desc {
+    font-size: 15px;
+  }
+
+  .orp-note-text {
+    font-size: 15px;
+  }
+
+  .orp-remark-display-text {
+    font-size: 15px;
+  }
+
+  .orp-task-inline-remark-input {
+    font-size: 15px;
+  }
+
+  .orp-card-nav-btn {
+    font-size: 14px;
+    padding: 9px 18px;
+  }
+
+  .orp-task-btn {
+    font-size: 14px;
+    padding: 9px 18px;
+  }
+
+  .orp-action-btn {
+    font-size: 15px;
+    padding: 10px 24px;
+  }
+}
+
+@media (min-width: 3840px) {
+  .orp-frame {
+    max-width: 3200px;
+  }
+
+  .orp-candidate-name {
+    font-size: 28px;
+  }
+
+  .orp-task-title {
+    font-size: 30px;
+  }
+
+  .orp-task-desc {
+    font-size: 18px;
+  }
+
+  .orp-note-text {
+    font-size: 18px;
+  }
+
+  .orp-remark-display-text {
+    font-size: 18px;
+  }
+
+  .orp-task-inline-remark-input {
+    font-size: 18px;
+  }
+
+  .orp-card-nav-btn {
+    font-size: 16px;
+    padding: 12px 24px;
+  }
+
+  .orp-task-btn {
+    font-size: 16px;
+    padding: 12px 24px;
+  }
+
+  .orp-action-btn {
+    font-size: 18px;
+    padding: 14px 32px;
   }
 }
 
@@ -1930,4 +2348,193 @@
 :root[data-theme="dark"] .orp-reject-btn-cancel:hover:not(:disabled) {
   background: #243046;
   color: #ffffff;
+}
+
+/* Approve Task Modal with Optional Remark */
+.orp-approve-modal-header-icon {
+  background: #dcfce7 !important;
+  color: #16a34a !important;
+}
+
+.orp-approve-btn-submit {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: #16a34a;
+  color: #ffffff;
+  border: 1px solid #16a34a;
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  transition: all 0.15s ease;
+}
+
+.orp-approve-btn-submit:hover:not(:disabled) {
+  background: #15803d;
+  border-color: #15803d;
+  box-shadow: 0 4px 12px rgba(22, 163, 74, 0.28);
+}
+
+.orp-approve-btn-submit:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.orp-optional-tag {
+  font-size: 12px;
+  font-weight: 500;
+  color: #64748b;
+  margin-left: 6px;
+}
+
+.orp-modal-field-hint {
+  margin: 6px 0 0 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.orp-task-btn--subtle-edit {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f8fafc;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.orp-task-btn--subtle-edit:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+}
+
+:root[data-theme="dark"] .orp-approve-modal-header-icon {
+  background: rgba(22, 163, 74, 0.2) !important;
+  color: #4ade80 !important;
+}
+
+:root[data-theme="dark"] .orp-task-btn--subtle-edit {
+  background: #1a2234;
+  border-color: #334460;
+  color: #94a3b8;
+}
+
+:root[data-theme="dark"] .orp-task-btn--subtle-edit:hover:not(:disabled) {
+  background: #243046;
+  color: #f1f5f9;
+  border-color: #475569;
+}
+
+:root[data-theme="dark"] .orp-task-remark-box {
+  background: #131926;
+  border-color: #243046;
+}
+
+:root[data-theme="dark"] .orp-remark-label {
+  color: #94a3b8;
+}
+
+:root[data-theme="dark"] .orp-optional-pill {
+  background: #1e293b;
+  color: #94a3b8;
+}
+
+:root[data-theme="dark"] .orp-btn-add-inline-remark,
+:root[data-theme="dark"] .orp-btn-edit-inline-remark {
+  background: #1a2234;
+  color: #38bdf8;
+  border-color: #0369a1;
+}
+
+:root[data-theme="dark"] .orp-btn-add-inline-remark:hover,
+:root[data-theme="dark"] .orp-btn-edit-inline-remark:hover {
+  background: #0c4a6e;
+  color: #f0f9ff;
+}
+
+:root[data-theme="dark"] .orp-btn-cancel-inline-remark {
+  background: #1a2234;
+  color: #94a3b8;
+  border-color: #334460;
+}
+
+:root[data-theme="dark"] .orp-btn-cancel-inline-remark:hover:not(:disabled) {
+  background: #243046;
+  color: #f1f5f9;
+}
+
+:root[data-theme="dark"] .orp-remark-empty-text {
+  color: #64748b;
+}
+
+:root[data-theme="dark"] .orp-task-rejected-badge {
+  background: #36171b;
+  color: #f87171;
+  border-color: #7f1d1d;
+}
+
+:root[data-theme="dark"] .orp-edit-remark-btn {
+  background: #1a2234;
+  border-color: #334460;
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .orp-edit-remark-btn:hover {
+  background: #243046;
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .orp-remark-display-text {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .orp-remark-display-text--approved {
+  color: #86efac;
+}
+
+:root[data-theme="dark"] .orp-remark-display-text--rejected {
+  color: #fca5a5;
+}
+
+:root[data-theme="dark"] .orp-task-inline-remark-input {
+  background: #1a2234;
+  border-color: #334460;
+  color: #f1f5f9;
+}
+
+:root[data-theme="dark"] .orp-card-nav-btn {
+  background: #1a2234;
+  border-color: #334460;
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .orp-card-nav-btn:hover:not(:disabled) {
+  background: #243046;
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .orp-task-counter-pill {
+  background: #1a2234;
+  color: #94a3b8;
+}
+
+:root[data-theme="dark"] .orp-btn-save-inline-remark {
+  background: #0284c7;
+  border-color: #0284c7;
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .orp-remark-saved-badge {
+  background: rgba(22, 163, 74, 0.2);
+  color: #86efac;
 }

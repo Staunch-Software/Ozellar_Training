@@ -706,6 +706,7 @@ def orientation_enrollment_detail(e):
                            if completions.get(t.id) and completions[t.id].completed_at else None),
             "status": completions[t.id].status if completions.get(t.id) else "draft",
             "rejectionNote": getattr(completions[t.id], "rejection_note", None) if completions.get(t.id) else None,
+            "approvalNote": getattr(completions[t.id], "approval_note", None) if completions.get(t.id) else None,
         } for t in tasks],
     }
 
@@ -794,6 +795,7 @@ def submit_multiple_orientation_tasks(req: SubmitMultipleTasksRequest, user: mod
             
         completion.status = "pending_review"
         completion.rejection_note = None
+        completion.approval_note = None
         completion.verified = False
         completion.verified_at = None
         completion.verified_by = None
@@ -835,6 +837,7 @@ def submit_orientation_task(task_id: str, user: models.User = Depends(get_curren
     
     completion.status = "pending_review"
     completion.rejection_note = None
+    completion.approval_note = None
     completion.verified = False
     completion.verified_at = None
     completion.verified_by = None
@@ -910,6 +913,7 @@ def orientation_submission_detail(db, enrollment):
             "completedAt": to_ist_iso(c.completed_at) if c and c.completed_at else None,
             "status": c.status if c else "draft",
             "rejectionNote": c.rejection_note if c else None,
+            "approvalNote": getattr(c, "approval_note", None) if c else None,
             "verified": (c.status == "approved") if c else False,
             "verifiedAt": to_ist_iso(c.verified_at) if c and c.verified_at else None,
             "verifiedBy": verifier.full_name if verifier else None,
@@ -1011,11 +1015,14 @@ def approver_verify_task(submission_id: str, task_id: str, req: OrientationVerif
         completion.verified = True
         completion.verified_at = datetime.now(timezone.utc)
         completion.verified_by = approver.id
+        completion.rejection_note = None
+        completion.approval_note = req.note.strip() if req.note and req.note.strip() else None
     elif req.action == 'reject':
         if not req.note or not req.note.strip():
             raise HTTPException(400, "Rejection note is required")
         completion.status = "rejected"
         completion.rejection_note = req.note.strip()
+        completion.approval_note = None
         completion.verified = False
         completion.verified_at = None
         completion.verified_by = None
@@ -1028,8 +1035,9 @@ def approver_verify_task(submission_id: str, task_id: str, req: OrientationVerif
     task = db.get(models.OrientationTask, task_id)
     if learner and task:
         if req.action == 'approve':
+            remark_msg = f" Remark: {completion.approval_note}" if completion.approval_note else ""
             notify(db, learner.id, "orientation_task_approved", f"Task Verified: {task.title}",
-                   body=f"Your task '{task.title}' was verified by {approver.full_name}.",
+                   body=f"Your task '{task.title}' was verified by {approver.full_name}.{remark_msg}",
                    link="/orientation")
         else:
             notify(db, learner.id, "orientation_task_rejected", f"Task Revision Required: {task.title}",
@@ -1105,8 +1113,8 @@ def admin_verify_orientation_task(
     enrollment = db.get(models.OrientationEnrollment, enrollment_id)
     if not enrollment:
         raise HTTPException(404, "Enrollment not found")
-    if enrollment.status == "approved":
-        raise HTTPException(400, "Orientation program is already fully approved. Tasks cannot be modified or rejected.")
+    if enrollment.status == "approved" and req.action == 'reject':
+        raise HTTPException(400, "Orientation program is already fully approved. Tasks cannot be rejected.")
 
     completion = (db.query(models.OrientationTaskCompletion)
                   .filter_by(enrollment_id=enrollment.id, task_id=task_id).first())
@@ -1127,6 +1135,7 @@ def admin_verify_orientation_task(
         completion.verified_at = datetime.now(timezone.utc)
         completion.verified_by = admin.id
         completion.rejection_note = None
+        completion.approval_note = req.note.strip() if req.note and req.note.strip() else None
         completion.is_completed = True
         if not completion.completed_at:
             completion.completed_at = datetime.now(timezone.utc)
@@ -1135,6 +1144,7 @@ def admin_verify_orientation_task(
             raise HTTPException(400, "Rejection remark is required")
         completion.status = "rejected"
         completion.rejection_note = req.note.strip()
+        completion.approval_note = None
         completion.verified = False
         completion.verified_at = None
         completion.verified_by = None
@@ -1148,8 +1158,9 @@ def admin_verify_orientation_task(
     task = db.get(models.OrientationTask, task_id)
     if learner and task:
         if req.action == 'approve':
+            remark_msg = f" Remark: {completion.approval_note}" if completion.approval_note else ""
             notify(db, learner.id, "orientation_task_approved", f"Task Approved: {task.title}",
-                   body=f"Your task '{task.title}' was reviewed and approved by Admin ({admin.full_name}).",
+                   body=f"Your task '{task.title}' was reviewed and approved by Admin ({admin.full_name}).{remark_msg}",
                    link="/orientation")
         else:
             notify(db, learner.id, "orientation_task_rejected", f"Task Revision Required: {task.title}",

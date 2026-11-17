@@ -76,6 +76,7 @@ class OrientationTaskCompletion(Base):
     # The review status for this specific task
     status = Column(String, default="draft") # draft | pending_review | approved | rejected
     rejection_note = Column(Text, nullable=True)
+    approval_note = Column(Text, nullable=True)
     # Per-task sign-off by the reviewing Master/Chief Engineer
     verified = Column(Boolean, default=False)
     verified_at = Column(DateTime, nullable=True)

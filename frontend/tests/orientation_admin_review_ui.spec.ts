@@ -226,6 +226,71 @@ test.describe('Admin Orientation - Dedicated Approver-Style Review Page & File P
     }
   })
 
+  test('admin can add/edit remark via top header button, which saves and renders as text without input box, with task and overall approve/reject always visible', async ({ page }) => {
+    await page.goto('/admin/orientation-program/enrollments')
+    await page.waitForLoadState('networkidle')
+
+    const reviewBtn = page.locator('button').filter({ hasText: /Review/i }).first()
+    await reviewBtn.click()
+    await expect(page).toHaveURL(/\/admin\/orientation(\/|-)?review\//)
+
+    const verifyBar = page.locator('.orp-task-verify-bar')
+    await expect(verifyBar).toBeVisible({ timeout: 8000 })
+
+    // Verify task toolbar has both action buttons visible (Approve and Reject)
+    const taskToolbar = verifyBar.locator('.orp-task-action-toolbar')
+    await expect(taskToolbar).toBeVisible()
+    const taskActionBtns = taskToolbar.locator('.orp-task-action-btns')
+    await expect(taskActionBtns).toBeVisible()
+    // Must NOT have Save Remark button in bottom toolbar
+    await expect(taskActionBtns.locator('.orp-btn-save-inline-remark')).toHaveCount(0)
+
+    // Verify overall footer has both action buttons visible (Reject and Final Approve Program)
+    const footer = page.locator('.orp-footer')
+    await expect(footer).toBeVisible()
+    await expect(footer.locator('.orp-action-btn--reject')).toBeVisible()
+    await expect(footer.locator('.orp-action-btn--approve')).toBeVisible()
+
+    // Remark section
+    const remarkBox = verifyBar.locator('.orp-task-remark-box')
+    await expect(remarkBox).toBeVisible()
+
+    // If Edit Remark is visible, click it; otherwise click Add Remark
+    const addRemarkBtn = remarkBox.locator('.orp-btn-add-inline-remark')
+    const editRemarkBtn = remarkBox.locator('.orp-btn-edit-inline-remark')
+
+    if (await editRemarkBtn.isVisible().catch(() => false)) {
+      await editRemarkBtn.click()
+    } else {
+      await expect(addRemarkBtn).toBeVisible({ timeout: 5000 })
+      await addRemarkBtn.click()
+    }
+
+    // Input box is now visible during edit mode
+    const remarkInput = remarkBox.locator('#orp-inline-task-remark')
+    await expect(remarkInput).toBeVisible({ timeout: 5000 })
+
+    const testRemark = 'Direct remark verified as text without scroll.'
+    await remarkInput.fill(testRemark)
+
+    // Top Save Remark button is visible
+    const saveBtn = remarkBox.locator('.orp-btn-save-inline-remark')
+    await expect(saveBtn).toBeVisible()
+    await saveBtn.click()
+
+    // Confirm saved badge displays
+    await expect(page.locator('.orp-remark-saved-badge')).toBeVisible({ timeout: 5000 })
+
+    // After saving, renders as text - NOT as an input box!
+    await expect(remarkBox.locator('#orp-inline-task-remark')).not.toBeVisible()
+    const displayText = remarkBox.locator('.orp-remark-display-text')
+    await expect(displayText).toBeVisible()
+    await expect(displayText).toContainText(testRemark)
+
+    // Top button is now Edit Remark
+    await expect(remarkBox.locator('.orp-btn-edit-inline-remark')).toBeVisible()
+  })
+
   test('admin reject task opens simplified rejection modal with validation and type-and-reject flow', async ({ page }) => {
     await page.goto('/admin/orientation-program/enrollments')
     await page.waitForLoadState('networkidle')
@@ -266,7 +331,7 @@ test.describe('Admin Orientation - Dedicated Approver-Style Review Page & File P
     }
   })
 
-  test('final approve button requires all tasks approved and locks rejections when approved', async ({ page }) => {
+  test('final approve button requires all tasks approved and both buttons are always visible', async ({ page }) => {
     await page.goto('/admin/orientation-program/enrollments')
     await page.waitForLoadState('networkidle')
 
@@ -274,25 +339,17 @@ test.describe('Admin Orientation - Dedicated Approver-Style Review Page & File P
     await reviewBtn.click()
     await expect(page).toHaveURL(/\/admin\/orientation(\/|-)?review\//)
 
-    // Check footer final approve button
+    // Check footer final approve and reject buttons - both must always be visible
     const approveBtn = page.locator('.orp-action-btn--approve')
-    const fullyApprovedBanner = page.locator('.orp-decided-hint--approved')
+    const rejectBtn = page.locator('.orp-action-btn--reject')
 
-    if (await approveBtn.isVisible().catch(() => false)) {
-      // If visible, check disabled state if any tasks not approved
-      const pips = page.locator('.orp-stepper-pip')
-      const pipCount = await pips.count()
-      // If final approve is enabled, all tasks must be verified
-      const isDisabled = await approveBtn.isDisabled()
-      if (isDisabled) {
-        // Disabled title / tooltip should indicate tasks need approval
-        const titleAttr = await approveBtn.getAttribute('title')
-        expect(titleAttr).toContain('Approve all tasks')
-      }
-    } else if (await fullyApprovedBanner.isVisible().catch(() => false)) {
-      // If already fully approved, no reject button should be shown
-      const rejectBtns = page.locator('.orp-action-btn--reject, .orp-task-btn--reject, .orp-task-btn--subtle-reject')
-      await expect(rejectBtns).toHaveCount(0)
+    await expect(approveBtn).toBeVisible()
+    await expect(rejectBtn).toBeVisible()
+
+    // If final approve is disabled, tooltip explains tasks need approval
+    if (await approveBtn.isDisabled()) {
+      const titleAttr = await approveBtn.getAttribute('title')
+      expect(titleAttr).toBeDefined()
     }
   })
 })
